@@ -4291,6 +4291,8 @@ dependencies = [
  "chrono",
  "dotenvy",
  "ed25519-dalek",
+ "futures-util",
+ "getrandom 0.4.3",
  "hex",
  "mockall",
  "pretty_assertions",

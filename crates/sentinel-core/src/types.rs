@@ -34,8 +34,11 @@ pub struct Market {
     /// Perpl market id (e.g. `32` = ETH on testnet, `20` = ETH on mainnet).
     pub id: MarketId,
     /// Human-readable symbol (e.g. `ETH`). Note: BTC/MON on mainnet carry an
-    /// empty `symbol` field in the venue payload; use `name` or the id there.
+    /// empty `symbol` field in the venue payload; the mapping falls back to
+    /// `base` there.
     pub symbol: String,
+    /// Base asset name from the venue payload (e.g. `ETH`, `ETH Perp`).
+    pub base: String,
     /// Price scaling exponent: `price = raw / 10^price_decimals`.
     pub price_decimals: u32,
     /// Size scaling exponent: `size = raw / 10^size_decimals`.
@@ -44,6 +47,17 @@ pub struct Market {
     pub initial_margin_fraction: Decimal,
     /// Maintenance-margin fraction (e.g. `0.05` for Perpl ETH `2000`).
     pub maintenance_margin_fraction: Decimal,
+    /// Maximum leverage allowed by the venue (`initial_margin / 100` in Perpl's
+    /// leverage-hundredths encoding; e.g. `12` for ETH).
+    pub max_leverage: Decimal,
+    /// Minimum order size in base units (0 when the venue reports no minimum).
+    pub min_size: Decimal,
+    /// Price tick in price units (`10^-price_decimals`).
+    pub tick_size: Decimal,
+    /// Base-tier maker fee in micros (`1e-6` of notional; per-market schedule).
+    pub maker_fee_micros: u64,
+    /// Base-tier taker fee in micros (`1e-6` of notional; per-market schedule).
+    pub taker_fee_micros: u64,
     /// Order time-to-live in blocks: `lb` ceiling offset from head.
     pub order_ttl_blocks: u64,
 }

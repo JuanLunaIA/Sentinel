@@ -1,24 +1,30 @@
    Compiling sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.55s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.33s
 warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
 note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
-     Running unittests src/lib.rs (target/debug/deps/sentinel-23c58449a97b191b)
+     Running unittests src/lib.rs (target/debug/deps/sentinel-c6effea1e6727d18)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running unittests src/main.rs (target/debug/deps/sentinel-dc4fea414bbc8e57)
+     Running unittests src/bin/read_positions.rs (target/debug/deps/read_positions-a4b27b8571a5d80b)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/smoke.rs (target/debug/deps/smoke-53e3d84de5c0d0fb)
+     Running unittests src/main.rs (target/debug/deps/sentinel-98ff09cc9c3d320b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/smoke.rs (target/debug/deps/smoke-6b067a89479aadc9)
 
 running 6 tests
-test rejected_on_invalid_secret_hex ... ok
 test config_loads_from_fixture_with_testnet_defaults ... ok
+test rejected_on_invalid_secret_hex ... ok
 test mainnet_requires_explicit_acknowledgement ... ok
 test rejected_when_mode_and_env_disagree ... ok
 test rejected_when_no_telegram_users ... ok

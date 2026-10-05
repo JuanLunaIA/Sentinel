@@ -13,4 +13,5 @@
 
 pub mod config;
 pub mod error;
+pub mod perpl;
 pub mod telemetry;

@@ -15,5 +15,8 @@ Silent stubs are forbidden. Update this file in the prompt that resolves each en
 | STUB-07 | SDK local test env | OPTIONAL | `perpl-sdk` `testing` feature needs a custom Monad Anvil fork (category-labs/foundry v1.5.0-monad.0.2.0) — not installed | `vendor/dex-sdk/README.md` | Only needed if we run SDK tests locally; we use `default-features = false` and our own fixtures |
 | STUB-08 | Docker session note | ENV | luna is in group `docker` but the running session lacks it; use `sudo docker` or `sg` re-login | `docs/evidence/p01-recon-toolchain.txt` | Non-blocking; resolves on next login |
 
+| STUB-09 | P03 live run | PENDING-KEY | `read-positions` live proof + `scripts/record-fixtures.sh` recording require a testnet API key (SETUP-MANUAL step 3); no live frames captured yet | `SPEC.md` §1/§5 | After key: run read-positions on testnet, record `tests/fixtures/perpl/session-*.jsonl`, capture evidence |
+| STUB-10 | min_size mapping | PARTIAL | Venue minimum order size is not exposed in `/v1/pub/context` (`min_posting_amount` is collateral-denominated and currently `0`); mapped as `Decimal::ZERO` | `SPEC.md` §3.3 | Revisit in P04/P05 when order sizing needs it |
+
 ## Resolved
 - (none yet)
