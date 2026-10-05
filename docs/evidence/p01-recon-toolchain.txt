@@ -1,0 +1,31 @@
+== P00 toolchain 2026-10-05T18:20:29-03:00 ==
+git       OK      /usr/bin/git
+rustc     OK      /usr/bin/rustc
+cargo     OK      /usr/bin/cargo
+rustup    OK      /usr/bin/rustup
+node      OK      /home/luna/.hermes/tools/node-26.7.0-linux-x64/bin/node
+npm       OK      /home/luna/.hermes/tools/node-26.7.0-linux-x64/bin/npm
+pnpm      OK      /usr/bin/pnpm
+forge     MISSING
+cast      MISSING
+anvil     MISSING
+docker    OK      /usr/bin/docker
+jq        OK      /usr/bin/jq
+curl      OK      /usr/bin/curl
+python3   OK      /home/luna/.hermes/tools/python-3.14.7+20260901-linux-x64/bin/python3
+gh        OK      /home/luna/.local/bin/gh
+claude    OK      /home/luna/.local/bin/claude
+cre       MISSING
+foundryup MISSING
+
+rustc:  rustc 1.98.1 (48a229cea 2026-09-01)
+cargo:  cargo 1.98.1 (797e8a9bc 2026-08-05)
+toolchain: stable-x86_64-unknown-linux-gnu (default)
+node:   v26.7.0
+pnpm:   11.28.4
+docker: Docker version 29.8.1, build 4a63305d74
+docker daemon: DOWN
+jq:     jq-1.8.2
+python: Python 3.14.7
+
+/dev/sda3        443G   136G  307G  31% /

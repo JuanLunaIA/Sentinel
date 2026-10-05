@@ -1,0 +1,32 @@
+== sentinel verify-facts  2026-10-05T21:38:15Z ==
+-- toolchain --
+rustc: rustc 1.98.1 (48a229cea 2026-09-01)
+cargo: cargo 1.98.1 (797e8a9bc 2026-08-05)
+cast:  cast Version: 1.8.5
+cre:   present at /home/luna/.local/bin/cre
+
+-- perpl contexts --
+PASS  mainnet context chain_id=143
+PASS  testnet context chain_id=10143
+PASS  mainnet market SOL=31 present
+PASS  testnet collateral token 0xa901..22dc
+PASS  mainnet exchange instance address
+
+-- monad rpc --
+PASS  monad mainnet eth_chainId=0x8f
+PASS  monad testnet eth_chainId=0x279f
+
+-- nansen x402 --
+PASS  nansen netflow unpaid -> HTTP 402
+PASS  nansen 402 offers Monad rail (eip155:143)
+PASS  nansen Monad USDC asset address present
+
+-- envio --
+envio: envio 3.12.1
+
+-- vendor provenance --
+api-docs: 25ab6e2c75c8f84d0550da8c3be30af49ad631f2
+dex-sdk: 01b9910761755b0a0d9c710c1ede62ab937daa7d
+dex-sdk-examples: c2a30986ac5f323faf3db30d6a8b59972647ca66
+
+== SUMMARY: 10 passed, 0 failed ==

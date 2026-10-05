@@ -1,0 +1,92 @@
+== P01 batch2 2026-10-05T18:30:35-03:00 ==
+-- sdk check @1.85 status --
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc 1.85.0
+
+exit=101
+-- rustup 1.97 status --
+info: self-update is disabled for this build of rustup
+info: any updates to rustup will need to be fetched with your system package manager
+exit=0
+
+-- nansen accepts rails (full) --
+[{"net":"eip155:8453","asset":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","amt":"50000","x":"USD Coin"},{"net":"eip155:196","asset":"0x779Ded0c9e1022225f8E0630b35a9b54bE713736","amt":"50000","x":"USD₮0"},{"net":"eip155:56","asset":"0xcE24439F2D9C6a2289F741120FE202248B666666","amt":"50000000000000000","x":"United Stables"},{"net":"eip155:56","asset":"0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d","amt":"50000000000000000","x":"World Liberty Financial USD"},{"net":"eip155:56","asset":"0x55d398326f99059fF775485246999027B3197955","amt":"50000000000000000","x":"Tether USD"},{"net":"eip155:56","asset":"0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d","amt":"50000000000000000","x":"USD Coin"},{"net":"eip155:143","asset":"0x754704Bc059F8C67012fEd69BC8A327a5aafb603","amt":"50000","x":"USDC"},{"net":"solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp","asset":"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v","amt":"50000","x":null}]
+-- accepts count --
+8
+-- dummy X-Payer-Address probe (diff vs base) --
+HTTP/2 402 
+{"v":2,"cnt":8,"nets":["eip155:8453","eip155:196","eip155:56","eip155:56","eip155:56","eip155:56","eip155:143","solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"]}
+
+
+-- envio init help --
+(node:22012) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Quick start — run with no arguments:
+
+  pnpx envio init
+
+Guided step-by-step for humans and AI agents. Reach for the subcommands below only when you already know exactly what you want.
+
+
+Create a new indexer
+
+Usage: envio init [OPTIONS] [COMMAND]
+
+Commands:
+  contract-import  [Advanced] Initialize Evm indexer by importing config from a contract for a given chain
+  template         [Advanced] Initialize Evm indexer from an example template
+  svm              Initialization option for creating Svm indexer
+  fuel             Initialization option for creating Fuel indexer
+  help             Print this message or the help of the given subcommand(s)
+
+Options:
+  -n, --name <NAME>
+          The name of your project
+
+  -l, --language <LANGUAGE>
+          The language used to write handlers
+          
+          [possible values: typescript, rescript]
+
+      --package-manager <PACKAGE_MANAGER>
+          The package manager used for `install` and post-init build steps (default: pnpm)
+          
+          [possible values: pnpm, npm, yarn, bun]
+
+      --api-token <API_TOKEN>
+          The Envio API token to be initialized in your templates .env file. Falls back to the `ENVIO_API_TOKEN` environment variable. Create one at https://envio.dev/app/api-tokens
+          
+          [env: ENVIO_API_TOKEN]
+
+  -d, --directory <DIRECTORY>
+          The directory of the project. Defaults to current dir ("./")
+
+      --config <CONFIG>
+          The config file path, resolved relative to the project directory. It can also be set via the `ENVIO_CONFIG` environment variable
+          
+
+-- SDK auth/api coverage grep (files) --
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/cli/src/order.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/cli/src/lib.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/cli/src/args.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/cli/tests/order.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/types/request.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/lib.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/exec.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/tests/order_submit.rs
+-- SDK manifests ed25519? --
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/Cargo.toml:16:  "reqwest",
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/Cargo.toml:17:  "reqwest-rustls-tls",
+-- SDK README topic grep --
+33:* [perpl-sdk](./crates/sdk/README.md): SDK types for building and maintaining in-memory cache of the exchange state, along with order posting helpers.
+34:* [perpl-cli](./crates/cli/README.md): CLI for reading and tracing exchange state and events, and for placing, cancelling and changing orders.
+
+-- perpl market object sample (mainnet ETH id20) --
+{"ver":289,"id":20,"instance_id":1,"perpetual_id":20,"symbol":"ETH","name":"ETH","size_units":"ETH","icon":"","funding_interval_sec":2580,"funding_interval_blocks":8571,"order_ttl_blocks":20,"order_retry_blocks":22,"order_max_market_slippage_bps":100,"order_max_neg_pnl_collat_bps":300,"config":{"at":{"b":110689387,"t":1791184332000},"is_open":true,"price_decimals":2,"size_decimals":3,"min_posting_amount":"0","min_settle_amount":"0","funding_sum_scaling_exp":0,"initial_margin":1200,"maintenance_margin":2000,"maker_fee":45,"taker_fee":345,"maker_fees":[45,25,15,0,0,0,0,0],"taker_fees":[345,300,250,210,175,150,125,0],"recycle_fee":"0","contract_version":[1,7,5]},"state":{"at":{"b":110858404,"t":1791235373000},"orl":271373,"mrk":271219,"lst":271136,"mid":271129,"bid":271123,"ask":271136,"prv":270359,"dv":647187,"dva":"1755901267250","oi":189689,"tvl":"222868273958"},"funding":{"at":{"b":110857314,"t":1791235044000},"feb":110857314,"rate":-40,"idx":271358,"ppl":-10,"sum":1472,"div":1}}
+
+-- perpl market object sample (testnet ETH id32) --
+{"ver":270,"id":32,"instance_id":12,"perpetual_id":32,"symbol":"ETH","name":"ETH Perp","size_units":"ETH","icon":"","funding_interval_sec":2580,"funding_interval_blocks":8571,"order_ttl_blocks":20,"order_retry_blocks":22,"order_max_market_slippage_bps":1000,"order_max_neg_pnl_collat_bps":1000,"config":{"at":{"b":68413211,"t":1791206884000},"is_open":true,"price_decimals":2,"size_decimals":3,"min_posting_amount":"0","min_settle_amount":"0","funding_sum_scaling_exp":0,"initial_margin":1200,"maintenance_margin":2000,"maker_fee":45,"taker_fee":345,"maker_fees":[45,25,15,0,0,0,0,0],"taker_fees":[345,300,250,210,175,150,125,0],"recycle_fee":"100000","contract_version":[1,7,5]},"state":{"at":{"b":68507460,"t":1791235369000},"orl":271371,"mrk":271370,"lst":271438,"mid":271401,"bid":271386,"ask":271416,"prv":270329,"dv":3849321,"dva":"10451069575480","oi":238883,"tvl":"132421635870"},"funding":{"at":{"b":68499432,"t":1791232933000},"feb":68499432,"rate":40,"idx":271469,"ppl":10,"sum":32139,"div":1}}
+
+-- tokens (testnet) --
+[{"ver":270,"id":1,"address":"0xa9012a055bd4e0edff8ce09f960291c09d5322dc","symbol":"AUSD","name":"AUSD","decimals":6,"display_precision":2,"usd_index":"<index_name>"}]
+

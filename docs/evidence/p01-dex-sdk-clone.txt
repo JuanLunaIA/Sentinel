@@ -1,0 +1,19 @@
+== dex-sdk clone 2026-10-05T18:24:56-03:00 ==
+Clonando en 'dex-sdk'...
+-- top level --
+Cargo.lock
+Cargo.toml
+clippy.toml
+CONTRIBUTING.md
+crates
+LICENSE
+makefile
+README.md
+rustfmt.toml
+rust-toolchain.toml
+-- rust-toolchain files --
+dex-sdk/rust-toolchain.toml
+-- cargo manifests --
+dex-sdk/Cargo.toml
+dex-sdk/crates/cli/Cargo.toml
+dex-sdk/crates/sdk/Cargo.toml

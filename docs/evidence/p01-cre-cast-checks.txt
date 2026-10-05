@@ -1,0 +1,39 @@
+== P01 batch7 2026-10-05T18:35:06-03:00 ==
+-- CRE checksums file (first 25 lines) --
+cre_v1.37.0_linux_amd64.tar.gz: 1e660e955be607bca3ae683d5f264bb354252f6af657f0d86e56108438536503
+cre_v1.37.0_linux_arm64.tar.gz: 8454d872386a1633e9f1792d593b13b3f1dd7f8101bc09cbb6f67069edcb5dfa
+cre_v1.37.0_linux_amd64.tar.gz (ldd-2.35): 3c8a73540ed78210ab3ed23d792d8a6bfb4e56deb49bc77d61dfbdd54a147155
+cre_v1.37.0_linux_arm64.tar.gz (ldd-2.35): 49c48b60a737ada370fb10213bcb1c364bce71508b4e2557512956a3b4289280
+cre_v1.37.0_darwin_amd64.zip: 6f1aa58a375cb8286f253ce867a1fae5d2b9aa0070e0960de4405fdf899d2cfc
+cre_v1.37.0_darwin_arm64.zip: b72d94ca7b3a6a88dbb68205c6a00c2edfb107814fb3dab1c15264aebdb0a7a0
+cre_v1.37.0_windows_amd64.zip: 3ba3ac4c3940bfaf6d4f8e5b039e3b3a8478104ae210b89c3b7a7ba4a3b69b47
+install.sh: 8f1b366c4027ed2dc4cc0fc37435d0b470623a48468fa57c792aa8dfb8b47ef8
+install.ps1: 91244fee56ef57715a68d3757aae7e36575e1fb3ea8379bcc4ef8056bbbe96d7
+
+checksums entry: <none>
+actual sha256:   1e660e955be607bca3ae683d5f264bb354252f6af657f0d86e56108438536503
+
+-- CRE binary install --
+installed ~/.local/bin/cre
+Usage:
+  cre [flags]
+  cre [command]
+
+
+-- CRE networks: grep raw mdx for monad/chain headings --
+24:## Version Requirements
+31:## Mainnets
+49:| Monad               | v1.29.0+ | v1.17.0+ | v1.18.0+ |
+60:## Testnets
+82:| Monad Testnet               | v1.30.0+ | v1.19.0+ | v1.19.0+ |
+98:## Forwarder Addresses
+106:## Solana Networks
+
+-- on-chain collateral checks via cast --
+mainnet AUSD 0x0000..9012a symbol(): "AUSD"
+testnet live 0xa9012a..22dc symbol(): "AUSD"
+testnet factsheet 0xdf5b..c027 code: 0x6080806040526004361015610012575f80fd5b5f3560e01c90816306fdde031461056957508063095ea7b3146105435780
+
+-- sdk @1.97 status --
+    Checking itertools v0.15.0
+    Checking colored v3.1.1

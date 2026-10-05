@@ -1,0 +1,90 @@
+== P01 batch5 2026-10-05T18:33:11-03:00 ==
+-- sdk @1.97 status --
+   Compiling darling_macro v0.23.0
+    Checking serde_with v3.16.1
+
+-- crates.io recheck --
+perpl-sdk on crates.io: HTTP 403
+
+-- SDK liquidation math --
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/event.rs:260:        /// close fill reports zero there. Liquidation, ADL,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/event.rs:262:        /// buy-to-liquidate stay uncharged at any version.
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/event.rs:269:        /// liquidation fills and on contracts without builder attribution, and
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/event.rs:491:    /// Position liquidated.
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/event.rs:492:    Liquidated {
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/event.rs:500:        #[debug("{liquidated_size}")]
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/event.rs:501:        liquidated_size: UD64,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:133:    /// Liquidation price of the position.
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:134:    pub fn liquidation_price(&self) -> UD64 {
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:136:        let liquidation_price = self.entry_price.to_signed()
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:143:        liquidation_price.max(D64::ZERO).unsigned_abs()
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:322:            format!("{:.6}", self.liquidation_price()).into(),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:645:    fn test_liquidation_price() {
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:662:        assert_eq!(pos.liquidation_price(), udec64!(95));
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:665:        assert_eq!(pos.liquidation_price(), udec64!(100));
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:679:        assert_eq!(pos.liquidation_price(), udec64!(105));
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:682:        assert_eq!(pos.liquidation_price(), udec64!(100));
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:727:    fn test_liquidation_price_after_funding_received() {
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:728:        // Complements test_liquidation_price, which only drives premium NEGATIVE
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:730:        // to +50 and moving the liquidation price AWAY from entry — long 95 ->
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:731:        // 90, short 105 -> 110. Setup mirrors test_liquidation_price (entry
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:750:        assert_eq!(pos.liquidation_price(), udec64!(95)); // 100 + (50-100-0)/10
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:753:        assert_eq!(pos.liquidation_price(), udec64!(90)); // 100 + (50-100-50)/10
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:768:        assert_eq!(pos.liquidation_price(), udec64!(105)); // 100 - (50-100-0)/10
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/position.rs:771:        assert_eq!(pos.liquidation_price(), udec64!(110)); // 100 - (50-100-50)/10
+
+-- SDK leverage converter --
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:17:    pub leverage_converter: num::Converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:89:                self.leverage_converter.to_unsigned(maintenance_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:244:                self.leverage_converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:268:                    self.leverage_converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:298:                            self.leverage_converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:340:                            self.leverage_converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:472:        let leverage_converter = num::Converter::new(2); // Margin and leverage are in 100th
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:492:                leverage_converter.to_unsigned(initial_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:493:                leverage_converter.to_unsigned(maintenance_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:511:                    leverage_converter.to_unsigned(initial_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:512:                    leverage_converter.to_unsigned(maintenance_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:538:            leverage_converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/order.rs:79:        leverage_converter: num::Converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/order.rs:100:            leverage: leverage_converter.from_u64(order.leverageHdths as u64),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/order.rs:123:        leverage_converter: num::Converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/order.rs:137:            leverage: leverage_converter.from_unsigned(ctx.leverage),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:46:    leverage_converter: num::Converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:105:        let leverage_converter = num::Converter::new(LEVERAGE_SCALE);
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:123:            leverage_converter,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:131:            initial_margin: leverage_converter.from_unsigned(initial_margin),
+
+-- CRE releases (latest) --
+v1.37.0
+checksums.txt, cre_darwin_amd64.zip, cre_darwin_arm64.zip, cre_linux_amd64.sig, cre_linux_amd64.tar.gz, cre_linux_amd64_ldd2-35.sig, cre_linux_amd64_ldd2-35.tar.gz, cre_linux_arm64.sig, cre_linux_arm64.tar.gz, cre_linux_arm64_ldd2-35.sig, cre_linux_arm64_ldd2-35.tar.gz, cre_windows_amd64.zip, install.ps1, install.sh
+
+
+-- CRE docs: src/content/cre listing --
+account
+capabilities
+code-snippets
+concepts
+demos
+getting-started
+guides
+index.mdx
+key-terms.mdx
+llms-full-go.txt
+llms-full-ts.txt
+llms.txt
+network-upgrades.mdx
+organization
+overview.mdx
+privacy
+reference
+release-notes.mdx
+service-quotas.mdx
+support-feedback.mdx
+supported-networks-go.mdx
+supported-networks-ts.mdx
+templates
+
+-- foundry on PATH? --
+cast not on PATH yet (use $HOME/.foundry/bin/cast)
+(no rc file mentions foundry yet)

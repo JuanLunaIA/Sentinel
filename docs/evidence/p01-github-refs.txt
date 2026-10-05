@@ -1,0 +1,42 @@
+== P00 github/refs recon 2026-10-05T18:21:01-03:00 ==
+-- gh auth --
+github.com
+  ✓ Logged in to github.com account JuanLunaIA (/home/luna/.config/gh/hosts.yml)
+  - Active account: true
+  - Git operations protocol: https
+  - Token: gho_************************************
+  - Token scopes: 'gist', 'read:org', 'read:packages', 'repo', 'workflow'
+-- PerplFoundation repos --
+PerplFoundation/dex-sdk
+PerplFoundation/dex-sdk-examples
+PerplFoundation/delegated-account
+PerplFoundation/api-docs
+PerplFoundation/explainers
+PerplFoundation/perpl-docs
+-- clone api-docs --
+Clonando en 'perpl-api-docs'...
+-- clone contents --
+total 208
+drwxr-xr-x 4 luna users  4096 oct  5 18:21 .
+drwxr-xr-x 3 luna users  4096 oct  5 18:21 ..
+-rw-r--r-- 1 luna users  5711 oct  5 18:21 authentication.md
+-rw-r--r-- 1 luna users  1979 oct  5 18:21 .env.example
+drwxr-xr-x 6 luna users  4096 oct  5 18:21 examples
+-rw-r--r-- 1 luna users 26619 oct  5 18:21 examples.md
+drwxr-xr-x 7 luna users  4096 oct  5 18:21 .git
+-rw-r--r-- 1 luna users   283 oct  5 18:21 .gitignore
+-rw-r--r-- 1 luna users 18132 oct  5 18:21 integrations.md
+-rw-r--r-- 1 luna users 25078 oct  5 18:21 README.md
+-rw-r--r-- 1 luna users 30794 oct  5 18:21 rest-endpoints.md
+-rw-r--r-- 1 luna users 30439 oct  5 18:21 types.md
+-rw-r--r-- 1 luna users 35145 oct  5 18:21 websocket.md
+-- file sizes --
+    144 perpl-api-docs/authentication.md
+      0 perpl-api-docs/examples
+    895 perpl-api-docs/examples.md
+    440 perpl-api-docs/integrations.md
+    568 perpl-api-docs/README.md
+    906 perpl-api-docs/rest-endpoints.md
+    983 perpl-api-docs/types.md
+    878 perpl-api-docs/websocket.md
+   4814 total

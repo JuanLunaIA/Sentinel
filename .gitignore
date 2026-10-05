@@ -1,0 +1,39 @@
+# --- Rust ---
+/target/
+**/*.rs.bk
+Cargo.lock.bak
+
+# --- Node / pnpm ---
+node_modules/
+**/node_modules/
+.pnpm-store/
+indexer/generated/
+workflow-cre/dist/
+workflow-cre/target/
+
+# --- Env & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Logs & data ---
+/logs/
+*.log
+/data/
+
+# --- Vendor (cloned reference repos; re-clone via scripts/verify-facts.sh) ---
+/vendor/
+
+# --- Build artifacts ---
+/dist/
+/build/
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Misc tooling ---
+.envio/

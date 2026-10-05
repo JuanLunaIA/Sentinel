@@ -1,0 +1,97 @@
+== P01 batch3 2026-10-05T18:31:28-03:00 ==
+-- sdk185 failure cause --
+303:error: rustc 1.85.0 is not supported by the following packages:
+304:  alloy@2.5.0 requires rustc 1.94.1
+305:  alloy-consensus@2.5.0 requires rustc 1.94.1
+306:  alloy-consensus-any@2.5.0 requires rustc 1.94.1
+307:  alloy-contract@2.5.0 requires rustc 1.94.1
+308:  alloy-eip2930@0.2.3 requires rustc 1.88
+309:  alloy-eip7702@0.6.3 requires rustc 1.88
+310:  alloy-eip7928@0.4.11 requires rustc 1.90
+311:  alloy-eip8141@0.1.1 requires rustc 1.90
+312:  alloy-eips@2.5.0 requires rustc 1.94.1
+313:  alloy-genesis@2.5.0 requires rustc 1.94.1
+314:  alloy-json-rpc@2.5.0 requires rustc 1.94.1
+315:  alloy-network@2.5.0 requires rustc 1.94.1
+316:  alloy-network-primitives@2.5.0 requires rustc 1.94.1
+317:  alloy-node-bindings@2.5.0 requires rustc 1.94.1
+318:  alloy-provider@2.5.0 requires rustc 1.94.1
+319:  alloy-rpc-client@2.5.0 requires rustc 1.94.1
+320:  alloy-rpc-types@2.5.0 requires rustc 1.94.1
+321:  alloy-rpc-types-anvil@2.5.0 requires rustc 1.94.1
+322:  alloy-rpc-types-any@2.5.0 requires rustc 1.94.1
+
+-- nansen wellknown: promo/monad mentions --
+      1 Monad
+-- wellknown size --
+4194 /home/luna/.hermes/cache/scratch/p00/evidence/nansen-wellknown.body
+
+-- vendor provenance --
+api-docs: 25ab6e2 2026-09-25
+dex-sdk:  01b9910 2026-09-23
+examples: c2a3098 2026-01-13
+
+-- dex-sdk-examples tree --
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/Cargo.toml
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/.env
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/market-making
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/market-making/Cargo.toml
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/market-making/src
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/market-making/src/error.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/market-making/src/bin
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/market-making/src/strategies
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/market-making/src/lib.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/utilities
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/utilities/Cargo.toml
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/utilities/src
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/utilities/src/print-trades.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/utilities/src/print-book.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/utilities/src/test-exchange.rs
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/Cargo.lock
+/home/luna/.hermes/Sentinel/vendor/dex-sdk-examples/README.md
+
+-- SDK gateway-http usage? --
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/cli/src/args.rs:12:pub(crate) const DEFAULT_MAINNET_RPC_PROVIDER: &str = "https://rpc.monad.xyz";
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/cli/src/args.rs:13:pub(crate) const DEFAULT_TESTNET_RPC_PROVIDER: &str = "https://testnet-rpc.monad.xyz";
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/cli/src/args.rs:22:    /// RPC endpoint to connect to [default: https://rpc.monad.xyz for mainnet, https://testnet-rpc.monad.xyz for testnet]
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:213:        // Deploy multicall3 contract (see https://github.com/mds1/multicall3?tab=readme-ov-file#new-deployments)
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/stream/trade.rs:626:            .connect("https://testnet-rpc.monad.xyz")
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/stream/raw.rs:83:                // (eg block 68747089 from https://rpc-mainnet.monadinfra.com)
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/stream/raw.rs:118:            .connect("https://testnet-rpc.monad.xyz")
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/lib.rs:51://! [`Perpl`]: https://perpl.xyz
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/lib.rs:52://! [`execution events`]: https://docs.monad.xyz/execution-events/
+
+-- SDK exec.rs public api --
+29:pub fn orders_call<P: Provider>(
+
+-- SDK request types --
+38:pub enum RequestType {
+50:pub struct OrderRequest {
+84:    pub fn new(
+128:    pub fn with_builder_attribution(mut self, builder: BuilderAttribution) -> Self {
+134:    pub fn builder_attribution(&self) -> Option<BuilderAttribution> { self.builder }
+142:    pub fn prepare(&self, exchange: &state::Exchange) -> OrderDesc {
+167:    pub fn prepare_v2(
+200:    pub fn to_order_extension(&self) -> Result<Bytes, OrderExtensionError> {
+260:    pub fn from_side(side: OrderSide, reduce_only: bool) -> Self {
+274:    pub fn try_side(&self) -> Option<OrderSide> {
+319:pub enum OrderField {
+339:pub enum OrderRequestBuilderError {
+401:    pub fn builder(
+417:    pub fn cancel(perp_id: PerpetualId, order_id: OrderId) -> OrderRequestBuilder {
+430:    pub fn change(perp_id: PerpetualId, order_id: OrderId) -> OrderRequestBuilder {
+435:    pub fn perp_id(&self) -> PerpetualId { self.perp_id }
+438:    pub fn request_id(&self) -> RequestId { self.request_id }
+442:    pub fn request_type(&self) -> RequestType { self.r#type }
+445:    pub fn price(&self) -> UD64 { self.price }
+448:    pub fn size(&self) -> UD64 { self.size }
+453:    pub fn leverage(&self) -> UD64 { self.leverage }
+459:    pub fn order_id(&self) -> Option<OrderId> { self.order_id }
+463:    pub fn last_exec_block(&self) -> Option<u64> { self.last_exec_block }
+468:    pub fn expiry_block(&self) -> Option<u64> { self.expiry_block }
+472:    pub fn post_only(&self) -> bool { self.post_only }
+
+-- SDK crate READMEs --
+-rw-r--r-- 1 luna users 12134 oct  5 18:24 /home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/cli/README.md
+-rw-r--r-- 1 luna users  8143 oct  5 18:24 /home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/README.md

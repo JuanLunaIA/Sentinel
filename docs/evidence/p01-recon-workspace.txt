@@ -1,0 +1,111 @@
+== P00 workspace recon 2026-10-05T18:20:27-03:00 ==
+-- cwd --
+/home/luna/.hermes/Sentinel
+total 24
+drwxr-xr-x  3 luna users  4096 oct  5 18:16 .
+drwx------ 35 luna users  4096 oct  5 18:16 ..
+drwxr-xr-x  7 luna users  4096 oct  5 18:16 .git
+-rw-r--r--  1 luna users 11357 oct  5 18:16 LICENSE
+-- git toplevel --
+/home/luna/.hermes/Sentinel
+-- /home/luna top --
+aegisweb
+awscliv2.zip
+contexto.md
+core
+custody
+custody-anchor-pubkey.asc
+datos.html.save
+de-audit
+Desktop
+directiva_ue_2014_65_mifid_ii.md
+Documents
+Downloads
+gaming-net-optimize.sh
+go
+idea_01_aegis_latent_core.md
+idea_02_aegis_latent_core.md
+index.html
+instalar-escritorio.sh
+investigacion_aegis_latent_core_2609_19969.md
+keygit
+ledger
+mi-proyecto-plugin
+models
+Music
+NEXUS_SETUP_COMPLETE.md
+paginaaegis.html
+Pictures
+plan_comercializacion_aegis_latent_core.md
+Projects
+prompt-optimizacion-total.txt
+Public
+randread.0.0
+randwrite.0.0
+redteam-blueprint
+regla_final_ia_salud_2022.md
+regla_hipaa_salvaguardas_tecnicas_45_cfr_164_312.md
+reglamento_ue_2024_1689_inteligencia_artificial.md
+res
+resumen.txt
+sentinel2.md
+sentinel.md
+skills
+src
+sudoers-drafts
+Templates
+venv
+Videos
+-- project candidates (maxdepth 3) --
+[sentinel]
+/home/luna/sentinel.md
+/home/luna/.hermes/Sentinel
+/home/luna/sentinel2.md
+[perpl]
+[monad]
+/home/luna/Downloads/Monad Hackathon _ Metropolis.pdf
+[metropolis]
+/home/luna/Downloads/metropolis-juan-luna.jpg
+/home/luna/Downloads/Monad Hackathon _ Metropolis.pdf
+-- scratch dir --
+total 192
+drwx------  5 luna users 131072 oct  5 18:20 .
+drwxr-xr-x 12 luna users   4096 oct  5 18:16 ..
+drwxr-xr-x  4 luna users   4096 oct  5 17:49 deepdev-2026-10-05
+-rw-r--r--  1 root root    2623 oct  5 17:35 ESTADO.md
+-rw-------  1 luna users   6243 oct  5 18:20 hermes-snap-f49d2e589d81.sh
+-rw-r--r--  1 root root   13831 oct  5 17:35 INFORME.md
+-rw-r--r--  1 luna users      0 oct  5 18:10 .last_prune
+drwxr-xr-x  3 luna users   4096 oct  5 17:10 node-compile-cache
+drwxr-xr-x  3 luna users   4096 oct  5 18:20 p00
+-rw-r--r--  1 luna users    571 oct  5 17:46 probe_lsp2.py
+-rw-r--r--  1 luna users    532 oct  5 17:45 probe_lsp.py
+-rwxr-xr-x  1 luna users    522 oct  5 17:47 run_probe3.sh
+-rw-r--r--  1 luna users    115 oct  5 16:18 scope-test.json
+-rw-rw-rw-  1 luna users      0 oct  5 16:35 uv-2e5cfaf08665e25a.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:36 uv-8049545d01592424.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:39 uv-f75eccdbce359d86.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:39 uv-setuptools-02ede4f40709a7c9.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:39 uv-setuptools-0a104c5a0dd53857.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:35 uv-setuptools-2e5cfaf08665e25a.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:39 uv-setuptools-48e8e9b1d89504ff.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:36 uv-setuptools-8049545d01592424.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:39 uv-setuptools-ae5ad1a24cbac78c.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:39 uv-setuptools-b57688465ff99c52.lock
+-rw-rw-rw-  1 luna users      0 oct  5 16:39 uv-setuptools-f75eccdbce359d86.lock
+-- superpowers skills installed --
+brainstorming
+diagnosing-superpowers
+dispatching-parallel-agents
+executing-plans
+finishing-a-development-branch
+receiving-code-review
+requesting-code-review
+subagent-driven-development
+systematic-debugging
+test-driven-development
+using-git-worktrees
+using-superpowers
+verification-before-completion
+writing-plans
+writing-skills

@@ -1,0 +1,40 @@
+== P00 connectivity + fact-sheet spot checks 2026-10-05T18:20:49-03:00 ==
+https://app.perpl.xyz/api/v1/pub/context                                       HTTP 200  0.174385s
+https://testnet.perpl.xyz/api/v1/pub/context                                   HTTP 200  1.272528s
+https://rpc.monad.xyz                                                          HTTP 400  0.541028s
+https://testnet-rpc.monad.xyz                                                  HTTP 400  0.546186s
+https://dashscope.aliyuncs.com/compatible-mode/v1/models                       HTTP 401  1.306751s
+https://dashscope-intl.aliyuncs.com/compatible-mode/v1/models                  HTTP 401  1.757146s
+https://api.moonshot.ai/v1/models                                              HTTP 401  0.486293s
+https://docs.nansen.ai/getting-started/agentic-payments/x402-payments          HTTP 200  0.484537s
+https://github.com                                                             HTTP 200  0.418065s
+
+-- perpl mainnet /v1/pub/context (head) --
+{"chain":{"ver":289,"chain_id":143,"name":"Monad","block_explorer_urls":["https://monadscan.com/"],"gas":{"at":{"b":110857953,"t":1791235236000},"h":110857953,"max":"153000000000","p95":"153000000000","p50":"103000000000","min":"0","base":"100000000000"}},"instances":[{"ver":289,"id":1,"address":"0x34b6552d57a35a1d042ccae1951bd1c370112a6f","collateral_token_id":1,"min_account_open_amount":"10000000","min_deposit_amou
+-- perpl testnet /v1/pub/context (head) --
+{"chain":{"ver":270,"chain_id":10143,"name":"Monad Testnet","block_explorer_urls":["https://testnet.monadscan.com/"],"gas":{"at":{"b":68507038,"t":1791235239000},"h":68507038,"max":"0","p95":"0","p50":"0","min":"0","base":"100000000000"}},"instances":[{"ver":270,"id":12,"address":"0x1964c32f0be608e7d29302aff5e61268e72080cc","collateral_token_id":1,"min_account_open_amount":"100000000","min_deposit_amount":"10000000",curl: (23) Failure writing output to destination, passed 1369 returned 640
+
+-- monad mainnet eth_chainId (expect 0x8f) --
+{"jsonrpc":"2.0","id":1,"result":"0x8f"}
+-- monad testnet eth_chainId (expect 0x279f) --
+{"jsonrpc":"2.0","id":1,"result":"0x279f"}
+-- testnet exchange 0x1964c32f...80cc eth_getCode --
+{"jsonrpc":"2.0","result":"0x60806040523615605c575f8073ffffffffffffffffffffffffffffffffffffffff7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5416368280378136915af43d5f803e156058573d5ff35b3d5ffd5b5f807
+-- mainnet exchange 0x34B6552d...12a6F eth_getCode --
+{"jsonrpc":"2.0","result":"0x60806040523615605c575f8073ffffffffffffffffffffffffffffffffffffffff7f360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc5416368280378136915af43d5f803e156058573d5ff35b3d5ffd5b5f807
+-- nansen unpaid POST /api/v1/smart-money/netflow (expect 402 + terms) --
+HTTP/2 402 
+date: Mon, 05 Oct 2026 21:20:49 GMT
+content-type: application/json
+content-length: 4621
+x-ratelimit-limit-second: 5
+x-ratelimit-limit-minute: 60
+x-ratelimit-remaining-second: 4
+x-ratelimit-remaining-minute: 59
+ratelimit-limit: 5
+ratelimit-remaining: 4
+ratelimit-reset: 1
+x-ratelimit-remaining-credit-fails: 10
+server: cloudflare
+payment-required: eyJ4NDAyVmVyc2lvbiI6MiwiZXJyb3IiOiJQYXltZW50IHJlcXVpcmVkIiwicmVzb3VyY2UiOnsidXJsIjoiaHR0cHM6Ly9hcGkubmFuc2VuLmFpL2FwaS92MS9zbWFydC1tb25leS9uZXRmbG93IiwiZGVzY3JpcHRpb24iOiJHZXQgU21hcnQgTW9uZXkgTmV0ZmxvdyBEYXRhIiwibWltZVR5cGUiOiIifSwiYWNjZXB0cyI6W3sic2NoZW1lIjoiZXhhY3QiLCJuZXR3b3JrIjoiZWlwMTU1Ojg0NTMiLCJhc3NldCI6IjB4ODMzNTg5ZkNENmVEYjZFMDhmNGM3QzMyRDRmNzFiNTRiZEEwMjkxMyIsImFtb3VudCI6IjUwMDAwIiwicGF5VG8iOiIweDkzMDUzZjFlN0E1ZUZFRGE1MzJGZTY5Q2JiRTQzY0JFYzNBMEYxM2YiLCJtYXhUaW1lb3V0U2Vjb25kcyI6MzAwLCJleHRyYSI6eyJuYW1lIjoiVVNEIENvcurl: (23) Failure writing output to destination, passed 1360 returned 338
+

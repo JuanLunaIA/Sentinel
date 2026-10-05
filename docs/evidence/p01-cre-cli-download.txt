@@ -1,0 +1,20 @@
+== P01 batch6 2026-10-05T18:33:48-03:00 ==
+-- crates.io retry with UA --
+HTTP 200
+-- LEVERAGE_SCALE --
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:8:const LEVERAGE_SCALE: u8 = 2;
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:105:        let leverage_converter = num::Converter::new(LEVERAGE_SCALE);
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:180:        let leverage_converter = num::Converter::new(LEVERAGE_SCALE);
+
+-- sdk @1.97 status --
+    Checking quanta v0.12.6
+    Checking ppv-lite86 v0.2.21
+
+-- foundry symlinks to ~/.local/bin --
+/home/luna/.local/bin/cast
+cast Version: 1.8.5
+
+-- CRE CLI v1.37.0 download + verify --
+SHA256 VERIFY: expected= actual=1e660e955be607bca3ae683d5f264bb354252f6af657f0d86e56108438536503
+cre-x/cre_v1.37.0_linux_amd64
+cre binary not found in archive

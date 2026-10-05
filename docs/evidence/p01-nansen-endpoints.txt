@@ -1,0 +1,49 @@
+== P01 batch4 2026-10-05T18:32:14-03:00 ==
+-- sdk check @1.97 --
+   Compiling zerofrom-derive v0.1.6
+    Checking tracing v0.1.44
+   Compiling winnow v1.0.4
+-- foundry install --
+foundryup: foundryup is up to date.
+foundryup exit=0
+cast Version: 1.8.5
+Commit SHA: 51a52c59cffd940f76eddd0b4bb1791aa4b5ac7f
+Build Timestamp: 2026-10-05T17:18:54.332175693Z (1791220734)
+Build Profile: dist
+total 6696
+drwxr-xr-x 2 luna users    4096 oct  5 18:31 .
+drwxr-xr-x 5 luna users    4096 oct  5 18:31 ..
+lrwxrwxrwx 1 luna users      60 oct  5 18:31 anvil -> /home/luna/.foundry/versions/foundry-rs/foundry/v1.8.5/anvil
+lrwxrwxrwx 1 luna users      59 oct  5 18:31 cast -> /home/luna/.foundry/versions/foundry-rs/foundry/v1.8.5/cast
+lrwxrwxrwx 1 luna users      61 oct  5 18:31 chisel -> /home/luna/.foundry/versions/foundry-rs/foundry/v1.8.5/chisel
+lrwxrwxrwx 1 luna users      60 oct  5 18:31 forge -> /home/luna/.foundry/versions/foundry-rs/foundry/v1.8.5/forge
+-rwxr-xr-x 1 luna users 6830864 oct  5 18:31 foundryup
+
+-- maintenance margin semantics in SDK --
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:81:    pub async fn set_maintenance_margin(
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:83:        maintenance_margin: UD64,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/perp.rs:89:                self.leverage_converter.to_unsigned(maintenance_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:469:        maintenance_margin: UD64,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:493:                leverage_converter.to_unsigned(maintenance_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/testing/mod.rs:512:                    leverage_converter.to_unsigned(maintenance_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/event.rs:512:    /// Position maintenance margin requirement updated due
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:56:    #[debug("{maintenance_margin}")]
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:57:    maintenance_margin: UD64, // SC allocates 16 bits
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:101:        maintenance_margin: U256,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:133:            maintenance_margin: leverage_converter.from_unsigned(maintenance_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:176:        maintenance_margin: U256,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:206:            maintenance_margin: leverage_converter.from_unsigned(maintenance_margin),
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:309:    /// Minimal maintenance margin fraction required to keep a position.
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:310:    pub fn maintenance_margin(&self) -> UD64 { self.maintenance_margin }
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:592:    pub(crate) fn update_maintenance_margin(
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:595:        maintenance_margin: UD64,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:597:        self.maintenance_margin = maintenance_margin;
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:712:            maintenance_margin: UD64::ZERO,
+/home/luna/.hermes/Sentinel/vendor/dex-sdk/crates/sdk/src/state/perpetual.rs:893:                format!("Margin: {} / {} (ini/mnt)", self.initial_margin, self.maintenance_margin),
+
+-- crates.io: perpl-sdk published? --
+
+-- nansen endpoint 402 probes --
+smart-money/holdings -> HTTP 402 ; accepts: ["eip155:8453","eip155:196","eip155:56","eip155:56","eip155:56","eip155:56","eip155:143","solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"]
+perp-leaderboard -> HTTP 402 ; accepts: ["eip155:8453","eip155:196","eip155:56","eip155:56","eip155:56","eip155:56","eip155:143","solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"]
+profiler/perp-positions -> HTTP 402 ; accepts: ["eip155:8453","eip155:196","eip155:56","eip155:56","eip155:56","eip155:56","eip155:143","solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"]

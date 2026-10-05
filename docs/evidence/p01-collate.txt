@@ -1,0 +1,73 @@
+== P01 collate 2026-10-05T18:36:46-03:00 ==
+-- mainnet market symbols (exact) --
+{"id":1,"symbol":"","name":"BTC"}
+{"id":10,"symbol":"","name":"MON"}
+{"id":20,"symbol":"ETH","name":"ETH"}
+{"id":31,"symbol":"SOL","name":"SOL"}
+{"id":40,"symbol":"HYPE","name":"HYPE"}
+{"id":50,"symbol":"ZEC","name":"ZEC"}
+{"id":60,"symbol":"LIT","name":"LIT"}
+{"id":70,"symbol":"VVV","name":"VVV"}
+{"id":90,"symbol":"PUMP","name":"PUMP"}
+{"id":100,"symbol":"NEAR","name":"NEAR"}
+{"id":110,"symbol":"UNI","name":"UNI"}
+-- testnet market symbols (exact) --
+{"id":16,"symbol":"BTC","name":"BTC Perp"}
+{"id":32,"symbol":"ETH","name":"ETH Perp"}
+{"id":48,"symbol":"SOL","name":"SOL Perp"}
+{"id":64,"symbol":"MON","name":"MON Perp"}
+{"id":256,"symbol":"ZEC","name":"ZEC Perp"}
+{"id":272,"symbol":"LIT","name":"LIT Perp"}
+{"id":320,"symbol":"PUMP","name":"PUMP Perp"}
+{"id":336,"symbol":"NEAR","name":"NEAR Perp"}
+-- fetch_smart_contract_info endpoints --
+4:const DEFAULT_API_URL: &str = "https://app.perpl.xyz/api";
+5:const CONTEXT_URL: &str = "/v1/pub/context";
+32:    smart_contract_address: String,
+38:async fn get_account_creation_info(api_url: &str) -> Result<AccountCreationInfo> {
+40:    let url = format!("{}{}", api_url, CONTEXT_URL);
+45:    let smart_contract_instance = exchange_context.instances.first().ok_or_else(|| anyhow!("no smart contract instance"))?;
+46:    let smart_contract_address = &smart_contract_instance.address;
+47:    let collateral_token_id = &smart_contract_instance.collateral_token_id;
+51:    let min_account_open_amount: u64 = smart_contract_instance.min_account_open_amount.as_str().parse()?;
+58:        smart_contract_address: smart_contract_address.to_string(),
+67:    let api_url = std::env::var("PERPL_API_URL").unwrap_or_else(|_| DEFAULT_API_URL.to_string());
+68:    let account_creation_info = get_account_creation_info(&api_url).await?;
+70:    println!("{:?}", account_creation_info);
+-- cre version forms --
+CRE CLI version v1.37.0
+Usage:
+  cre [flags]
+-- sdk @1.97 tail --
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5m 14s
+exit=0
+
+api-docs clone:  25ab6e2c75c8f84d0550da8c3be30af49ad631f2
+dex-sdk clone:   01b9910761755b0a0d9c710c1ede62ab937daa7d
+dex-sdk-examples clone: c2a30986ac5f323faf3db30d6a8b59972647ca66
+-- evidence dir --
+nansen-wellknown.headers
+p01-connectivity.txt
+p01-cre-cast-checks.txt
+p01-cre-cli-download.txt
+p01-cre-releases.txt
+p01-dex-sdk-clone.txt
+p01-foundry-install.log
+p01-github-refs.txt
+p01-nansen-402.headers
+p01-nansen-402.json
+p01-nansen-402-payer.headers
+p01-nansen-402-payer.json
+p01-nansen-402-perp-leaderboard.json
+p01-nansen-402-profiler-perp-positions.json
+p01-nansen-402-smart-money-holdings.json
+p01-nansen-endpoints.txt
+p01-perpl-context-mainnet.json
+p01-perpl-context-testnet.json
+p01-perpl-market-extract.txt
+p01-recon-toolchain.txt
+p01-recon-workspace.txt
+p01-sdk-coverage.txt
+p01-sdk-rust185-fail.log
+p01-sdk-rust197-check.log
+p01-vendor-provenance.txt
