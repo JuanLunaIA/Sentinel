@@ -1,4 +1,12 @@
+    Checking chrono v0.4.45
+    Checking rust_decimal v1.43.0
+    Checking rusty-fork v0.3.1
+    Checking rand_chacha v0.9.0
+    Checking proptest v1.11.0
+    Checking sentinel-core v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel-core)
+    Checking teloxide-core v0.13.0
+    Checking teloxide v0.17.0
     Checking sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 14.52s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 35.48s
 warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
 note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`

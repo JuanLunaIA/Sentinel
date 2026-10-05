@@ -18,5 +18,6 @@ Silent stubs are forbidden. Update this file in the prompt that resolves each en
 | STUB-09 | P03 live run | PENDING-KEY | `read-positions` live proof + `scripts/record-fixtures.sh` recording require a testnet API key (SETUP-MANUAL step 3); no live frames captured yet | `SPEC.md` §1/§5 | After key: run read-positions on testnet, record `tests/fixtures/perpl/session-*.jsonl`, capture evidence |
 | STUB-10 | min_size mapping | PARTIAL | Venue minimum order size is not exposed in `/v1/pub/context` (`min_posting_amount` is collateral-denominated and currently `0`); mapped as `Decimal::ZERO` | `SPEC.md` §3.3 | Revisit in P04/P05 when order sizing needs it |
 
+| STUB-11 | funding drag | SKIPPED (optional) | `funding_drag_estimate` not modeled: core `Position` carries no funding fields (`efs`/`fnd` not mapped); P04 marks it optional | SPEC-P04 §2 / P04 wave reports | Revisit if funding enriches risk (needs type extension + fixtures) |
 ## Resolved
 - (none yet)

@@ -169,3 +169,13 @@ STUB-09.)
 
 Same JSON shape as P03 (`files_created`, `tests[{cmd,exit,observed}]`,
 `open_issues`).
+
+## 11 Changelog
+
+- **v1.0.1 (parent, integration after wave-1):** `distance_to_liq_pct` gains the
+  `market: &Market` parameter. The P02-era one-argument stub could not implement
+  §3.1's derivation fallback (no access to `maintenance_margin_fraction`) — a gap
+  both wave agents independently flagged. Final semantics per §3.1: exchange
+  price when present, else derived, else `None`; `None` also when `mark <= 0`.
+  Test suites updated: no-liq + market + mark cases assert the derived distance;
+  zero-size / mark-missing / mark<=0 still assert `None`.
