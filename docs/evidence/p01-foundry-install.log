@@ -1,0 +1,59 @@
+foundryup-init: installing latest foundryup
+foundryup-init: downloading attestation...
+foundryup-init: verifying attestation...
+foundryup-init: downloading foundryup...
+foundryup-init: verifying binary integrity...
+foundryup-init: binary verified ✓
+foundryup-init: installing foundryup to /home/luna/.foundry/bin...
+foundryup-init: 
+foundryup-init: foundryup was installed successfully!
+foundryup-init: 
+foundryup-init: To get started, add foundryup to your PATH:
+foundryup-init: 
+foundryup-init:   export PATH="$PATH:/home/luna/.foundry/bin"
+foundryup-init: 
+foundryup-init: Then run 'foundryup' to install Foundry.
+installer exit=0
+
+.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx
+
+ ╔═╗ ╔═╗ ╦ ╦ ╔╗╔ ╔╦╗ ╦═╗ ╦ ╦         Portable and modular toolkit
+ ╠╣  ║ ║ ║ ║ ║║║  ║║ ╠╦╝ ╚╦╝    for Ethereum Application Development
+ ╚   ╚═╝ ╚═╝ ╝╚╝ ═╩╝ ╩╚═  ╩                 written in Rust.
+
+.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx
+
+Repo       : https://github.com/foundry-rs/foundry
+Book       : https://book.getfoundry.sh/
+Chat       : https://t.me/foundry_rs/
+Support    : https://t.me/foundry_support/
+Contribute : https://github.com/foundry-rs/foundry/blob/HEAD/CONTRIBUTING.md
+
+.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx.xOx
+
+foundryup: fetching latest release tag from foundry-rs/foundry...
+foundryup: resolved release tag: v1.8.5
+foundryup: installing foundry (version v1.8.5, tag v1.8.5)
+foundryup: checking if forge, cast, anvil, chisel, solar for v1.8.5 version are already installed
+foundryup: found attestation for v1.8.5 version, downloading attestation artifact, checking...
+foundryup: binaries not found or do not match expected hashes, downloading new binaries
+foundryup: downloading foundry_v1.8.5_linux_amd64.tar.gz
+foundryup: verifying downloaded binaries against the attestation file
+foundryup: forge verified ✓
+foundryup: cast verified ✓
+foundryup: anvil verified ✓
+foundryup: chisel verified ✓
+foundryup: solar verified ✓
+foundryup: downloading manpages
+foundryup: use - forge 1.8.5 (51a52c59cf 2026-10-05T17:18:54.332175693Z)
+foundryup: use - cast 1.8.5 (51a52c59cf 2026-10-05T17:18:54.332175693Z)
+foundryup: use - anvil 1.8.5 (51a52c59cf 2026-10-05T17:18:54.332175693Z)
+foundryup: use - chisel 1.8.5 (51a52c59cf 2026-10-05T17:18:54.332175693Z)
+foundryup: use - solar 0.2.0-dev (83214bb 2026-10-05T17:18:44.969371011Z)
+foundryup: done!
+foundryup: foundryup is up to date.
+foundryup exit=0
+cast Version: 1.8.5
+Commit SHA: 51a52c59cffd940f76eddd0b4bb1791aa4b5ac7f
+Build Timestamp: 2026-10-05T17:18:54.332175693Z (1791220734)
+Build Profile: dist

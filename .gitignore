@@ -19,6 +19,7 @@ workflow-cre/target/
 # --- Logs & data ---
 /logs/
 *.log
+!docs/evidence/*.log
 /data/
 
 # --- Vendor (cloned reference repos; re-clone via scripts/verify-facts.sh) ---
