@@ -1,0 +1,109 @@
+== cargo add: sentinel-core 2026-10-05T18:56:18-03:00 ==
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+
+== cargo add: sentinel (app) 2026-10-05T18:56:18-03:00 ==
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+  no targets specified in the manifest
+  either src/lib.rs, src/main.rs, a [lib] section, or [[bin]] section must be present
+
+== resolved manifests ==
+---- crates/sentinel-core/Cargo.toml ----
+[package]
+name = "sentinel-core"
+description = "Sentinel pure core: domain types, risk math, policy, audit chain — zero network dependencies"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+[lints]
+workspace = true
+---- crates/sentinel/Cargo.toml ----
+[package]
+name = "sentinel"
+description = "Sentinel application: perception, reasoning brain, execution, policy gate, interfaces (daemon)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+default-run = "sentinel"
+[[bin]]
+name = "sentinel"
+path = "src/main.rs"
+[lints]
+workspace = true

@@ -1,0 +1,21 @@
+[package]
+name = "sentinel-core"
+description = "Sentinel pure core: domain types, risk math, policy, audit chain — zero network dependencies"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+chrono = { version = "0.4.45", features = ["serde"] }
+hex = "0.4.3"
+rust_decimal = { version = "1.43.0", features = ["serde-with-str"] }
+rust_decimal_macros = "1.40.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+thiserror = "2.0.21"

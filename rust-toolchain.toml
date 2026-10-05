@@ -1,0 +1,6 @@
+# Track the latest stable toolchain (operator rule: always use latest versions).
+# Stable at build time: rustc 1.98.1. Newer stable is fine and expected; the
+# workspace MSRV floor lives in Cargo.toml (`rust-version`).
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]

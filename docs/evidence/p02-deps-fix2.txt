@@ -1,0 +1,62 @@
+== alloy add (corrected features) 2026-10-05T19:02:05-03:00 ==
+      Adding ruint-macro v1.2.1
+      Adding rustc-hex v2.1.0
+      Adding rustc_version v0.3.3
+      Adding sec1 v0.7.3
+      Adding secp256k1 v0.30.0
+      Adding secp256k1 v0.31.1
+      Adding secp256k1-sys v0.10.1
+      Adding secp256k1-sys v0.11.0
+      Adding semver v0.11.0
+      Adding semver-parser v0.10.3
+      Adding serdect v0.2.0
+      Adding sha2 v0.10.9
+      Adding sha3 v0.11.0
+      Adding sha3-asm v0.1.9
+      Adding signature v2.2.0
+      Adding siphasher v1.0.4
+      Adding spki v0.7.3
+      Adding static_assertions v1.1.0
+      Adding syn v1.0.109
+      Adding syn-solidity v1.7.3
+      Adding tap v1.0.1
+      Adding threadpool v1.8.1
+      Adding ucd-trie v0.1.7
+      Adding uint v0.9.5
+      Adding unarray v0.1.4
+      Adding unicode-segmentation v1.13.3
+      Adding version_check v0.9.5
+      Adding wasmtimer v0.4.3
+      Adding wyz v0.5.1
+      Adding zeroize_derive v1.5.0
+
+== host build tools (aws-lc-sys needs cmake+cc) ==
+cmake: /usr/bin/cmake
+gcc: /usr/lib/ccache/bin/gcc
+make: /usr/bin/make
+perl: /usr/bin/perl
+
+== effective app deps ==
+alloy = { version = "2.5.0", features = ["signers", "signer-local", "providers", "contract", "reqwest-rustls-tls"] }
+ed25519-dalek = "3.0.0"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "gzip", "http2"] }
+teloxide = { version = "0.17.0", features = ["ctrlc_handler", "macros", "rustls"], default-features = false }
+tokio = { version = "1.53.2", features = ["full", "tracing"] }
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-webpki-roots"] }
+-- core deps --
+name = "sentinel-core"
+description = "Sentinel pure core: domain types, risk math, policy, audit chain — zero network dependencies"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+workspace = true
+chrono = { version = "0.4.45", features = ["serde"] }
+hex = "0.4.3"
+rust_decimal = { version = "1.43.0", features = ["serde-with-str"] }
+rust_decimal_macros = "1.40.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+thiserror = "2.0.21"

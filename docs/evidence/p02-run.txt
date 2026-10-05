@@ -1,0 +1,6 @@
+   Compiling sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.39s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running `target/debug/sentinel`
+[2m2026-10-05T22:14:05.264985Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m sentinel initialized [3mmode[0m[2m=[0mDRY_RUN [3mdry_run[0m[2m=[0mtrue [3mperpl_env[0m[2m=[0mtestnet [3mchain_id[0m[2m=[0m10143 [3mreflex[0m[2m=[0mtrue [3mstrategy[0m[2m=[0mtrue

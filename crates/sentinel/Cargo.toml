@@ -1,0 +1,53 @@
+[package]
+name = "sentinel"
+description = "Sentinel application: perception, reasoning brain, execution, policy gate, interfaces (daemon)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+default-run = "sentinel"
+
+# Every binary is declared explicitly (later prompts add read-positions,
+# backtest, replay-demo, anchor).
+[[bin]]
+name = "sentinel"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+alloy = { version = "2.5.0", features = ["signers", "signer-local", "providers", "contract", "reqwest-rustls-tls"] }
+anyhow = "1.0.104"
+axum = "0.8.9"
+base64 = "0.23.1"
+chrono = { version = "0.4.45", features = ["serde"] }
+dotenvy = "0.15.7"
+ed25519-dalek = "3.0.0"
+hex = "0.4.3"
+rand_core = "0.10.1"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "json", "gzip", "http2"] }
+rust_decimal = { version = "1.43.0", features = ["serde-with-str"] }
+sentinel-core = { version = "0.1.0", path = "../sentinel-core" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+teloxide = { version = "0.17.0", features = ["ctrlc_handler", "macros", "rustls"], default-features = false }
+thiserror = "2.0.21"
+tokio = { version = "1.53.2", features = ["full", "tracing"] }
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-webpki-roots"] }
+toml = "1.1.6"
+tower-http = { version = "0.7.1", features = ["cors", "trace"] }
+tracing = "0.1.44"
+tracing-appender = "0.2.5"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
+url = "2.5.8"
+
+[dev-dependencies]
+mockall = "0.15.0"
+pretty_assertions = "1.4.1"
+rstest = "0.27.0"
+tempfile = "3.27.0"
+tokio-test = "0.4.6"
+wiremock = "0.6.5"

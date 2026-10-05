@@ -1,0 +1,22 @@
+# Sentinel — Rust workspace root.
+#
+# See docs/architecture.md (system design) and docs/FACTS.md (verified facts).
+# Standing rule: always track the latest versions of toolchains and crates —
+# never copy pinned old versions out of a spec. `cargo add` resolves live.
+[workspace]
+resolver = "3"
+members = ["crates/sentinel-core", "crates/sentinel"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+# MSRV floor: perpl-sdk (vendor/dex-sdk) pins rustc 1.97; alloy 2.x needs >= 1.94.1.
+# The toolchain file tracks latest stable; this floor only bounds compatibility.
+rust-version = "1.97"
+license = "Apache-2.0"
+repository = "https://github.com/JuanLunaIA/Sentinel"
+authors = ["Juan Luna IA <127159163+JuanLunaIA@users.noreply.github.com>"]
+description = "Sentinel — verifiable AI risk guardian for isolated-margin perpetual futures on Perpl (Monad)"
+
+[workspace.lints.rust]
+missing_docs = "warn"

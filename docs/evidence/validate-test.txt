@@ -1,0 +1,46 @@
+   Compiling sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.55s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (target/debug/deps/sentinel-23c58449a97b191b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/sentinel-dc4fea414bbc8e57)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/smoke.rs (target/debug/deps/smoke-53e3d84de5c0d0fb)
+
+running 6 tests
+test rejected_on_invalid_secret_hex ... ok
+test config_loads_from_fixture_with_testnet_defaults ... ok
+test mainnet_requires_explicit_acknowledgement ... ok
+test rejected_when_mode_and_env_disagree ... ok
+test rejected_when_no_telegram_users ... ok
+test rejected_when_threshold_order_broken ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/sentinel_core-885eeeeb0a33d7e9)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sentinel
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sentinel_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

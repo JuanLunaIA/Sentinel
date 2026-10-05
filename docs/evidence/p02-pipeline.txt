@@ -1,0 +1,28 @@
+== P02 pipeline 2026-10-05T19:02:48-03:00 ==
+-- step: cargo check --workspace --all-targets --
+check rc=0
+-- step: scripts/validate.sh --
+validate rc=1
+-- step: .env from example --
+.env present: yes
+-- step: cargo run --bin sentinel --
+run rc=0
+-- run output (tail) --
+   Compiling alloy-rpc-client v2.5.0
+   Compiling alloy-provider v2.5.0
+   Compiling teloxide-core v0.13.0
+   Compiling alloy-contract v2.5.0
+   Compiling alloy v2.5.0
+   Compiling teloxide v0.17.0
+   Compiling sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2m 00s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running `target/debug/sentinel`
+[2m2026-10-05T22:12:28.684416Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m sentinel initialized [3mmode[0m[2m=[0mDRY_RUN [3mdry_run[0m[2m=[0mtrue [3mperpl_env[0m[2m=[0mtestnet [3mchain_id[0m[2m=[0m10143 [3mreflex[0m[2m=[0mtrue [3mstrategy[0m[2m=[0mtrue
+-- log dir --
+total 12
+drwxr-xr-x 2 luna users 4096 oct  5 19:12 .
+drwxr-xr-x 9 luna users 4096 oct  5 19:12 ..
+-rw-r--r-- 1 luna users  150 oct  5 19:12 sentinel.2026-10-05.log
+-- done 2026-10-05T19:12:28-03:00 --

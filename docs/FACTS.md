@@ -3,6 +3,8 @@
 **Verification date:** 2026-10-05 (UTC) · **Method:** live probes + vendored official repos at pinned commits + on-chain reads.
 Every claim below maps to a file in `docs/evidence/` (see §0.9 index) or a cited file in `vendor/` (gitignored clones, re-created by `scripts/verify-facts.sh`).
 
+**Standing rule (operator, 2026-10-05):** always use the **latest** versions — toolchains, crates, CLIs — even when a prompt or spec cites an older one. Crate versions are resolved live with `cargo add`; the Rust toolchain tracks `stable`. See `docs/architecture.md` → Conventions.
+
 **Vendor provenance (pinned commits):**
 - `vendor/api-docs` @ `25ab6e2c75c8f84d0550da8c3be30af49ad631f2` (2026-09-25)
 - `vendor/dex-sdk` @ `01b9910761755b0a0d9c710c1ede62ab937daa7d` (2026-09-23)
@@ -16,7 +18,7 @@ Every claim below maps to a file in `docs/evidence/` (see §0.9 index) or a cite
 | # | P00 FACT SHEET said | Verified reality | Impact / action |
 |---|---------------------|------------------|-----------------|
 | 0.1 | Testnet collateral `0xdf5b718d8fcc173335185a2a1513ee8151e3c027` | **LIVE testnet collateral = `0xa9012a055bd4e0edff8ce09f960291c09d5322dc`** (symbol `AUSD`, 6 dec, confirmed via `/v1/pub/context` and `cast call`). The `0xdf5b…` contract also exists and reports `AUSD` (older instance); `api-docs/.env.example` is stale. | Use `0xa901…22dc` everywhere. Evidence: `p01-perpl-context-testnet.json`, `p01-cre-cast-checks.txt` |
-| 0.2 | Rust pin `1.85.0` (P02 spec) | **Impossible**: `alloy 2.5.0` chain (perpl-sdk dep) requires rustc ≥ **1.94.1**; dex-sdk pins `1.97`. | Pin project toolchain to **1.97**. Check @1.85 fails (`p01-sdk-rust185-fail.log`), check @1.97 **passes** in 5m14s (`p01-sdk-rust197-check.log`) |
+| 0.2 | Rust pin `1.85.0` (P02 spec) | **Impossible**: `alloy 2.5.0` chain (perpl-sdk dep) requires rustc ≥ **1.94.1**; dex-sdk pins `1.97`. | **Toolchain tracks latest stable** (`channel = "stable"`; 1.98.1 at build) per the standing rule below. Checks: @1.85 fails / @1.97 passes (`p01-sdk-rust185-fail.log`, `p01-sdk-rust197-check.log`) |
 | 0.3 | (env example) SOL mainnet id `30` | **SOL mainnet = 31** (live + official docs). Fact sheet was right; the shipped `.env.example` is stale. | Trust live context |
 | 0.4 | CRE CLI `npm i -g @chainlink/cre-cli` | npm package does **not** exist (404). Real install = **GitHub releases** (`smartcontractkit/cre-cli`); installed **v1.37.0**, sha256 verified vs official `checksums.txt` (`1e660e95…536503`). Version cmd: `cre version`. | Use installed binary `~/.local/bin/cre`. Evidence: `p01-cre-cli-download.txt` |
 | 0.5 | Markets list (6 mainnet / 5 testnet) | Live has more: **mainnet** 1 BTC, 10 MON, 20 ETH, 31 SOL, 40 HYPE, 50 ZEC, **60 LIT, 70 VVV, 90 PUMP, 100 NEAR, 110 UNI**; **testnet** 16 BTC, 32 ETH, 48 SOL, 64 MON, 256 ZEC, **272 LIT, 320 PUMP, 336 NEAR** | Read market set dynamically from `/v1/pub/context`; never hardcode |

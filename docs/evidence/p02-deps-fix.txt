@@ -1,0 +1,83 @@
+== crates.io feature recon 2026-10-05T19:01:01-03:00 ==
+---- alloy 2.5.0 features ----
+arbitrary asm-keccak consensus consensus-secp256k1 contract default dyn-abi eip712 eips ens essentials full 
+genesis getrandom hyper json json-abi json-rpc k256 kzg map map-fxhash map-hashbrown map-indexmap more-tuple-impls 
+native-keccak network node-bindings postgres provider-admin-api provider-anvil-api provider-anvil-node 
+provider-ccip-read provider-debug-api provider-engine-api provider-http provider-ipc provider-mev-api 
+provider-net-api providers provider-trace-api provider-txpool-api provider-ws provider-ws-native-tls 
+provider-ws-ring pubsub rand reqwest reqwest-default-tls reqwest-native-tls reqwest-rustls-tls rlp rpc rpc-client 
+rpc-client-ipc rpc-client-ws rpc-client-ws-native-tls rpc-client-ws-ring rpc-types rpc-types-admin rpc-types-anvil 
+rpc-types-any rpc-types-beacon rpc-types-debug rpc-types-engine rpc-types-eth rpc-types-mev rpc-types-trace 
+rpc-types-txpool secp256k1 serde serde-bincode-compat sha3-keccak signer-aws signer-gcp signer-keystore 
+signer-keystore-geth-compat signer-ledger signer-ledger-browser signer-ledger-node signer-local signer-mnemonic 
+signer-mnemonic-all-languages signers signer-trezor signer-turnkey signer-yubihsm sol-types ssz std tiny-keccak 
+transport-http transport-ipc transport-ipc-mock transports transport-throttle transport-ws transport-ws-base 
+transport-ws-native-tls transport-ws-ring trie wasm-bindgen
+---- alloy-primitives (1.7.3) ----
+allocative arbitrary asm-keccak borsh default diesel getrandom hex-compat k256 keccak-cache keccak-cache-global 
+keccak-cache-stats map map-foldhash map-fxhash map-hashbrown map-indexmap map-rapidhash native-keccak nightly 
+postgres rand rayon rkyv rlp schemars secp256k1 serde sha3-keccak sqlx sqlx-postgres std tiny-keccak
+---- alloy-provider (2.5.0) ----
+admin-api anvil-api anvil-node ccip-read ccip-read-http debug-api default engine-api erc4337-api hyper hyper-tls 
+ipc mev-api more-tuple-impls net-api pubsub reqwest reqwest-default-tls reqwest-native-tls reqwest-rustls-tls 
+rpc-api tenderly-admin-api tenderly-api throttle trace-api txpool-api ws ws-base ws-native-tls ws-ring
+---- alloy-signer (2.5.0) ----
+eip712
+---- alloy-signer-local (2.5.0) ----
+eip712 keystore keystore-geth-compat mnemonic mnemonic-all-languages secp256k1 yubihsm zeroize
+---- alloy-contract (2.5.0) ----
+pubsub
+---- alloy-sol-types (1.7.3) ----
+arbitrary default eip712-serde json more-tuple-impls std
+
+== fix: reqwest (0.13 uses 'rustls') ==
+      Adding adler2 v2.0.1
+      Adding async-compression v0.4.50
+      Adding aws-lc-rs v1.18.1
+      Adding aws-lc-sys v0.45.0
+      Adding cmake v0.1.58
+      Adding combine v4.6.8
+      Adding compression-codecs v0.4.45
+      Adding compression-core v0.4.33
+      Adding crc32fast v1.5.2
+      Adding dunce v1.0.5
+      Adding flate2 v1.1.10
+      Adding fs_extra v1.3.0
+      Adding jni v0.22.4
+      Adding jni-macros v0.22.4
+      Adding jni-sys v0.4.1
+      Adding jni-sys-macros v0.4.1
+      Adding jobserver v0.1.35
+      Adding miniz_oxide v0.9.1
+      Adding reqwest v0.13.5
+      Adding rustls-native-certs v0.8.4
+      Adding rustls-platform-verifier v0.7.1
+      Adding rustls-platform-verifier-android v0.2.0
+      Adding same-file v1.0.6
+      Adding simd-adler32 v0.3.10
+      Adding simd_cesu8 v1.2.0
+      Adding simdutf8 v0.1.5
+      Adding walkdir v2.5.0
+      Adding webpki-root-certs v1.0.9
+      Adding winapi-util v0.1.11
+      Adding zlib-rs v0.6.8
+
+== fix: teloxide slim (rustls-only, keep macros+ctrlc) ==
+             - native-tls
+             - nightly
+             - postgres-storage-nativetls
+             - postgres-storage-rustls
+             - rand
+             - redis-storage
+             - rustls-native-roots
+             - serde_cbor
+             - sqlite-storage-nativetls
+             - sqlite-storage-rustls
+             - sqlx
+             - throttle
+             - tower
+             - tower-http
+             - trace-adaptor
+             - tracing
+             - webhooks
+             - webhooks-axum
