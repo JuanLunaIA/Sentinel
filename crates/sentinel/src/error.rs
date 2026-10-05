@@ -36,6 +36,15 @@ pub enum SentinelError {
     #[error("config: {0}")]
     Config(#[from] ConfigError),
 
+    /// A duplicate order was suppressed by the idempotency window.
+    #[error("duplicate order within {window_secs}s window: {key}")]
+    DuplicateOrder {
+        /// Idempotency window in seconds.
+        window_secs: u64,
+        /// Idempotency key of the suppressed order.
+        key: String,
+    },
+
     /// An unexpected internal error (a bug — should never happen).
     #[error("internal: {0}")]
     Internal(String),
