@@ -1,0 +1,3 @@
+{"kind":"rest","path":"/v1/pub/context","resp":{"markets":[{"ver":270,"id":32,"instance_id":12,"perpetual_id":32,"symbol":"ETH","name":"ETH Perp","funding_interval_sec":2580,"order_ttl_blocks":20,"order_max_market_slippage_bps":1000,"config":{"price_decimals":2,"size_decimals":3,"min_posting_amount":"0","initial_margin":1200,"maintenance_margin":2000,"maker_fee":45,"taker_fee":345,"contract_version":[1,7,5]}}]}}
+{"kind":"ws","t_ms":0,"msg":{"mt":9,"d":{"32":{"mrk":271370,"at":{"b":1,"t":1791235369000}}}}}
+{"kind":"ws","t_ms":10,"msg":{"mt":9,"d":{"32":{"mrk":271371,"at":{"b":2,"t":1791235370000}}}}}

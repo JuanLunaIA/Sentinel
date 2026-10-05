@@ -50,7 +50,7 @@ canonical = "143\nGET\n/v1/trading/fills?count=100\n1728000000000\nAAAAAAAAAAAAA
 ```
 (`sha256("")` verified: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.)
 
-**Vector REST-2** (chain 10143, POST, body `{"d":[]}` literal 7 bytes):
+**Vector REST-2** (chain 10143, POST, body `{"d":[]}` literal 8 bytes):
 ```
 canonical = "10143\nPOST\n/v1/trading/orders\n1728000001000\nAAAAAAAAAAAAAAAAAAAAAA\n088214f816e99a2f4aedb5323c1c2eaf8b8143df9424ec46759966ddd9b72dd3"
 ```
@@ -149,7 +149,7 @@ With `sd:2` ⇒ `size=-50.000`. With mark `2713.70` ⇒
 ⇒ `AccountUpdate { account_id:7, free_balance:800.0, fee_tier:0, forward_enabled:true, last_forwarded_request_id:42, ts:None }`.
 
 **Fills (SYNTHETIC)**: `{"d":[{"at":{"t":1791235369000},"mkt":32,"oid":555,"t":1,"l":2,"p":271300,"s":50000,"f":"9450"}]}`
-⇒ `FillRecord { market_id:32, order_id:555, is_maker:false, price:Some(2713.00), size:50.000, fee:9.450000, ts:Some(...) }`.
+⇒ `FillRecord { market_id:32, order_id:555, is_maker:false, price:Some(2713.00), size:50.000, fee:0.009450, ts:Some(...) }`.
 
 **Account history (SYNTHETIC)**: `{"d":[{"at":{"t":1791235369000},"in":12,"id":7,"et":4,"m":32,"a":"-9450","b":"999990550","f":"9450"}]}`
 ⇒ `AccountEventRecord { kind:4, market_id:Some(32), amount:-0.009450, balance:999.990550, ts:Some(...) }`.
@@ -278,3 +278,20 @@ partial results and blockers stated plainly. Report format (JSON):
 {"files_created": ["..."], "tests": [{"cmd":"...", "exit":0, "observed":"..."}],
  "open_issues": ["..."]}
 ```
+
+## 11 Changelog (integration-time changes only)
+
+- **v1.0.1 (parent, integration):**
+  (a) §3.5 fills example corrected: for raw `"f":"9450"` the mapped `fee` is
+  `0.009450` — the `9.450000` printed in v1.0 was a typo; the §3.3 rule
+  (amounts = raw / 10^6) was always authoritative.
+  (b) §3.1 REST-2 body `{"d":[]}` is 8 bytes, not 7; the hash is unchanged.
+  (c) `WsConfig.markets` becomes `Vec<sentinel_core::types::Market>` and
+  `MarketRef` is removed: the socket layer needs the full market table
+  (`size_decimals`, `symbol`) to compose account snapshots — fixes the
+  integration gap reported by agent `ws`.
+- **v1.0.2 (parent, post-verification):** error-surface wording: the spec
+  text names `PerplError::Rest`/`PerplError::Auth`; frozen signatures return
+  `sentinel::error::Result<T>`, so callers receive
+  `SentinelError::Perpl(PerplError::Rest(..))` — classification and messages
+  unchanged (verifier finding, info severity).

@@ -1,0 +1,35 @@
+== P03 parallel-subagent build — verification record (parent re-runs) 2026-10-05T22:57:39Z ==
+wave1 delegation: deleg_cb744071 (agents auth/types/rest/ws) — parent re-run: 41 lib tests green
+wave2 delegation: deleg_600f9529 (independent verifier, spec-only) — 26/26 adversarial; Node Ed25519 oracle matched
+
+-- node oracle (parent re-run) --
+seed_hex  = 0707070707070707070707070707070707070707070707070707070707070707
+sha256("")           = e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+sha256({"d":[]})      = 088214f816e99a2f4aedb5323c1c2eaf8b8143df9424ec46759966ddd9b72dd3
+byteLength({"d":[]})  = 8
+nonce_decoded_bytes   = 16
+--- REST-1
+canonical = "143\nGET\n/v1/trading/fills?count=100\n1728000000000\nAAAAAAAAAAAAAAAAAAAAAA\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+sig_b64url = tg2unwMXTHrFEeR1NHsFwupj1iVLo69RYcPeLvYhHwt5pRCrTWa62GfbNNl5ozwv3i6vtHQ10Oj1qbTi2NtOBg
+sig_bytes = 64  verify = true
+--- REST-2
+canonical = "10143\nPOST\n/v1/trading/orders\n1728000001000\nAAAAAAAAAAAAAAAAAAAAAA\n088214f816e99a2f4aedb5323c1c2eaf8b8143df9424ec46759966ddd9b72dd3"
+sig_b64url = pbi1rC0vtS5Zbvooid41Mzq4ATq3mczW5kF3pcYzQuXymLl99g20mbJiVejoekJfMk7RvazhDfGKoeqxN-teAA
+sig_bytes = 64  verify = true
+--- WS-1
+canonical = "10143\ntrading-ws-signin\n1728000000000\nAAAAAAAAAAAAAAAAAAAAAA"
+sig_b64url = qrTi3fOt0EmW_IinRzbCc3UmeBADd1txA7BYLqy5KETUnrCUIzl5gYyp04JVA5huOUm_TvkNhYneWBIjdEDRCg
+sig_bytes = 64  verify = true
+
+-- adversarial suite (parent re-run) --
+test fixture_replay_matches_independent_parser ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.79s
+
+-- full validation (parent re-run) --
+== sentinel validate 2026-10-05T22:57:10Z ==
+rustc: rustc 1.98.1 (48a229cea 2026-09-01)
+fmt --check : rc=0   (docs/evidence/validate-fmt.txt)
+clippy      : rc=0   (docs/evidence/validate-clippy.txt)
+test        : rc=0   (docs/evidence/validate-test.txt)
+VALIDATION: OK
