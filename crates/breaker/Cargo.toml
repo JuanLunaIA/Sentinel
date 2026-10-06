@@ -1,0 +1,28 @@
+[package]
+name = "breaker"
+description = "Sentinel breaker: independent dead-man's-switch guardian that fires pre-authorized defensive reduces when the daemon's heartbeats go stale (SPEC-P14)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+alloy = { version = "2.5.0", features = ["signers", "signer-local", "providers", "contract", "reqwest-rustls-tls"] }
+anyhow = "1.0.104"
+axum = "0.8.9"
+chrono = { version = "0.4.45", features = ["serde"] }
+hex = "0.4.3"
+hmac = "0.13.0"
+rust_decimal = { version = "1.43.0", features = ["serde-with-str"] }
+sentinel = { version = "0.1.0", path = "../sentinel" }
+sentinel-core = { version = "0.1.0", path = "../sentinel-core" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+sha2 = "0.11.0"
+tokio = { version = "1.53.2", features = ["full", "tracing"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }

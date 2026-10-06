@@ -236,6 +236,9 @@ where
     S: AlertSink + Sync,
 {
     let feed = MockPerpl::from_fixture(path).context("load replay fixture")?;
+    // P14: replay demos keep heartbeats live for the dead-man's switch
+    // (self-gated: no-op unless ENABLE_ANCHOR + address + signer key exist).
+    spawn_anchor(&cfg, journal.clone(), shutdown.clone());
     let executor = DryRunExecutor::new(
         StateProbe::new(Arc::clone(&state)),
         10,

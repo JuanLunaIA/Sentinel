@@ -5,7 +5,7 @@
 # never copy pinned old versions out of a spec. `cargo add` resolves live.
 [workspace]
 resolver = "3"
-members = ["crates/sentinel-core", "crates/sentinel"]
+members = ["crates/sentinel-core", "crates/sentinel", "crates/breaker"]
 
 [workspace.package]
 version = "0.1.0"

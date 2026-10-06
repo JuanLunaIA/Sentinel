@@ -34,6 +34,10 @@ path = "src/bin/test_nansen.rs"
 name = "audit-verify"
 path = "src/bin/audit_verify.rs"
 
+[[bin]]
+name = "backtest"
+path = "src/bin/backtest.rs"
+
 [lints]
 workspace = true
 
