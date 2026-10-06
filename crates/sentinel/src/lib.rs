@@ -19,6 +19,7 @@ pub mod config;
 pub mod error;
 pub mod execution;
 pub mod health;
+pub mod indexer;
 pub mod nansen;
 pub mod notify;
 pub mod perpl;

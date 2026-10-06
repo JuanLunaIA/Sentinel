@@ -149,6 +149,14 @@ pub struct TelegramConfig {
     pub approval_chat_id: Option<i64>,
 }
 
+/// Envio HyperIndex client settings (P12).
+#[derive(Debug, Clone)]
+pub struct IndexerConfig {
+    /// Public GraphQL endpoint (Envio Cloud or local `envio dev`); `None`
+    /// degrades the feature.
+    pub graphql_endpoint: Option<String>,
+}
+
 /// Audit anchoring settings.
 #[derive(Debug, Clone)]
 pub struct AnchorConfig {
@@ -251,6 +259,8 @@ pub struct Config {
     pub telegram: TelegramConfig,
     /// Audit anchor.
     pub anchor: AnchorConfig,
+    /// Envio indexer client (P12).
+    pub indexer: IndexerConfig,
     /// Risk policy.
     pub risk: RiskConfig,
     /// Strategy pacing.
@@ -383,6 +393,10 @@ impl Config {
             contract_address: opt(&vars, "ANCHOR_CONTRACT_ADDRESS"),
             rpc_signer_key: opt(&vars, "RPC_SIGNER_KEY").map(SecretString::new),
         };
+
+        let indexer = IndexerConfig {
+            graphql_endpoint: opt(&vars, "ENVIO_GRAPHQL_ENDPOINT"),
+        };
         if let Some(addr) = &anchor.contract_address {
             require_address("ANCHOR_CONTRACT_ADDRESS", addr)?;
         }
@@ -489,6 +503,7 @@ impl Config {
             nansen,
             telegram,
             anchor,
+            indexer,
             risk,
             strategy,
             execution,
