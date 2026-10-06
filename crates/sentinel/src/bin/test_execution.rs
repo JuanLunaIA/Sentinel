@@ -95,7 +95,7 @@ async fn run_dry(cfg: &Config) -> anyhow::Result<()> {
         other => println!("submit #2: UNEXPECTED {other:?}"),
     }
 
-    anyhow::ensure!(matches!(first, Ok(_)), "first submission must succeed");
+    anyhow::ensure!(first.is_ok(), "first submission must succeed");
     anyhow::ensure!(
         matches!(second, Err(SentinelError::DuplicateOrder { .. })),
         "second submission must be suppressed"

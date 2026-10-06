@@ -1,0 +1,7 @@
+== P05 acceptance: DRY_RUN test-execution 2026-10-05T21:23:05-03:00 ==
+python slippage crosscheck (2713.70 @ 10bps sell): 2710.98630
+DRY_RUN reduce: market 32 size 2.500 (position |10|)
+submit #1: Simulated id=sentinel-32-1 filled=2.500 avg=Some(2710.98630)
+submit #2: suppressed as duplicate (window 60s, key 32:reduce:250)
+DRY_RUN acceptance OK (idempotency window suppresses the repeat)
+acceptance rc=0

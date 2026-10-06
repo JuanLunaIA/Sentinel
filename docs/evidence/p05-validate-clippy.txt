@@ -1,0 +1,23 @@
+== P05 validate: fmt + clippy 2026-10-05T21:21:02-03:00 ==
+FMT_OK
+--- clippy -D warnings (workspace, all-targets) ---
+    Checking sentinel-core v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel-core)
+    Checking sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
+error: redundant pattern matching
+  --> crates/sentinel/src/bin/test_execution.rs:98:21
+   |
+98 |     anyhow::ensure!(matches!(first, Ok(_)), "first submission must succeed");
+   |                     ^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#redundant_pattern_matching
+   = note: `-D clippy::redundant-pattern-matching` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::redundant_pattern_matching)]`
+help: consider using `is_ok()`
+   |
+98 -     anyhow::ensure!(matches!(first, Ok(_)), "first submission must succeed");
+98 +     anyhow::ensure!(first.is_ok(), "first submission must succeed");
+   |
+
+error: could not compile `sentinel` (bin "test-execution") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+CLIPPY_FAIL
