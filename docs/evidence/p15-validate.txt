@@ -27,6 +27,11 @@
 - p15-dashboard-bottom.png (90006 B) — same scroll clamp as above (kept for completeness)
 - p15-dashboard-paused-banner.png (153357 B) — GUARDIAN PAUSED banner
 
+## POST-FIX (P17) — dashboard size (parent)
+After the P15-integration CRE-status embed (+137 B), `wc -c dashboard/index.html` =
+61807 bytes (2026-10-06). The 61,670 B figure above is the served size during the
+original live pass (pre-embed).
+
 ## Notes
 - reflex latency renders 0 us: P13 engine emits zeros (fresh bin run verified) — adjudicated in SPEC-P15 v1.0.1 (e)
 - nansen panel zeros are honest (no paid calls yet, PENDING-WALLET)

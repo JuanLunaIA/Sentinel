@@ -10,3 +10,8 @@ CLIPPY_RC=0
 FMT_OK
 == backtest aggregate (documented artifact) ==
 Across 14 scenarios representing $60163.365 notional, Sentinel preserved $5972.13546111693125 (9.93%); baseline liquidations: 11 -> with Sentinel: 0
+
+## POST-FIX (P17) — backtest runtime re-measure (parent)
+`./target/release/backtest --scenario all --out /tmp/<out>` twice, 2026-10-06:
+`real 0m0.063s` and `real 0m0.025s` (direct release binary, warm cache).
+Byte-identical md + json-minus-metrics re-confirmed by the P17 wave.

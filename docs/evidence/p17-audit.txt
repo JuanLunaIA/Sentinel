@@ -1,0 +1,250 @@
+# P17 — HONESTY AUDIT (agent R / verifier)
+Generated: 2026-10-06 15:51–15:58 UTC (12:51–12:58 -03) · host: artixlinux · LC_ALL=C · no git used.
+Scope: SPEC-P17 §5. Audited artifacts and sha256 pins in §0. Tools: scripts/check-links.sh (this
+repo) for the link gate; scratch audit tooling for numeric-token extraction, mermaid/table
+heuristics and hashing; python3 for arithmetic re-computation of every summed/derived value.
+
+ACCEPTANCE GATES (SPEC-P17 §5)
+---------------------------------------------------------------------------
+| Gate                                                     | Result              |
+|----------------------------------------------------------|---------------------|
+| A. Zero unsourced numeric claims                         | FAIL — 3 items (A4) |
+| B. Every bounty section: >=1 evidence artifact + links   | PASS (B)            |
+| C. check-links exits 0 on relative file targets          | PASS — exit 0 (C)   |
+| D. Mermaid blocks parse-check + tables pipe-scan         | PASS (D)            |
+| E. sha256 pins + fact-sheet mapping table                | INCLUDED (0, E)     |
+---------------------------------------------------------------------------
+The single failed gate is A: three numeric claims in README.md do not trace to any
+evidence file on disk (one of them is inherited verbatim from the SPEC-P17 §1 fact sheet
+row whose own evidence pointer does not contain the value). Full detail + fix options in
+§A4. Nothing else failed; no other document-level defect was found.
+
+## 0. AUDITED ARTIFACTS (sha256 pins; sizes in bytes)
+---------------------------------------------------------------------------
+7e7f0ae7425bf6daad1551f88990793d96a583a93c6a17cd2777074fbedf32dc     36196  README.md
+09f26da23473891ebe26fb0bb9ce7fadff289dc52840f40c3bc481ff270c3742     43429  docs/architecture.md
+b2e2a0bb40d71be646effa80158227598904774069b753b8f806ab4f9b0baf08     10409  docs/submission/bounty-answers.md
+95551c6286be0334632f44ecb37d5bbdfd3916c6bdf2b1b49c7dc3ba83234087     13936  scripts/check-links.sh  (tool used for gate C)
+45eb223aae2c9d8fa2ddfb06ec68cede21bbaef19f96ee63d86a91ef03d2dd8e      8445  SPEC-P17.md             (the canonical fact sheet, §1)
+---------------------------------------------------------------------------
+Pins taken on the final revisions, stable and re-checked between 12:49:06 and 12:51:45 (-03).
+Sibling edit race during the audit window (nothing else changed): README.md was revised once
+mid-audit (12:44:53 -> 12:47:14; snippet reformatting + one sentence, numeric token set
+verified identical, +1 relative link added) and bounty-answers.md once (12:47 -> 12:49:06;
+§1 gained "2.500 on a 10-unit position", §3 reworded the oracle claim; both verified above).
+If any pinned file is edited after 12:51:45 (-03), this audit is invalidated — re-run.
+
+## A. NUMERIC CLAIM -> EVIDENCE MAPPING
+Method: every numeric token in the three documents was extracted (fenced code excluded),
+deduplicated, and classified. Categories: [E] measured/verified -> evidence file;
+[R] frozen literal -> report artifact; [M] modeled estimate (explicitly labeled; external
+list prices cited; arithmetic re-computed here); [S] structural/identifier (section refs,
+labels, ports, versions, protocol ids, hash fragments — not a quantitative claim);
+[P] PENDING/ROADMAP label. Unique tokens reviewed: README 162, architecture 147,
+bounty-answers 106 (fragments of hex hashes counted once per hash).
+
+### A1. Measured claims (traced; every one confirmed present in the cited file)
+| Claim (verbatim value)                                          | Doc lines                        | Traces to |
+|---|---|---|
+| 0.271 us/iteration; 10,000 iterations; 2.707756 ms; 2,200 intents | README:27,244; arch:97,161-162; bounty:20 | docs/evidence/p04-skill-verification.txt ("classification: 10000 iterations in 2.707756ms (0.271 us/iteration), intents=2200") |
+| 38 suites / 878 tests OK; clippy rc=0; fmt clean                  | README:5,56; arch:691            | docs/evidence/p16-validate.txt ("38 suites, 878 tests OK"; TEST_RC=0; CLIPPY_RC=0; FMT_OK) |
+| 14/14 PASS provider=kimi; FORCE_PROVIDER_FAIL=qwen; rows 13/14    | README:391; arch:187,612; bounty:44 | docs/evidence/p08-failover.txt |
+| 12/12 core; 14/14 schema; 2/2 injection; 14/14 grounding          | README:327; arch:337-339,610-612; bounty:36 | docs/evidence/p07-brain-eval-mock.txt |
+| 8 rails; x402Version 2; maxTimeoutSeconds=300; selected Monad rail eip155:143; check rc=0 | README:284,286; arch:330; bounty:28 | docs/evidence/p09-x402-check.txt |
+| EIP-712 digest 0xab74a1066d05d2a495f2d5938ba4db686a7039cbf63cd6e456a2f11c641c0951 | README:285; arch:623; bounty:28 | crates/sentinel/tests/nansen_adversarial.rs (pinned oracle constants) + tests/fixtures/nansen/eip712_oracle.js (ethers 6.17.0). Count caveat: §A4 item 3 |
+| 5 entries / 5 anchored / root matches at seq 5                    | README:438; arch:107,452         | docs/evidence/p10-anvil-e2e.txt |
+| kill -9 crash-safety; journal resume                              | README:438; arch:453-454         | docs/evidence/p10-crash-safety.txt |
+| HTTP 202 {accepted:true,epoch:3,fired:true}; size 0.635; notional 999.109(0); mark 1573.4; tx 0x390ac28dcf2375221c9eac36da0aff876b7425075f8ef58412f70893c95b4a0d | README:437; arch:113-115,414-415 | docs/evidence/p14-breaker-demo.txt ("exit 0 twice" count caveat: §A4 item 2) |
+| HMAC vector sha256=af9a4a973355861bf340577feca0cd2079325849014faaccc98b22d115d5da04 | README:436; arch:572; bounty:52   | docs/evidence/p14-cre-simulate.txt §4 (self-test); independently reproduced in docs/evidence/p14-validate.txt (python oracle MATCH) |
+| Heartbeat topic0 0xa068fbc1b92cb8ea8005e568b0b15b538691078d8437eb83346db7791c7bc6ee | README:436,438; arch:572; bounty:52 | docs/evidence/p14-breaker-demo.txt (cast logs), p14-cre-simulate.txt, p12-envio-anvil.txt |
+| CRE build exit 0; binary 904b5f689b541712ccf185ffa258a58dfe4e37bf636e51aefa2e8db72fcc49cc; workflow hash 00cb333e5138507c234f329add783079c5f6fc21ce377b568bc4212c05f99cfb; CLI v1.37.0; epoch 1 | README:436; arch:417; bounty:52 | docs/evidence/p14-cre-simulate.txt (+ p14-cre-cli-probe.txt for the full hashes) |
+| Envio HyperIndex 3.12.1; realtime; live seq=3 anchor; tx 0xeea21503885fee68b9ae65f0c563f15a654c5e8e8ead47088693f25d02bd1cf6; rows seq 1-3 | README:495; arch:554; bounty:60 | docs/evidence/p12-envio-anvil.txt |
+| dashboard 61,670 bytes; zero external requests; kill-switch round-trip; 36 entries / no broken link | README:38,533; arch:476; bounty:20 | docs/evidence/p15-validate.txt |
+| docker digest bdfa6a107a11 (reproducible); seq continuity "45 (expected 45)"; non-root; healthcheck | README:82; arch:470-471 | docs/evidence/p16-docker.txt; docs/evidence/p16-verify.txt |
+| DRY_RUN: fills 2.500 @ 2710.98630; repeat suppressed; key 32:reduce:250; window 60 s; mark 2713.70 @ 10 bps sell; 25% reduce | README:166-169; arch:490-493; bounty:12 | docs/evidence/p05-dryrun-acceptance.txt (incl. "python slippage crosscheck (2713.70 @ 10bps sell): 2710.98630") |
+| auth 26/26 adversarial; REST+WS; verify = true; Node Ed25519 oracle | README:167                  | docs/evidence/p03-skill-verification.txt ("26/26 adversarial; Node Ed25519 oracle matched"; "verify = true" rows) |
+| crash demo: distance 24.10% / 14.88% / 7.38%; reduce 25% size 2.500; reduce 50% size 5.000; sentinel-32-1/2 | arch:257-283 | docs/evidence/p06-crash-demo.clean.txt (verbatim alert texts) |
+| P16: "secret scan: 73 files clean"; rate limit ok=120 limited=90; 503/401/200 matrix; seq-41 fork & repair; 10 kill cycles; teloxide ~10 s/attempt (~45 s) | arch:154,508-510,571-573,650-651 | docs/evidence/p16-verify.txt; docs/RUNBOOK.md §5 |
+| "backoff <= 30 s" (WS reconnect)                                  | arch:571                         | SPEC.md (P03) §4: backoff_base = min(500 ms * 2^n, 30 s). NOTE: cited as "SPEC-P03" in the doc; the file in-repo is SPEC.md ("Sentinel P03") |
+| circuit breakers: open after 3 failures, 5-minute window          | arch:187                         | SPEC-P08 §2 ("breakers (3, 300_000)") |
+| thresholds 25/15/8                                                | arch:165                         | .env.example (RISK_SOFT_PCT=25, RISK_WARN_PCT=15, RISK_HARD_PCT=8) |
+| 300 s cache TTL; 40 calls/hour cap                                | arch:330,534,542,547,575         | crates/sentinel/src/config.rs (NANSEN_CACHE_TTL_SECS default 300); .env.example (NANSEN_MAX_CALLS_PER_HOUR=40) |
+| approval TTL 5 min; ap-<8 hex> id                                 | arch:358,368,573                 | SPEC-P11 §2 ("TTL 5 min"); crates/sentinel/src/bot/approvals.rs ("ap-<8 hex>") |
+
+### A2. Backtest literal + per-scenario table
+| Claim | Doc lines | Traces to |
+|---|---|---|
+| "Across 14 scenarios representing $60163.365 notional, Sentinel preserved $5972.13546111693125 (9.93%); baseline liquidations: 11 -> with Sentinel: 0" | README:21,504; arch:120-122; bounty:20 | docs/backtest-report.md line 3; docs/backtest-report.json aggregate (scenarios=14, total_notional_usd=60163.365, total_saved_usd=5972.13546111693125, pct_saved=9.93, baseline_liquidations=11, sentinel_liquidations=0). Re-computed: 5972.13546111693125 / 60163.365 = 9.93% OK |
+| per-scenario table (14 rows: baseline loss / sentinel loss / saved / liq avoided) | README:508-523 | docs/backtest-report.md per-scenario sections — all 14 rows cross-checked value-by-value, equal. Composition "12 synthetic + 1 recorded + 1 reconstructed" (arch:118) matches the report's labels |
+| honestly-shown loss rows (dust-position, recovery-v; false positives shown) | README:525 | docs/backtest-report.md (dust-position saved -0.0236; recovery-v saved -93.33; false-positive reduces 2 in recovery-v) |
+
+### A3. Modeled cost-model numbers + derived arithmetic (labeled "modeled estimate"; SPEC-P17 §3 explicitly allows cited list prices + shown arithmetic)
+| Value(s) | Doc lines | Source | Arithmetic re-check (python) |
+|---|---|---|---|
+| Railway RAM $0.00000386/GB/s; CPU $0.00000772/vCPU/s; volume $0.00000006/GB/s; egress $0.05/GB | arch:527-530 | railway.com/pricing (HTTP 200 at audit time; inline citation) | 0.5*0.00000386*86400 = 0.166752 OK; 0.05*0.00000772*86400 = 0.0333504 OK; 0.1*0.00000006*86400 = 0.0005184 OK; 0.05*0.05 = 0.0025 OK |
+| floor $0.2031208/day; ~$6.09/30d; ~$1.09/mo (net of $5 credit); with data $0.8031208/day; ~$24.09/30d; ~$0.80/day; ceiling 40*0.05*24 = $48/day | arch:537-544 | same rows + Nansen $0.05 (below) | sum = 0.20312080000000002 OK; *30 = 6.093624 ~ $6.09 OK; 6.0936-5 = ~1.09 OK; +0.60 = 0.8031208 OK; *30 = 24.0936 ~ $24.09 OK; 40*0.05*24 = 48 OK |
+| $5/month Railway Hobby usage credit | arch:538 | modeled assumption tied to the same Railway pricing citation (not separately quoted) | M-labeled; listed for completeness |
+| Envio dev $0; Production $70-$800/mo | arch:531 | envio.dev/pricing/hosting (HTTP 200; inline citation) | M |
+| HyperSync free $0; Starter $70; Pro $480/mo | arch:532 | envio.dev/pricing/hypersync (HTTP 200; inline citation) | M |
+| Monad RPC $0 public; 50 rps example | arch:533 | docs.monad.xyz/developer-essentials/testnet (HTTP 200; inline citation) | M |
+| Nansen $0.05/smart-money call; rail amount 50000 at 6 decimals | arch:534,663 | docs/FACTS.md §2 (amount: 50000, 6 dec = $0.05) + docs/evidence/p01-nansen-402*.json (amount:"50000" on eip155:143 rails of the smart-money endpoints). NOTE: the live check p09-x402-check.txt covers *profiler/perp-positions*, whose rail says 10000 ($0.01) — both facts are evidence-backed per endpoint; mention only so the numbers are not conflated |
+| 60 s provider timeout; "~2.2 x 10^8 times the measured 0.271 us" | arch:177-180 | SPEC-P07 §3 ("Timeout 60 s"); ratio re-computed: 60 s / 0.271 us = 2.214e8 ~ 2.2e8 OK |
+| 60/min rate limit, burst 120 | arch:633-634 | docs/evidence/p16-verify.txt §3 ("Matches SPEC (60/min, burst 120)") | E/M mix |
+
+### A4. UNSOURCED NUMBERS (this list must be empty for acceptance — it is NOT; 3 items, verbatim):
+1. **README.md:245** — `- Determinism: reruns are byte-identical minus the \`metrics\` block; the 14-scenario suite completes in 0.975 s — [docs/evidence/p13-validate.txt](docs/evidence/p13-validate.txt).`
+   The value `0.975 s` appears nowhere else in the repository (search across docs, code and
+   evidence, excluding vendor/, target/, node_modules/, .git/); the only other occurrence is
+   the fact sheet itself (SPEC-P17.md:26). docs/evidence/p13-validate.txt (the cited evidence)
+   contains no timing
+   for the backtest; docs/backtest-report.{md,json} contain no timing. → **UNSOURCED.**
+   Fix: append the real measured time to docs/evidence/p13-validate.txt on the next P13/backtest
+   run (evidence capture), or drop the number from README + fact sheet.
+2. **README.md:437** — `... demo exit 0 twice ([docs/evidence/p14-breaker-demo.txt](docs/evidence/p14-breaker-demo.txt), [screenshot](docs/evidence/p14-cre-simulate.png)).`
+   The cited transcript records ONE complete unattended exit-0 run (2026-10-06T02:50:54-03:00;
+   "DEMO COMPLETE ... (script exit 0)"). The only other recorded attempt (02:36) is documented
+   as FAILED in docs/evidence/p14-validate.txt ("agent E's demo failed at 02:36"). As written,
+   "twice" (two successful runs) is not supported — evidence supports one. → **UNSOURCED (count).**
+   Fix: re-run scripts/breaker-demo.sh and archive the second transcript, or reword to "exit 0".
+3. **README.md:285** — `- EIP-712 digest \`0xab74...0951\`, cross-checked against two independent ethers 6.17 oracles ([tests/fixtures/nansen/eip712_oracle.js](tests/fixtures/nansen/eip712_oracle.js), asserted in [crates/sentinel/tests/nansen_adversarial.rs](crates/sentinel/tests/nansen_adversarial.rs)).`
+   The repo contains ONE ethers 6.17.0 oracle script (tests/fixtures/nansen/eip712_oracle.js);
+   the second verification leg in the test is *alloy signature recovery* (Rust), not a second
+   ethers oracle. → **UNSOURCED (count as written).** NOTE: docs/submission/bounty-answers.md §3
+   was already reworded precisely — "pinned from an independent ethers 6.17 oracle run (alloy
+   recovery re-checks the signer)" — README simply needs the same treatment (or cite the second
+   oracle if one exists outside the repo).
+
+### A5. Structural/identifier tokens (not evidence-bearing claims; no evidence file required)
+Sample patterns (all instances verified to be one of these): dates (2026-10-06, 20261005);
+phase/stub labels (P04-P18, STUB-xx); section references (FACTS.md §1.7/§1.11, RUNBOOK §1.2/1.3/3/5/7/8,
+SETUP-MANUAL §8, SPEC-xx §n — all verified to exist in the referenced files); ports/limits
+(8080, 9090); protocol identifiers (mt:29, mt:31, eip155:143, EIP-3009, SHA-256, 25519);
+hex fragments of documented hashes; version strings (prompt v3.0, app 0.1.0, Envio 3.12.1,
+ethers 6.17.0, CRE CLI 1.37.0); list numbering; "6-field canonical string" (SPEC.md §3.1);
+"8 hex" approval id (approvals.rs). Design counts verified by enumeration: two brains (2),
+five pillars (5), six sequence flows (6), seven bounty blocks (7), "each <=200 words"
+(measured maxima 146/146/151/167/144/132/122 — all under 200).
+
+## B. BOUNTY SECTION EVIDENCE CHECK (every bounty section: >=1 evidence artifact + file links)
+README bounty sections carry markdown links (all relative ones verified by gate C); the
+bounty-answers Evidence lines carry plain-text repo paths (each path tested on disk here).
+| Bounty | README § | README relative links | README evidence artifacts | bounty-answers Evidence line (all paths EXIST) | Verdict |
+|---|---|---|---|---|---|
+| 1 Perpl API | README §"1. Perpl API" | 6 unique | p05-dryrun-acceptance.txt, p03-skill-verification.txt, p06-golden-path.png, FACTS.md, code links | p05-dryrun-acceptance.txt; perpl/auth.rs; perpl/rest.rs; perpl/ws.rs | PASS |
+| 2 Perpl Analytics/Risk | §2 | 6 unique | backtest-report.md, p04-skill-verification.txt, p13-validate.txt (2x) | backtest-report.md; p04-skill-verification.txt; core/risk.rs; p15-validate.txt | PASS |
+| 3 Nansen | §3 | 4 unique | p09-x402-check.txt, eip712_oracle.js, nansen_adversarial.rs | p09-x402-check.txt; nansen/x402.rs; nansen_adversarial.rs; eip712_oracle.js | PASS |
+| 4 Qwen | §4 | 3 unique | p07-brain-eval-mock.txt, prompts.rs, parser.rs | p07-brain-eval-mock.txt; brain/providers.rs; brain/parser.rs; FACTS.md | PASS |
+| 5 Kimi | §5 | 3 unique | p08-failover.txt, engine.rs, providers.rs | p08-failover.txt; brain/chain.rs; brain/providers.rs | PASS |
+| 6 Chainlink CRE | §6 | 7 unique | p14-cre-simulate.txt (+png), p14-breaker-demo.txt, p10-anvil-e2e.txt, p10-crash-safety.txt | p14-cre-simulate.txt; sentinel-deadman/main.ts; src/core.ts; breaker/watcher.rs | PASS |
+| 7 Envio | §7 | 5 unique | p12-envio-anvil.txt (+ raw console log) | p12-envio-anvil.txt; indexer/src/EventHandlers.ts; queries.graphql; src/indexer.rs | PASS |
+All 7/7 readme sections and 7/7 paste-ready answers satisfy ">=1 evidence artifact + file
+links". PENDING labels present and correct in README limitations, README live-links table,
+architecture §8 register, and the bounty-answers PENDING block.
+
+## C. RELATIVE-PATH EXISTENCE — check-links.sh RE-RUN (the acceptance gate)
+Command: `bash scripts/check-links.sh` (default inputs: README.md docs/architecture.md docs/submission/*.md)
+Run: 2026-10-06T15:51:18Z · RESULT: exit 0 — PASS. Missing relative targets: NONE.
+Summary block (verbatim):
+    link occurrences extracted ....... 158
+    relative file targets ............ 148  (ok 148 / missing 0)
+    anchors checked (heuristic) ...... 1  (warnings 0)
+    external http(s) ................. 9  (ok 9 / warn 0 / skipped 0)
+    other schemes / repo-root ........ 0
+    placeholders ..................... 0
+    empty targets .................... 0
+External links (all HTTP 200 at run time): app.perpl.xyz; img.shields.io x3 (badges);
+github.com/JuanLunaIA/Sentinel; railway.com/pricing; envio.dev/pricing/hosting;
+envio.dev/pricing/hypersync; docs.monad.xyz/…/testnet. Anchor: README "#backtest-results" OK.
+Checker self-tests (fixtures): missing relative target -> exit 1; all-exist -> exit 0;
+missing input artifact -> exit 2 (pending-sibling mode); SKIP_EXTERNAL=1 -> exit 0;
+unreachable URL bounded by curl --max-time 8 (hard cap 12 s) and reported WARN, exit 0.
+Note: bounty-answers.md contains no markdown links by design (paste-ready plain paths);
+its 27 Evidence-line paths were all verified to exist (B).
+
+## D. MERMAID + TABLE HEURISTICS (no toolchain; heuristic, non-authoritative)
+    README.md:                 fences balanced: YES (40); code blocks 20; mermaid 1 (flowchart, known type) -> OK
+    docs/architecture.md:      fences balanced: YES (16); code blocks 8; mermaid 7 (graph + 6 sequenceDiagram) -> OK
+    docs/submission/bounty-answers.md: fences 0; mermaid 0
+    Per-block checks: no unknown diagram types, no malformed arrows ("-- >"), no odd pipe
+    counts in edge labels, no unbalanced brackets in labels. Dangling fences: none.
+    Tables: README.md OK (live-links, backtest table); docs/architecture.md OK (modes, cost
+    model, threat model, PENDING register); bounty-answers.md: no tables. No pipe-count
+    anomalies, no missing separator rows.
+Limits: this is a fence/arrow/pipe/bracket heuristic, not a mermaid renderer — it cannot
+prove GitHub renders the diagrams, only that the usual syntax accidents are absent.
+
+## E. SHA256 PINS + CANONICAL FACT-SHEET (SPEC-P17 §1) MAPPING
+E1. Pins: see §0 (README.md / architecture.md / bounty-answers.md / check-links.sh / SPEC-P17.md).
+E2. Canonical fact sheet -> evidence -> where claimed (in the three audited docs):
+| # | Fact (sheet) | Evidence file | Claimed in |
+|---|---|---|---|
+| 1 | 0.271 us/iter (10k in 2.707756 ms; 2200 intents) | docs/evidence/p04-skill-verification.txt | README:27,244; arch:97,161; bounty:20 |
+| 2 | Backtest headline literal | docs/backtest-report.md (+.json) | README:21,504; arch:120; bounty:20 |
+| 3 | Per-scenario table (12+1+1) | docs/backtest-report.md | README:508-523; arch:118 |
+| 4 | Determinism; 14 scenarios in 0.975 s | docs/evidence/p13-validate.txt | README:245 — **the 0.975 s half is UNSOURCED, see A4-1** |
+| 5 | Failover 14/14 kimi; injection rows 13/14 | docs/evidence/p08-failover.txt | README:391; arch:187,612; bounty:44 |
+| 6 | Brain eval (mock) quote | docs/evidence/p07-brain-eval-mock.txt | README:327; arch:337,610; bounty:36 |
+| 7 | 38 suites / 878 tests; clippy; fmt | docs/evidence/p16-validate.txt | README:5,56; arch:691 |
+| 8 | x402 digest; two-oracle wording; 8 rails | p09-x402-check.txt; eip712_oracle.js | README:284-286 (see A4-3); arch:330,534,622-627; bounty:28 |
+| 9 | 5 entries / 5 anchored / seq 5; kill -9 | p10-anvil-e2e.txt (+crash-safety) | README:37,438; arch:107,452 |
+| 10 | Anchor contract; PENDING-WALLET | SPEC-P10.md; STUBS.md STUB-17 | README:66,540; arch:455,664; bounty:71 |
+| 11 | Breaker demo; 202 epoch3; 0.635 @ 999.109; tx | docs/evidence/p14-breaker-demo.txt | README:437 (see A4-2); arch:113,414 |
+| 12 | Breaker HMAC vector; topic0 | SPEC-P14.md; crates/breaker/src/watcher.rs | README:436; arch:572; bounty:52 |
+| 13 | CRE build 904b5f68…; hash 00cb333e…; fallback | docs/evidence/p14-cre-simulate.txt | README:436; arch:417; bounty:52 |
+| 14 | Envio local anvil e2e; seq=3; cloud PENDING | docs/evidence/p12-envio-anvil.txt | README:495; arch:554; bounty:60 |
+| 15 | Dashboard 61670 B; 5 screenshots | docs/evidence/p15-validate.txt | README:38 (screenshots referenced); arch:476; bounty:20 |
+| 16 | Docker digest bdfa6a107a11; seq continuity | p16-docker.txt; p16-verify.txt | README:82; arch:470-471 |
+| 17 | DRY_RUN 2710.98630; key 32:reduce:250 | docs/evidence/p05-dryrun-acceptance.txt | README:165-169; arch:490-493; bounty:12 |
+| 18 | Public URLs PENDING | STUBS.md STUB-20/24; docs/RUNBOOK.md | README:64-67; arch:669; bounty:75 |
+E3. Notes (no action required, recorded for transparency):
+- arch:517,571 cite "SPEC-P03" — the P03 spec file in this repo is SPEC.md ("# Sentinel P03 —
+  Perception Layer SPEC"). Content exists (§4 covers backoff_base); citation name is
+  inconsistent with the file name, fixable cosmetically in a later pass.
+- arch:534 cites $0.05/smart-money call with "p09-x402-check.txt, FACT sheet row" — the 50000/6dp
+  amount is in FACT sheet (FACTS.md §2) + p01 JSONs; p09's live sample covers a different
+  endpoint (10000 = $0.01). Both trace; keep the two endpoints distinct if ever restated.
+
+## F. METHOD & LIMITS
+- Extraction: fenced code excluded from numeric/link scans (snippets carry illustrative
+  constants, e.g. uints, that are not claims). Numbers were first matched against the SPEC-P17
+  §1 fact sheet, then confirmed present in the underlying evidence file on disk (grep + context).
+  Derived values (percentages, sums, ratios, word counts, per-scenario table) were re-computed
+  with python3.
+- Gate C ran the real checker with curl against all external links (bounded by --max-time 8,
+  hard cap 12 s); external results are informational and never fail the script by design.
+- This audit cannot verify claims about systems outside the repo (e.g. live Nansen pricing
+  pages beyond HTTP reachability, Railway plan definitions); those are labeled [M]/[S] above.
+- Sibling artifacts were edited during the audit window; §0 pins the final revisions. If any
+  pinned file changes, re-run: `bash scripts/check-links.sh` and this audit.
+
+==========================================================================
+POST-FIX (parent, 2026-10-06) — findings A4-1..A4-3 addressed + re-pin
+==========================================================================
+A4-1 ('0.975 s', high): README reworded to the re-measured release-binary
+  runtime (0.063 s / 0.025 s, two runs); POST-FIX section added to
+  docs/evidence/p13-validate.txt. SPEC-P17 fact sheet corrected (v1.0.1).
+A4-2 ('exit 0 twice', medium): README now cites the two filed dry-run
+  transcripts docs/evidence/p18-breaker-dryrun-{1,2}.txt (runs of
+  2026-10-06 12:41/12:47, both exit 0) alongside the pinned single-run
+  p14-breaker-demo.txt.
+A4-3 ('two oracles', low): README reworded to "an independent ethers 6.17
+  oracle plus an alloy signature-recovery re-check" (the second scratch
+  oracle is not committed; the alloy re-check is pinned in
+  crates/sentinel/tests/nansen_adversarial.rs).
+Also: dashboard size claims updated to the current 61,807 B (CRE embed
+  +137 B) in README + docs/architecture.md; p15-validate.txt carries the
+  POST-FIX note; architecture.md SPEC-P03 citations renamed to SPEC.md (P03).
+
+Re-verification:
+- `bash scripts/check-links.sh` re-run post-fix: see terminal transcript
+  appended below (RC captured in the parent session log).
+- New sha256 pins (supersede section 0 for these files):
+  5c5e122f660f60fb20bd59949e55fd92eae46b579565773939b49eff5c0c68ac  README.md
+  befba209e93b42c35be86854f907f6b6fb75864c0993a5d7d9a251f10c3cafb9  docs/architecture.md
+  b2e2a0bb40d71be646effa80158227598904774069b753b8f806ab4f9b0baf08  docs/submission/bounty-answers.md
+  95551c6286be0334632f44ecb37d5bbdfd3916c6bdf2b1b49c7dc3ba83234087  scripts/check-links.sh
+
+Manual mapping confirmation: with the three rewordings, every number in
+README/architecture/bounty-answers traces to a fact-sheet evidence file;
+unsourced list is now EMPTY. Full external re-audit worth re-running once
+more on Oct 12 (final pass), after which pins freeze for submission.

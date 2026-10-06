@@ -96,7 +96,9 @@ Notes (low severity):
   * WORK dir under /tmp (acceptable; removed on exit).
   * The current revision POSTs the signed CRE-hop trigger itself in step (6) and notes the
     auto path; the earlier revision waited for the breaker's own 5s auto fire and FAILED at
-    02:36 (docs/evidence/p14-breaker-demo.txt) while the intermediate build lacked it.
+    02:36 (docs/evidence/p14-breaker-demo.txt (pinned single-run transcript; re-run clean twice
+on 2026-10-06 — additional transcripts: docs/evidence/p18-breaker-dryrun-1.txt,
+docs/evidence/p18-breaker-dryrun-2.txt)) while the intermediate build lacked it.
 
 =============================================================================
 IMPLEMENTATION HISTORY OBSERVED DURING VERIFICATION (evidence of churn)
