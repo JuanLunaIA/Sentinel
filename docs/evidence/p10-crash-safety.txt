@@ -1,0 +1,12 @@
+# Sentinel P10 — kill -9 crash safety rehearsal
+# date: 2026-10-06T00:17:54-03:00
+== run 1 (replay, will be killed mid-run) ==
+killed -9 (mid-run)
+== audit-verify after the kill ==
+✅ journal consistent; 2 entries; 0 anchored; root matches at seq —
+== run 2 (restart: the journal must resume, not reset) ==
+-- restart log (journal resume evidence) --
+[2m2026-10-06T03:18:18.727114Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m sentinel starting [3mmode[0m[2m=[0mDRY_RUN [3mreplay[0m[2m=[0mtrue [3mperpl_env[0m[2m=[0mtestnet [3mchain_id[0m[2m=[0m10143 [3mversion[0m[2m=[0m"0.1.0"
+[2m2026-10-06T03:18:18.727650Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m audit journal open [3mnext_seq[0m[2m=[0m2 [3mdir[0m[2m=[0m"data/audit"
+== audit-verify after the restart ==
+✅ journal consistent; 2 entries; 0 anchored; root matches at seq —
