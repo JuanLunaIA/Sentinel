@@ -18,7 +18,7 @@
 //! | `BREAKER_JOURNAL` | `data/breaker-journal.jsonl` | action journal (JSONL) |
 //! | `PERPL_API_KEY` / `PERPL_API_KEY_SECRET` / `PERPL_API_URL` | — | required in `testnet` mode |
 //! | `PERPL_CHAIN_ID` | `10143` | signing chain id (Monad testnet) |
-//! | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_APPROVAL_CHAT_ID` | — (optional pair) | alert delivery |
+//! | `TELEGRAM_BOT_TOKEN` (alias: `TELOXIDE_TOKEN`) / `TELEGRAM_APPROVAL_CHAT_ID` | — (optional pair) | alert delivery |
 //!
 //! `from_env` reads the process environment; `from_vars` is the deterministic
 //! test seam. Required values that are missing or malformed produce a typed
@@ -302,8 +302,11 @@ impl BreakerConfig {
             }
         }
 
+        // Accept the daemon's token name as an alias so one `.env` value
+        // configures both processes (key-readiness audit, 2026-10-06).
         let telegram = match (
-            get_trimmed(&vars, "TELEGRAM_BOT_TOKEN"),
+            get_trimmed(&vars, "TELEGRAM_BOT_TOKEN")
+                .or_else(|| get_trimmed(&vars, "TELOXIDE_TOKEN")),
             get_trimmed(&vars, "TELEGRAM_APPROVAL_CHAT_ID"),
         ) {
             (None, _) => None,
@@ -571,6 +574,21 @@ mod tests {
         let cfg = BreakerConfig::from_vars(vars).expect("testnet config loads");
         assert_eq!(cfg.mode, BreakerMode::Testnet);
         assert!(cfg.has_perpl_live());
+    }
+
+    #[test]
+    fn telegram_accepts_teloxide_token_alias() {
+        let mut vars = base();
+        with(&mut vars, "TELOXIDE_TOKEN", "999:alias");
+        with(&mut vars, "TELEGRAM_APPROVAL_CHAT_ID", "7");
+        let cfg = BreakerConfig::from_vars(vars).expect("alias loads");
+        assert_eq!(
+            cfg.telegram,
+            Some(TelegramConfig {
+                bot_token: "999:alias".to_string(),
+                chat_id: 7,
+            })
+        );
     }
 
     #[test]

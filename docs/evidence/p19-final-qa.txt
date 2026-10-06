@@ -26,3 +26,10 @@ result was: RESULT: PASS — all 150 relative file target(s) exist [exit 0]
 (run 2026-10-06 13:1x, see also docs/evidence/p17-audit.txt POST-FIX #2).
 Anvil-dev-key scan: all 7 hits are the WELL-KNOWN public anvil dev key used by
 tests/demo scripts/runbooks — no real key material in tracked files.
+
+== KEY-READINESS PASS #2 (2026-10-06T15:46) ==
+TEST_RC=0 | 38 suites, 879 tests OK | FAILED_SUITES=0 | CLIPPY_RC=0 | FMT_OK
+Changes covered: breaker Telegram token alias (TELOXIDE_TOKEN accepted; +1 unit test),
+.env.example completeness (AUDIT_DIR, ANCHOR_FROM_SEQ, HEARTBEAT_PATH,
+ENVIO_GRAPHQL_ENDPOINT, PERPL_CHAIN_ID, token-alias note), docs/SETUP-MANUAL.md
+final rewrite (11-credential table + Zero->live-evidence runbook).
