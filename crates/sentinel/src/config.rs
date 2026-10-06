@@ -169,6 +169,10 @@ pub struct RiskConfig {
     pub hard_pct: Decimal,
     /// Fraction of size a reflex reduce removes, `(0, 1]`.
     pub reflex_reduce_fraction: Decimal,
+    /// Fraction of size an Orange (or gated-stale) reduce removes, `(0, 1]`.
+    pub reflex_orange_fraction: Decimal,
+    /// Per-market cooldown between reflexive actions, seconds.
+    pub reflex_cooldown_secs: u64,
     /// Per-action notional cap, USD.
     pub max_order_size_usd: Decimal,
     /// Daily action cap.
@@ -383,6 +387,8 @@ impl Config {
             warn_pct: parse_or(&vars, "RISK_WARN_PCT", Decimal::new(15, 0))?,
             hard_pct: parse_or(&vars, "RISK_HARD_PCT", Decimal::new(8, 0))?,
             reflex_reduce_fraction: parse_or(&vars, "REFLEX_REDUCE_FRACTION", Decimal::new(5, 1))?,
+            reflex_orange_fraction: parse_or(&vars, "REFLEX_ORANGE_FRACTION", Decimal::new(25, 2))?,
+            reflex_cooldown_secs: parse_or(&vars, "REFLEX_COOLDOWN_SECS", 600u64)?,
             max_order_size_usd: parse_or(&vars, "MAX_ORDER_SIZE_USD", Decimal::new(5000, 0))?,
             max_daily_actions: parse_or(&vars, "MAX_DAILY_ACTIONS", 20u32)?,
             market_allowlist: parse_csv_u32(&vars, "MARKET_ALLOWLIST", "20,1")?,
@@ -500,6 +506,12 @@ impl Config {
         }
         if r.reflex_reduce_fraction <= Decimal::ZERO || r.reflex_reduce_fraction > Decimal::ONE {
             return Err(cfg_err("REFLEX_REDUCE_FRACTION", "must be in (0, 1]"));
+        }
+        if r.reflex_orange_fraction <= Decimal::ZERO || r.reflex_orange_fraction > Decimal::ONE {
+            return Err(cfg_err("REFLEX_ORANGE_FRACTION", "must be in (0, 1]"));
+        }
+        if r.reflex_cooldown_secs == 0 {
+            return Err(cfg_err("REFLEX_COOLDOWN_SECS", "must be > 0"));
         }
         if r.max_order_size_usd <= Decimal::ZERO {
             return Err(cfg_err("MAX_ORDER_SIZE_USD", "must be > 0"));

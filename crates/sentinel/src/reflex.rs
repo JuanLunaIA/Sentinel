@@ -1,52 +1,49 @@
-//! Reflex decision loop — the deterministic pipeline
-//! `feed → risk → policy → sizing → executor` with per-stage latency logging.
+//! Reflex decision core — pure planning over a state snapshot.
 //!
-//! P05 wires the path behind `ENABLE_REFLEX`; P06 turns this into the fully
-//! supervised daemon. The LLM is not involved anywhere here (P00 invariant #1).
+//! P06 refactor: the decision pass was extracted from the P05 sweep so the
+//! supervised pipeline ([`crate::pipeline`]) drives it directly. This module
+//! contains **no I/O**: it maps (account state, markets, clocks) to planned
+//! actions; the pipeline executes them.
 //!
-//! `sweep` is a single deterministic pass over the current snapshot — it is
-//! the unit of work the daemon repeats on a fixed interval, and the unit the
-//! integration tests drive directly.
-
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+//! Determinism: given the same state, config and `now_ms`, [`decide`] returns
+//! the same plan — the replay contract in `SPEC-P06.md` §7 relies on this.
 
 use rust_decimal::Decimal;
+use sentinel_core::order::{OrderRequest, reduce_by_fraction};
 use sentinel_core::policy::{DayState, PolicyConfig, PolicyContext, PolicyEngine, PolicySource};
 use sentinel_core::risk::{self, ReflexConfig, ReflexState, RiskThresholds};
-use sentinel_core::types::{Intent, MarketId, PolicyVerdict, Position, RiskTier};
+use sentinel_core::types::{
+    AccountState, DataQuality, Intent, Market, MarketId, PolicyVerdict, RiskTier,
+};
 
 use crate::config::Config;
-use crate::error::{Result, SentinelError};
-use crate::execution::Executor;
-use crate::perpl::PerplFeed;
-
-/// Fixed sweep interval for the P05 daemon (P06 generalizes supervision).
-const SWEEP_INTERVAL: Duration = Duration::from_secs(15);
 
 /// Default slippage cap for reflex reduce orders, bps.
-const REFLEX_SLIPPAGE_BPS: u16 = 50;
+pub const REFLEX_SLIPPAGE_BPS: u16 = 50;
 
-/// One decision's structured record (also emitted via `tracing`).
+/// A fully planned decision, ready for the executor (pure; no I/O).
 #[derive(Debug, Clone)]
-pub struct DecisionRecord {
-    /// Correlates every log line of this decision.
+pub struct PlannedAction {
+    /// Correlates every log line and event of this decision.
     pub decision_id: String,
     /// Market the decision concerns.
     pub market_id: MarketId,
     /// Tier after classification.
     pub tier: RiskTier,
-    /// What the policy gate said.
+    /// Distance to liquidation at decision time, percent.
+    pub distance_pct: Decimal,
+    /// Intent produced by the reflex engine, if any.
+    pub intent: Option<Intent>,
+    /// Sized reduce order when the intent survived policy and sizing.
+    pub order: Option<OrderRequest>,
+    /// Policy gate verdict.
     pub verdict: PolicyVerdict,
-    /// True when an order was actually submitted.
-    pub submitted: bool,
-    /// Report status or error summary of the submission.
-    pub outcome: String,
-    /// Per-stage durations in microseconds: (classify, policy, submit).
-    pub stage_us: (u64, u64, u64),
+    /// Human-readable note (skip reasons, no-action markers).
+    pub note: String,
 }
 
-/// Build the core risk thresholds from the app configuration.
-fn thresholds(cfg: &Config) -> RiskThresholds {
+/// Risk thresholds from the app configuration.
+pub fn thresholds_from(cfg: &Config) -> RiskThresholds {
     RiskThresholds {
         soft: cfg.risk.soft_pct,
         warn: cfg.risk.warn_pct,
@@ -54,17 +51,17 @@ fn thresholds(cfg: &Config) -> RiskThresholds {
     }
 }
 
-/// Build the reflex parameters from the app configuration.
+/// Reflex parameters from the app configuration.
 fn reflex_params(cfg: &Config) -> ReflexConfig {
     ReflexConfig {
         reduce_fraction: cfg.risk.reflex_reduce_fraction,
-        orange_fraction: Decimal::new(25, 2),
-        cooldown_ms: 600_000,
+        orange_fraction: cfg.risk.reflex_orange_fraction,
+        cooldown_ms: cfg.risk.reflex_cooldown_secs.saturating_mul(1000),
         stale_reduce: false,
     }
 }
 
-/// Build the policy limits from the app configuration.
+/// Policy limits from the app configuration.
 ///
 /// The kill switch is wired in P11 (Telegram); until then it is always off.
 fn policy_params(cfg: &Config) -> PolicyConfig {
@@ -84,7 +81,7 @@ fn policy_params(cfg: &Config) -> PolicyConfig {
 }
 
 /// Fraction of the position an intent asks to remove.
-fn intent_fraction(intent: &Intent) -> Option<Decimal> {
+pub fn intent_fraction(intent: &Intent) -> Option<Decimal> {
     match intent {
         Intent::Reduce { fraction, .. } => Some(*fraction),
         Intent::Close { .. } => Some(Decimal::ONE),
@@ -92,221 +89,99 @@ fn intent_fraction(intent: &Intent) -> Option<Decimal> {
     }
 }
 
-/// Wall-clock milliseconds (execution-layer bookkeeping only; the core stays
-/// clock-free with caller-supplied `now_ms`).
-pub(crate) fn unix_ms() -> u64 {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(elapsed) => u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
-        Err(_) => 0,
-    }
-}
-
-/// One decision sweep across every position in the account snapshot.
+/// One deterministic evaluation pass over every position (no I/O).
 ///
-/// Returns one [`DecisionRecord`] per position considered. Errors from the
-/// feed propagate; individual submission errors are captured in the record
-/// (a duplicate order is an expected, non-fatal outcome).
-pub async fn sweep<F, E>(
+/// `now_ms` is the caller's clock (logical in replay → deterministic);
+/// `quality` is the feed freshness at evaluation time. Positions without a
+/// market entry or without a derivable distance are skipped with a warning
+/// (they cannot be classified safely).
+pub fn decide(
+    state: &AccountState,
+    markets: &[Market],
     cfg: &Config,
-    feed: &F,
-    executor: &E,
     reflex: &mut ReflexState,
-    day: &mut DayState,
-    decision_seq: &mut u64,
-) -> Result<Vec<DecisionRecord>>
-where
-    F: PerplFeed + Sync,
-    E: Executor + Sync,
-{
-    let markets = feed.context().await?;
-    let account = feed.snapshot().await?;
-    let thresholds = thresholds(cfg);
+    day: &DayState,
+    seq: &mut u64,
+    now_ms: u64,
+    quality: DataQuality,
+) -> Vec<PlannedAction> {
+    let thresholds = thresholds_from(cfg);
     let reflex_cfg = reflex_params(cfg);
     let policy_cfg = policy_params(cfg);
-    let now_ms = unix_ms();
-    let mut records = Vec::new();
+    let mut planned = Vec::new();
 
-    for pos in &account.positions {
-        *decision_seq = decision_seq.saturating_add(1);
-        let decision_id = format!("d-{}", *decision_seq);
-        let Some(market) = markets.iter().find(|m| m.id == pos.market_id) else {
-            tracing::warn!(decision_id = %decision_id, market_id = pos.market_id.0, "no market in context; skipped");
+    for pos in &state.positions {
+        *seq = seq.saturating_add(1);
+        let decision_id = format!("d-{}", *seq);
+        let Some(market) = markets.iter().find(|market| market.id == pos.market_id) else {
+            tracing::warn!(
+                decision_id = %decision_id,
+                market_id = pos.market_id.0,
+                "no market in context; skipped"
+            );
             continue;
         };
-
-        let t0 = Instant::now();
         let Some(distance) = risk::distance_to_liq_pct(pos, market) else {
-            tracing::warn!(decision_id = %decision_id, market_id = pos.market_id.0, "distance unavailable; skipped");
+            tracing::warn!(
+                decision_id = %decision_id,
+                market_id = pos.market_id.0,
+                "distance unavailable; skipped"
+            );
             continue;
         };
         let tier = risk::tier(distance, &thresholds);
-        let intent = reflex.advance(
-            pos,
-            tier,
-            sentinel_core::types::DataQuality::Fresh,
-            &reflex_cfg,
-            now_ms,
-        );
-        let classify_us = u64::try_from(t0.elapsed().as_micros()).unwrap_or(u64::MAX);
+        let intent = reflex.advance(pos, tier, quality, &reflex_cfg, now_ms);
 
-        let Some(intent) = intent else {
-            records.push(DecisionRecord {
-                decision_id: decision_id.clone(),
-                market_id: pos.market_id,
-                tier,
-                verdict: PolicyVerdict::Allow,
-                submitted: false,
-                outcome: "no action".to_string(),
-                stage_us: (classify_us, 0, 0),
-            });
-            tracing::debug!(decision_id = %decision_id, market_id = pos.market_id.0, tier = ?tier, "no reflex action");
-            continue;
-        };
-
-        let t1 = Instant::now();
-        let ctx = PolicyContext {
-            source: PolicySource::Reflex,
-            tier,
-            market_id: pos.market_id,
-        };
-        let verdict = PolicyEngine::evaluate(&intent, &account, &policy_cfg, day, &ctx);
-        let policy_us = u64::try_from(t1.elapsed().as_micros()).unwrap_or(u64::MAX);
-
-        let (submitted, outcome, submit_us) = match &verdict {
-            PolicyVerdict::Allow => {
-                let Some(fraction) = intent_fraction(&intent) else {
-                    records.push(DecisionRecord {
-                        decision_id: decision_id.clone(),
-                        market_id: pos.market_id,
-                        tier,
-                        verdict: verdict.clone(),
-                        submitted: false,
-                        outcome: "non-order intent".to_string(),
-                        stage_us: (classify_us, policy_us, 0),
-                    });
-                    continue;
+        let (verdict, order, note) = match &intent {
+            None => (PolicyVerdict::Allow, None, "no action".to_string()),
+            Some(intent) => {
+                let ctx = PolicyContext {
+                    source: PolicySource::Reflex,
+                    tier,
+                    market_id: pos.market_id,
                 };
-                let t2 = Instant::now();
-                match sentinel_core::order::reduce_by_fraction(
-                    pos,
-                    fraction,
-                    market,
-                    REFLEX_SLIPPAGE_BPS,
-                ) {
-                    None => {
-                        let us = u64::try_from(t2.elapsed().as_micros()).unwrap_or(u64::MAX);
-                        (false, "skipped: size below lot/min".to_string(), us)
-                    }
-                    Some(order) => {
-                        let res = executor.submit(&order).await;
-                        let us = u64::try_from(t2.elapsed().as_micros()).unwrap_or(u64::MAX);
-                        match res {
-                            Ok(report) => {
-                                day.actions_today = day.actions_today.saturating_add(1);
-                                (
-                                    true,
-                                    format!("{:?} ({})", report.status, report.client_order_id),
-                                    us,
-                                )
+                let verdict = PolicyEngine::evaluate(intent, state, &policy_cfg, day, &ctx);
+                let (order, note) = match &verdict {
+                    PolicyVerdict::Allow => match intent_fraction(intent) {
+                        None => (None, "non-order intent".to_string()),
+                        Some(fraction) => {
+                            match reduce_by_fraction(pos, fraction, market, REFLEX_SLIPPAGE_BPS) {
+                                Some(order) => (Some(order), "sized".to_string()),
+                                None => (None, "skipped: size below lot/min".to_string()),
                             }
-                            Err(SentinelError::DuplicateOrder { key, .. }) => {
-                                (false, format!("duplicate suppressed ({key})"), us)
-                            }
-                            Err(err) => (false, format!("submit error: {err}"), us),
                         }
+                    },
+                    PolicyVerdict::Deny { reason } => (None, format!("denied: {reason}")),
+                    PolicyVerdict::NeedsApproval { reason } => {
+                        (None, format!("needs approval: {reason}"))
                     }
-                }
-            }
-            PolicyVerdict::Deny { reason } => (false, format!("denied: {reason}"), 0),
-            PolicyVerdict::NeedsApproval { reason } => {
-                (false, format!("needs approval: {reason}"), 0)
+                };
+                (verdict, order, note)
             }
         };
 
-        tracing::info!(
-            decision_id = %decision_id,
-            market_id = pos.market_id.0,
-            tier = ?tier,
-            verdict = ?verdict,
-            submitted,
-            outcome = %outcome,
-            classify_us,
-            policy_us,
-            submit_us,
-            "reflex decision"
-        );
-        records.push(DecisionRecord {
+        planned.push(PlannedAction {
             decision_id,
             market_id: pos.market_id,
             tier,
+            distance_pct: distance,
+            intent,
+            order,
             verdict,
-            submitted,
-            outcome,
-            stage_us: (classify_us, policy_us, submit_us),
+            note,
         });
     }
-    Ok(records)
-}
-
-/// The P05 daemon body: build the live feed + guarded DRY_RUN executor and
-/// sweep on a fixed interval, tolerating transient failures.
-///
-/// TESTNET mode is wired but stays behind the mode flag until a real API key
-/// exists (P05 FALLBACK; STUB-09). P06 replaces this with the supervised
-/// pipeline.
-pub async fn daemon(cfg: Config) -> anyhow::Result<()> {
-    use crate::execution::GuardedExecutor;
-    use crate::execution::dry_run::DryRunExecutor;
-    use crate::execution::idempotency::IdempotencyStore;
-    use crate::perpl::LivePerpl;
-    use std::path::PathBuf;
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
-
-    let feed = LivePerpl::new(&cfg)?;
-    let probe = LivePerpl::new(&cfg)?;
-    let store = Arc::new(Mutex::new(IdempotencyStore::load(
-        Duration::from_secs(cfg.risk.idempotency_window_secs),
-        PathBuf::from("data/idempotency.json"),
-    )?));
-    let executor = GuardedExecutor::new(
-        DryRunExecutor::new(probe, 10, PathBuf::from("data/dryrun-reports.jsonl"), 0),
-        Arc::clone(&store),
-        feed_probe(&cfg)?,
-        Duration::from_secs(3),
-    );
-
-    let mut reflex = ReflexState::new();
-    let mut day = DayState::default();
-    let mut seq: u64 = 0;
-
-    tracing::info!(
-        mode = %cfg.execution.mode,
-        interval_secs = SWEEP_INTERVAL.as_secs(),
-        "reflex daemon started (DRY_RUN executor module P05)"
-    );
-    loop {
-        match sweep(&cfg, &feed, &executor, &mut reflex, &mut day, &mut seq).await {
-            Ok(records) => {
-                tracing::debug!(decisions = records.len(), "sweep complete");
-            }
-            Err(err) => {
-                tracing::warn!(error = %err, "sweep failed; retrying next interval");
-            }
-        }
-        tokio::time::sleep(SWEEP_INTERVAL).await;
-    }
-}
-
-/// Second live client used purely as the guard's position probe.
-fn feed_probe(cfg: &Config) -> anyhow::Result<crate::perpl::LivePerpl> {
-    Ok(crate::perpl::LivePerpl::new(cfg)?)
+    planned
 }
 
 /// `PositionProbe` adapter for fixture replay (bins/tests); the live impl is
-/// in `execution::mod`.
+/// in `execution::mod` and the pipeline's live-state probe in `pipeline`.
 impl crate::execution::PositionProbe for crate::perpl::MockPerpl {
-    async fn position(&self, market_id: MarketId) -> Result<Option<Position>> {
+    async fn position(
+        &self,
+        market_id: MarketId,
+    ) -> crate::error::Result<Option<sentinel_core::types::Position>> {
+        use crate::perpl::PerplFeed as _;
         let state = self.snapshot().await?;
         Ok(state
             .positions

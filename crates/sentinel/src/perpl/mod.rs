@@ -47,6 +47,24 @@ const MOCK_PACE_DIVISOR: u64 = 50;
 /// Upper bound for a single replayed inter-message pause.
 const MOCK_PACE_CAP_MS: u64 = 100;
 
+/// `SENTINEL_MOCK_PACE` overrides the replay divisor at runtime (crash demo
+/// slows down, determinism tests speed up; see `SPEC-P06.md` §7).
+fn mock_pace_divisor() -> u64 {
+    std::env::var("SENTINEL_MOCK_PACE")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(MOCK_PACE_DIVISOR)
+}
+
+/// `SENTINEL_MOCK_CAP_MS` overrides the per-line replay pause cap.
+fn mock_pace_cap_ms() -> u64 {
+    std::env::var("SENTINEL_MOCK_CAP_MS")
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(MOCK_PACE_CAP_MS)
+}
+
 /// Perception feed: streams live events and serves point-in-time snapshots.
 ///
 /// Implementations never expose raw venue JSON; everything is mapped into
@@ -359,10 +377,10 @@ async fn replay(lines: Vec<FixtureLine>, markets: Vec<Market>, tx: Sender<FeedEv
         let FixtureLine::Ws { t_ms, msg } = line else {
             continue; // rest lines are served by snapshot()/context()
         };
-        let delta = t_ms.saturating_sub(prev_t) / MOCK_PACE_DIVISOR;
+        let delta = t_ms.saturating_sub(prev_t) / mock_pace_divisor();
         prev_t = t_ms;
         if delta > 0 {
-            tokio::time::sleep(Duration::from_millis(delta.min(MOCK_PACE_CAP_MS))).await;
+            tokio::time::sleep(Duration::from_millis(delta.min(mock_pace_cap_ms()))).await;
         }
         match msg.get("mt").and_then(serde_json::Value::as_u64) {
             Some(9) => {

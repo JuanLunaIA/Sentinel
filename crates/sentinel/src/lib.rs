@@ -11,9 +11,13 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
+pub mod args;
 pub mod config;
 pub mod error;
 pub mod execution;
+pub mod health;
+pub mod notify;
 pub mod perpl;
+pub mod pipeline;
 pub mod reflex;
 pub mod telemetry;
