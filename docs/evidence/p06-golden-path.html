@@ -1,0 +1,21 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body { background:#0e0e14; color:#d7d7e0; font: 13px/1.45 'DejaVu Sans Mono',monospace; padding:24px; }
+h1 { color:#8b7bff; font-size:15px; margin:0 0 12px; }
+.tier { color:#ffd166; font-weight:bold; }
+.act { color:#ff6b6b; font-weight:bold; }
+.exec { color:#6bf0a0; }
+.alert { color:#7bd7ff; }
+.dim { color:#888; }
+pre { white-space:pre-wrap; }
+</style></head><body><h1>SENTINEL — crash rehearsal (P06 golden path, DRY_RUN replay)</h1><pre>2026-10-06T01:05:04.521765Z  INFO sentinel: sentinel starting mode=DRY_RUN replay=true perpl_env=testnet chain_id=10143 version=&quot;0.1.0&quot;
+<span class="alert">2026-10-06T01:05:04.526875Z  INFO sentinel: alerts: tracing only (no telegram chat configured)</span>
+2026-10-06T01:05:04.533055Z  INFO sentinel::pipeline: pipeline started markets=2 positions=2 replay=true
+<span class="alert">2026-10-06T01:05:27.951058Z  INFO sentinel::alert: alert kind=&quot;tier_change&quot; market_id=32 text=🟡 ETH#32 GREEN→YELLOW · distance 24.10% · consult scheduled</span>
+<span class="alert">2026-10-06T01:05:27.951286Z  INFO sentinel::alert: alert kind=&quot;consult_scheduled&quot; market_id=32 text=🧠 ETH#32 YELLOW · consult scheduled · distance 24.10%</span>
+<span class="alert">2026-10-06T01:05:57.019886Z  INFO sentinel::alert: alert kind=&quot;tier_change&quot; market_id=32 text=🟠 ETH#32 YELLOW→ORANGE · distance 14.88%</span>
+<span class="alert">2026-10-06T01:05:57.020251Z  INFO sentinel::alert: alert kind=&quot;reflex_action&quot; market_id=32 text=⚡ ETH#32 <span class="act">reduce 25%</span> · size 2.500 · <span class="exec">sentinel-32-1</span> · <span class="exec">simulated</span></span>
+<span class="alert">2026-10-06T01:06:15.976321Z  INFO sentinel::alert: alert kind=&quot;tier_change&quot; market_id=32 text=🔴 ETH#32 ORANGE→RED · distance 7.38%</span>
+<span class="alert">2026-10-06T01:06:19.177908Z  INFO sentinel::alert: alert kind=&quot;reflex_action&quot; market_id=32 text=⚡ ETH#32 <span class="act">reduce 50%</span> · size 5.000 · <span class="exec">sentinel-32-2</span> · <span class="exec">simulated</span></span>
+2026-10-06T01:06:19.178416Z  WARN sentinel::pipeline: feed event channel closed; ending pipeline
+2026-10-06T01:06:19.178552Z  INFO sentinel::pipeline: pipeline stopped events=128
+<span class="alert">2026-10-06T01:06:19.181100Z  INFO sentinel: pipeline finished events=128 <span class="exec">executed</span>=2 alerts=6 denied=0</span></pre></body></html>

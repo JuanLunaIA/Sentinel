@@ -1,0 +1,345 @@
+   Compiling sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 36s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (target/debug/deps/sentinel-ef23378669fab1dc)
+
+running 99 tests
+test args::tests::empty_args_yield_default ... ok
+test args::tests::parses_modes ... ok
+test args::tests::rejects_unknown_flag_and_bad_values ... ok
+test args::tests::parses_mode_and_replay ... ok
+test execution::dry_run::tests::missing_mark_is_an_order_error ... ok
+test execution::idempotency::tests::corrupt_file_is_an_order_error ... ok
+test execution::dry_run::tests::close_short_buys_above_mark_at_slippage ... ok
+test execution::dry_run::tests::close_long_sells_below_mark_at_slippage ... ok
+test execution::dry_run::tests::appends_one_line_per_submission ... ok
+test execution::idempotency::tests::missing_file_loads_empty_and_is_created_on_first_record ... ok
+test execution::idempotency::tests::restart_reload_still_suppresses ... ok
+test execution::idempotency::tests::fresh_key_allowed_recorded_and_persisted ... ok
+test execution::idempotency::tests::prune_drops_only_expired_entries ... ok
+test execution::perpl::tests::close_short_posts_t4_with_the_same_exact_shape ... ok
+test execution::perpl::tests::http_401_maps_to_unauthorized_error_without_retrying ... ok
+test execution::perpl::tests::http_403_maps_to_missing_trade_scope_error ... ok
+test execution::perpl::tests::batch_level_rejection_maps_to_rejected ... ok
+test execution::recording::tests::appends_one_line_per_submission ... ok
+test execution::recording::tests::records_request_and_report_round_trip ... ok
+test execution::perpl::tests::per_order_rejection_maps_to_rejected_with_code_and_error ... ok
+test execution::perpl::tests::raw_size_out_of_range_is_refused_before_posting ... ok
+test execution::tests::guard_keeps_inner_report_when_verify_probe_fails ... ok
+test execution::tests::guard_marks_filled_when_decrease_covers_order_size ... ok
+test execution::tests::guard_marks_filled_when_position_goes_flat ... ok
+test execution::perpl::tests::success_posts_exact_signed_batch_and_maps_ack_zero_to_submitted ... ok
+test execution::tests::guard_marks_partial_when_position_shrinks ... ok
+test execution::tests::guard_submits_unverified_when_baseline_probe_fails ... ok
+test execution::tests::seq_counter_starts_after_seed ... ok
+test execution::tests::size_bucket_table_and_key_shape ... ok
+test health::tests::render_computes_feed_age_seconds_after_touch ... ok
+test health::tests::render_feed_age_saturates_on_backwards_clock ... ok
+test health::tests::render_returns_frozen_shape_with_null_feed_age_until_touched ... ok
+test execution::tests::guard_keeps_inner_report_on_verification_timeout ... ok
+test execution::tests::guard_suppresses_duplicate_and_keeps_single_execution ... ok
+test notify::tests::dedupe_first_tier_change_passes ... ok
+test notify::tests::dedupe_forwards_inner_errors ... ok
+test notify::tests::dedupe_is_per_market ... ok
+test notify::tests::dedupe_non_red_never_realerts ... ok
+test notify::tests::dedupe_non_tier_kinds_always_pass_even_identical ... ok
+test notify::tests::dedupe_red_realerts_only_at_the_window ... ok
+test notify::tests::dedupe_repeat_same_tier_is_suppressed ... ok
+test notify::tests::dedupe_state_is_not_touched_by_non_tier_alerts ... ok
+test notify::tests::dedupe_tier_change_passes_immediately ... ok
+test notify::tests::dedupe_unkeyed_tier_change_fails_open ... ok
+test notify::tests::recording_sink_captures_every_alert_in_order ... ok
+test notify::tests::telegram_sink_constructs_and_debug_does_not_panic ... ok
+test notify::tests::tracing_sink_send_returns_ok ... ok
+test perpl::auth::tests::b64url_encodes_without_padding ... ok
+test perpl::auth::tests::canonical_rest_matches_rest1_vector ... ok
+test perpl::auth::tests::canonical_rest_with_body_matches_rest2_vector ... ok
+test perpl::auth::tests::canonical_ws_matches_ws1_vector ... ok
+test perpl::auth::tests::debug_redacts_token_and_seed ... ok
+test perpl::auth::tests::from_config_reads_perpl_config ... ok
+test perpl::auth::tests::from_parts_accepts_plain_and_0x_prefixed_seeds ... ok
+test perpl::auth::tests::from_parts_rejects_malformed_seeds ... ok
+test perpl::auth::tests::random_nonce_is_16_bytes_and_changes ... ok
+test perpl::auth::tests::sign_canonical_roundtrips_through_verifying_key ... ok
+test health::tests::router_serves_healthz_json_over_http ... ok
+test perpl::auth::tests::ws_signin_frame_is_mt29_json_with_verifiable_signature ... ok
+test perpl::auth::tests::signed_request_headers_are_ordered_and_verifiable ... ok
+test perpl::rest::tests::signed_request_carries_exact_path_query_and_api_key ... ok
+test health::tests::serve_answers_healthz_and_returns_ok_on_shutdown ... ok
+test execution::tests::guard_allows_again_after_window_expiry ... ok
+test perpl::types::tests::account_history_record_exact ... ok
+test perpl::types::tests::account_state_sums_equity_from_balance_and_unrealized ... ok
+test perpl::types::tests::account_update_mt21_exact ... ok
+test perpl::types::tests::context_falls_back_to_name_for_empty_symbol ... ok
+test perpl::types::tests::context_maps_eth_market_exactly ... ok
+test perpl::types::tests::fills_record_exact ... ok
+test perpl::types::tests::malformed_payloads_error ... ok
+test perpl::types::tests::positions_keep_only_open_status ... ok
+test perpl::types::tests::positions_long_maps_sign_and_pnl ... ok
+test perpl::types::tests::positions_short_maps_sign_and_pnl ... ok
+test perpl::types::tests::positions_without_mark_have_no_mark_and_zero_pnl ... ok
+test perpl::types::tests::ticker_maps_mark_price ... ok
+test perpl::types::tests::unknown_market_id_errors ... ok
+test perpl::types::tests::unparseable_timestamps_map_to_none ... ok
+test perpl::types::tests::wallet_returns_primary_account_tuple ... ok
+test perpl::types::tests::wallet_without_exchange_account_errors ... ok
+test perpl::ws::tests::backoff_base_is_capped_for_large_attempts ... ok
+test perpl::ws::tests::backoff_base_matches_spec_table ... ok
+test perpl::ws::tests::jittered_backoff_stays_within_twenty_five_percent ... ok
+test perpl::ws::tests::scale_raw_divides_by_the_decimal_scale ... ok
+test perpl::ws::tests::stale_detector_fires_once_at_the_threshold_and_resets_on_touch ... ok
+test perpl::ws::tests::stale_detector_never_fires_without_a_touch ... ok
+test perpl::ws::tests::stale_detector_reports_whole_seconds ... ok
+test perpl::ws::tests::subscription_frame_matches_the_frozen_mt5_shape ... ok
+test perpl::ws::tests::websocket_endpoint_rejects_bad_urls ... ok
+test pipeline::tests::apply_marks_revalue_positions_and_equity ... ok
+test pipeline::tests::apply_snapshot_replaces_account_and_merges_marks ... ok
+test pipeline::tests::apply_stale_sets_and_any_event_clears ... ok
+test pipeline::tests::apply_update_patches_balances_and_keeps_marks ... ok
+test pipeline::tests::channel_close_ends_gracefully_with_shutdown ... ok
+test pipeline::tests::fixture_replay_emits_ordered_events ... ok
+test pipeline::tests::shutdown_mid_stream_returns_ok_with_exactly_one_shutdown ... ok
+test pipeline::tests::state_probe_reads_positions_from_shared_state ... ok
+test perpl::rest::tests::success_path_returns_parsed_json ... ok
+test perpl::rest::tests::unauthorized_401_is_not_retried ... ok
+test perpl::rest::tests::persistent_500_retries_three_attempts_then_fails ... ok
+
+test result: ok. 99 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.93s
+
+     Running unittests src/bin/read_positions.rs (target/debug/deps/read_positions-e8de1956fd493a7a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/sentinel-6152b4fc574b4d2b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/test_execution.rs (target/debug/deps/test_execution-e47e177223520170)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/execution_adversarial.rs (target/debug/deps/execution_adversarial-de66a5aae5012d14)
+
+running 18 tests
+test dry_run_missing_mark_is_order_error ... ok
+test dry_run_sequence_is_monotonic ... ok
+test dry_run_slippage_math_python_derived ... ok
+test guard_duplicate_suppressed_single_execution ... ok
+test guard_post_verify_filled ... ok
+test guard_post_verify_filled_to_zero ... ok
+test guard_post_verify_partial ... ok
+test idempotency_prune_semantics ... ok
+test idempotency_restart_reload_suppresses ... ok
+test key_and_client_id_shapes ... ok
+test idempotency_boundary_exact_window_and_no_duplicate_refresh ... ok
+test guard_post_verify_timeout_keeps_inner_report ... ok
+test recording_round_trip_jsonl ... ok
+test seq_counter_is_monotonic_from_seed_plus_one ... ok
+test size_bucket_matches_python ... ok
+test perpl_rejected_ack_carries_code_and_no_retry ... ok
+test perpl_executor_body_and_ack_mapping ... ok
+test perpl_http_401_403_map_to_order_error ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.47s
+
+     Running tests/mock_replay.rs (target/debug/deps/mock_replay-d4e3a55855c62049)
+
+running 2 tests
+test mock_context_parses_and_snapshot_is_documented_pending ... ok
+test mock_replay_matches_raw_fixture_derivation ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+
+     Running tests/p06_adversarial.rs (target/debug/deps/p06_adversarial-983962bf5b46ee96)
+
+running 4 tests
+test notify_dedupe_boundary_matrix_black_box ... ok
+test determinism_two_runs_byte_equal_and_expected_sequence ... ok
+test shutdown_mid_stream_returns_ok_with_single_shutdown ... ok
+test health_endpoint_shape_and_feed_age ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests/perpl_adversarial.rs (target/debug/deps/perpl_adversarial-689b99eaddf504d4)
+
+running 26 tests
+test account_update_example_and_adversarial ... ok
+test account_history_example_and_adversarial ... ok
+test backoff_base_matches_spec_table ... ok
+test context_example_yields_spec_fields ... ok
+test context_malformed_payload_errors ... ok
+test b64url_is_unpadded_url_safe ... ok
+test context_symbol_empty_falls_back_to_name ... ok
+test account_state_equity_sums_balance_and_unrealized_pnl ... ok
+test fills_example_and_adversarial ... ok
+test from_parts_rejects_invalid_seeds ... ok
+test positions_map_example_values ... ok
+test positions_adversarial_edges ... ok
+test positions_missing_required_fields_error ... ok
+test random_nonce_16_is_16_bytes_and_unique ... ok
+test signer_debug_never_leaks_token_or_seed ... ok
+test node_ed25519_oracle_signatures_match_sign_canonical ... ok
+test spec_canonical_vectors_are_reproduced_byte_for_byte ... ok
+test signed_request_headers_conform_to_spec ... ok
+test spec_mt9_example_maps_to_mark_price_event ... ok
+test stale_detector_truncates_whole_seconds ... ok
+test stale_detector_boundaries ... ok
+test wallet_example_and_missing_accounts ... ok
+test ticker_marks_example_and_adversarial ... ok
+test ws_signin_frame_matches_spec_and_self_verifies ... ok
+test snapshot_on_public_only_fixture_errors_naming_missing_recording ... ok
+test fixture_replay_matches_independent_parser ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+
+     Running tests/pipeline_determinism.rs (target/debug/deps/pipeline_determinism-2dcf53933950437a)
+
+running 2 tests
+test shutdown_drains_and_reports_once ... ok
+test replay_is_deterministic_and_hits_the_golden_sequence ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/risk_snapshot.rs (target/debug/deps/risk_snapshot-b931155c672841b9)
+
+running 2 tests
+test escalation_after_cooldown_on_fixture_position ... ok
+test classifies_fixture_snapshot_per_position ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/smoke.rs (target/debug/deps/smoke-bb5c0a8d29cd08f7)
+
+running 6 tests
+test rejected_on_invalid_secret_hex ... ok
+test config_loads_from_fixture_with_testnet_defaults ... ok
+test rejected_when_mode_and_env_disagree ... ok
+test mainnet_requires_explicit_acknowledgement ... ok
+test rejected_when_no_telegram_users ... ok
+test rejected_when_threshold_order_broken ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/sentinel_core-1eb7ce5112f449dc)
+
+running 45 tests
+test order::tests::carries_size_decimals_and_slippage_verbatim ... ok
+test order::tests::flat_position_is_skipped ... ok
+test order::tests::clamp_never_exceeds_quantized_position ... ok
+test order::tests::fraction_bounds_rejected ... ok
+test order::tests::min_size_skip_and_exact_min_pass ... ok
+test order::tests::quantization_below_one_lot_is_zero ... ok
+test order::tests::quantization_table ... ok
+test order::tests::side_mapping_and_request_shape ... ok
+test order::tests::tiny_position_below_one_lot_is_skipped ... ok
+test policy::tests::rule1_kill_switch_beats_everything ... ok
+test policy::tests::matrix_benign_intents_allow_across_sources_and_tiers ... ok
+test policy::tests::no_intent_can_increase_or_flip_exposure ... ok
+test order::tests::serde_round_trip_carries_size_decimals_and_ms ... ok
+test policy::tests::rule3_alert_short_circuits_after_rules_1_and_2 ... ok
+test policy::tests::rule4_close_on_flat_position_denied ... ok
+test policy::tests::rule4_collateral_amount_must_be_positive ... ok
+test policy::tests::rule3_missing_position_denied_for_actionable_intents ... ok
+test policy::tests::rule2_allowlist_before_position_lookup ... ok
+test policy::tests::rule5_notional_formulas ... ok
+test policy::tests::rule5_mark_required_for_reduce_and_close_only ... ok
+test policy::tests::rule4_reduce_fraction_bounds ... ok
+test policy::tests::rule6_cap_beats_approval ... ok
+test policy::tests::rule6_cap_boundary_strictly_greater ... ok
+test policy::tests::rule8_daily_cap_boundary_and_precedence ... ok
+test policy::tests::rule7_approval_threshold_strictly_greater ... ok
+test policy::tests::rule7_reflex_red_bypass_is_approval_only ... ok
+test risk::tests::green_and_yellow_never_yield_intents ... ok
+test risk::tests::distance_requires_mark_and_derives_without_liq ... ok
+test risk::tests::effective_price_source_and_divergence ... ok
+test risk::tests::hand_computed_orange_scenario ... ok
+test risk::tests::hand_computed_red_scenario ... ok
+test risk::tests::hand_computed_green_scenario ... ok
+test risk::tests::margin_health_guards ... ok
+test risk::tests::classification_10k_under_target ... ok
+test risk::tests::sdk_vectors_implied_liq_prices ... ok
+test risk::tests::state_machine_orange_cadence ... ok
+test risk::tests::state_machine_red_escalation_and_recovery_reset ... ok
+test risk::tests::state_machine_stale_gate_both_branches ... ok
+test risk::tests::green_never_yields_an_intent_regardless_of_collateral ... ok
+test risk::tests::tier_boundary_cuts_belong_to_safer_tier ... ok
+test risk::tests::validators_reject_violations ... ok
+test risk::tests::monotone_distance_is_never_more_severe ... ok
+test risk::tests::threshold_boundaries_land_on_safer_tier ... ok
+test risk::tests::long_short_mirror_symmetry_around_entry ... ok
+test risk::tests::zero_size_position_yields_none_everywhere ... ok
+
+test result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+     Running tests/policy_order_adversarial.rs (target/debug/deps/policy_order_adversarial-849a272fd3765816)
+
+running 14 tests
+test allowlist_rule_and_precedence ... ok
+test approval_threshold_and_reflex_red_asymmetry ... ok
+test daily_cap_rule_and_precedence_chain ... ok
+test kill_switch_denies_every_intent ... ok
+test position_resolution_and_alert_short_circuit ... ok
+test quantize_table_python_derived ... ok
+test notional_mark_and_cap_boundaries ... ok
+test reduce_only_bias_rule ... ok
+test sizing_fraction_bounds_and_zero_skips ... ok
+test short_side_notional_symmetry ... ok
+test sizing_min_size_boundary ... ok
+test sizing_never_increases_position ... ok
+test sizing_side_mapping_and_decimals ... ok
+test sizing_table_python_derived ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/risk_adversarial.rs (target/debug/deps/risk_adversarial-2213a216dd9bab2a)
+
+running 27 tests
+test adversarial_derived_missing_inputs_are_none ... ok
+test adversarial_28_scale_precision ... ok
+test adversarial_derived_distance_when_exchange_absent ... ok
+test adversarial_mark_nonpositive ... ok
+test adversarial_negative_exchange_liq_price ... ok
+test adversarial_nonpositive_entry_probe ... ok
+test config_validation_rules ... ok
+test adversarial_very_large_magnitude ... ok
+test boundary_cuts_via_full_pipeline ... ok
+test divergence_and_effective_source_precedence ... ok
+test huge_collateral_is_green_and_never_acts ... ok
+test long_short_mirror_symmetry ... ok
+test margin_health_values_and_none_rules ... ok
+test negative_size_is_a_short_not_a_none ... ok
+test reflex_state_orange_cadence ... ok
+test reflex_intent_stateless_table_grid ... ok
+test reflex_state_per_market_isolation ... ok
+test reflex_state_recovery_reset ... ok
+test reflex_state_zero_cooldown_edge ... ok
+test sdk_vector_derived_liq_prices ... ok
+test reflex_state_red_escalation_and_cooldown ... ok
+test reflex_state_stale_gate_both_branches ... ok
+test sdk_vector_distance_checks ... ok
+test thresholds_validation_edges ... ok
+test tier_cut_boundaries_exact_and_one_ulp ... ok
+test zero_size_yields_none_everywhere ... ok
+test tier_monotonicity_sweep ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sentinel
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sentinel_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -5,27 +5,32 @@
 //! contract (same fixture ⇒ identical JSONL of events); the logical clock in
 //! replay is the latest applied event timestamp.
 //!
-//! **Skeleton status (P06):** interfaces frozen; implemented by the P06 wave.
+//! **P06 status:** implemented — [`LiveState`] revaluation, the supervised
+//! event loop ([`Pipeline::run`]) and the decision/alert emission rules live
+//! here; alert transport lives in [`crate::notify`].
 
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use sentinel_core::policy::DayState;
 use sentinel_core::risk::ReflexState;
 use sentinel_core::types::{
-    AccountState, DataQuality, ExecutionMode, Market, MarketId, Position, RiskTier,
+    AccountState, DataQuality, ExecutionMode, Intent, Market, MarketId, PolicyVerdict, Position,
+    RiskTier,
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, watch};
 
 use crate::config::Config;
-use crate::error::Result;
+use crate::error::{Result, SentinelError};
 use crate::execution::{Executor, PositionProbe};
 use crate::health::HealthState;
-use crate::notify::AlertSink;
-use crate::perpl::{FeedEvent, PerplFeed};
+use crate::notify::{Alert, AlertKind, AlertSink};
+use crate::perpl::{AccountEvent, FeedEvent, MarketEvent, PerplFeed};
+use crate::reflex::{self, PlannedAction};
 
 /// How the pipeline sources time and input.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -227,13 +232,70 @@ impl LiveState {
     /// `equity = base_balance + Σ uPnL`); snapshots replace the account and
     /// recompute `base_balance`; updates patch balances; any event clears
     /// staleness and advances `now_ms` to the event timestamp.
-    pub fn apply(&mut self, _event: &FeedEvent) -> StateDelta {
-        todo!("P06 agent pipeline: apply per SPEC-P06 §4")
+    pub fn apply(&mut self, event: &FeedEvent) -> StateDelta {
+        // Any event ends a stale episode; `FeedStale` re-enters one below.
+        self.stale_secs = None;
+        match event {
+            FeedEvent::Market(MarketEvent::MarkPrice {
+                market_id,
+                price,
+                ts,
+            }) => {
+                self.marks.insert(*market_id, *price);
+                if let Some(account) = &mut self.account {
+                    for position in &mut account.positions {
+                        if position.market_id == *market_id {
+                            position.mark_price = Some(*price);
+                            position.unrealized_pnl =
+                                (*price - position.entry_price) * position.size;
+                        }
+                    }
+                    let equity = self.base_balance + total_unrealized_pnl(account);
+                    account.equity = equity;
+                }
+                self.now_ms = datetime_ms(*ts);
+                StateDelta::Risk
+            }
+            FeedEvent::Account(AccountEvent::Snapshot { state }) => {
+                // Merge the snapshot's position marks into the shared mark map
+                // (the venue re-sends current marks with every snapshot).
+                for position in &state.positions {
+                    if let Some(mark) = position.mark_price {
+                        self.marks.insert(position.market_id, mark);
+                    }
+                }
+                self.base_balance = state.equity - total_unrealized_pnl(state);
+                self.account = Some(state.clone());
+                self.now_ms = datetime_ms(state.snapshot_ts);
+                StateDelta::Risk
+            }
+            FeedEvent::Account(AccountEvent::Update { update }) => {
+                if let Some(account) = &mut self.account {
+                    account.free_balance = update.free_balance;
+                    account.fee_tier = update.fee_tier;
+                    let equity = self.base_balance + total_unrealized_pnl(account);
+                    account.equity = equity;
+                }
+                // "Time unchanged" unless the update carries its own timestamp.
+                if let Some(ts) = update.ts {
+                    self.now_ms = datetime_ms(ts);
+                }
+                StateDelta::Risk
+            }
+            FeedEvent::FeedStale { secs } => {
+                self.stale_secs = Some(*secs);
+                StateDelta::Stale
+            }
+            FeedEvent::Reconnected { .. } => StateDelta::Reconnected,
+        }
     }
 
     /// Data quality for risk decisions.
     pub fn quality(&self) -> DataQuality {
-        todo!("P06 agent pipeline: Fresh or Stale{{secs}}")
+        match self.stale_secs {
+            Some(secs) => DataQuality::Stale { secs },
+            None => DataQuality::Fresh,
+        }
     }
 
     /// Current position for a market, if any.
@@ -262,13 +324,13 @@ impl StateProbe {
 }
 
 impl PositionProbe for StateProbe {
-    async fn position(&self, _market_id: MarketId) -> Result<Option<Position>> {
-        todo!("P06 agent pipeline: read from the shared state")
+    async fn position(&self, market_id: MarketId) -> Result<Option<Position>> {
+        let state = self.state.lock().await;
+        Ok(state.position(market_id))
     }
 }
 
 /// The supervised pipeline (single owner of the event loop).
-#[allow(dead_code)] // private stub fields; consumed by the P06 wave
 pub struct Pipeline<F, E, S> {
     /// Configuration.
     pub cfg: Config,
@@ -305,8 +367,19 @@ impl<F, E, S> Pipeline<F, E, S> {
         health: Arc<HealthState>,
         run_mode: RunMode,
     ) -> Self {
-        let _ = (&cfg, &feed, &executor, &sink, &state, &health, run_mode);
-        todo!("P06 agent pipeline: constructor")
+        Self {
+            cfg,
+            feed,
+            executor,
+            sink,
+            state,
+            health,
+            run_mode,
+            reflex: ReflexState::new(),
+            day: DayState::default(),
+            seq: 0,
+            last_tier: std::collections::HashMap::new(),
+        }
     }
 }
 
@@ -317,9 +390,299 @@ where
     S: AlertSink + Sync,
 {
     /// Run until the shutdown watch flips; drain and return every event.
-    pub async fn run(self, shutdown: watch::Receiver<bool>) -> Result<PipelineOutcome> {
-        let _ = shutdown;
-        todo!("P06 agent pipeline: supervised event loop per SPEC-P06 §4")
+    pub async fn run(mut self, mut shutdown: watch::Receiver<bool>) -> Result<PipelineOutcome> {
+        // --- Startup: market table + initial account (errors are fatal).
+        let markets = self.feed.context().await?;
+        let snapshot = self.feed.snapshot().await?;
+        {
+            let mut state = self.state.lock().await;
+            state.set_markets(markets.clone());
+            let _ = state.apply(&FeedEvent::Account(AccountEvent::Snapshot {
+                state: snapshot.clone(),
+            }));
+        }
+
+        let started_at = match self.run_mode {
+            RunMode::Replay => datetime_ms(snapshot.snapshot_ts),
+            RunMode::Live => unix_ms(),
+        };
+        tracing::info!(
+            markets = markets.len(),
+            positions = snapshot.positions.len(),
+            replay = self.run_mode == RunMode::Replay,
+            "pipeline started"
+        );
+
+        let mut outcome = PipelineOutcome::default();
+        outcome.events.push(PipelineEvent::Started {
+            mode: mode_label(self.cfg.execution.mode),
+            replay: self.run_mode == RunMode::Replay,
+            markets: markets.iter().map(|market| market.id.0).collect(),
+            positions: snapshot.positions.len(),
+            at_ms: started_at,
+        });
+
+        let mut rx = self.feed.stream().await;
+        let mut last_eval_ms: Option<u64> = None;
+
+        // --- Event loop: apply, then evaluate; shutdown stops consumption.
+        loop {
+            if *shutdown.borrow() {
+                break;
+            }
+            tokio::select! {
+                biased;
+                change = shutdown.changed() => {
+                    if change.is_err() {
+                        tracing::debug!("shutdown watch closed; treating as shutdown");
+                        break;
+                    }
+                    // Loop around: the borrow check above re-reads the value,
+                    // so only a flip to `true` stops the pipeline.
+                }
+                incoming = rx.recv() => {
+                    let Some(event) = incoming else {
+                        // The producer died (fixture exhausted / sockets gone):
+                        // end gracefully, never spin.
+                        tracing::warn!("feed event channel closed; ending pipeline");
+                        break;
+                    };
+                    let (delta, state_now_ms) = {
+                        let mut state = self.state.lock().await;
+                        let delta = state.apply(&event);
+                        (delta, state.now_ms)
+                    };
+                    let now_ms = match self.run_mode {
+                        RunMode::Replay => state_now_ms,
+                        RunMode::Live => unix_ms(),
+                    };
+                    self.health.touch_feed(now_ms);
+
+                    match &event {
+                        FeedEvent::FeedStale { secs } => {
+                            outcome
+                                .events
+                                .push(PipelineEvent::FeedStale { at_ms: now_ms, secs: *secs });
+                            let alert = Alert {
+                                kind: AlertKind::FeedStale { secs: *secs },
+                                market_id: None,
+                                text: format!("⚠️ feed stale: no data for {secs}s"),
+                                at_ms: now_ms,
+                            };
+                            self.send_alert(alert, &mut outcome.events).await;
+                        }
+                        FeedEvent::Reconnected { attempt } => {
+                            outcome
+                                .events
+                                .push(PipelineEvent::Reconnected { at_ms: now_ms, attempt: *attempt });
+                        }
+                        FeedEvent::Market(_) | FeedEvent::Account(_) => {}
+                    }
+
+                    if delta == StateDelta::Risk && self.eval_due(now_ms, &mut last_eval_ms) {
+                        let produced = self.evaluate(now_ms).await;
+                        outcome.events.extend(produced);
+                    }
+                }
+            }
+        }
+
+        let ended_at = match self.run_mode {
+            RunMode::Replay => self.state.lock().await.now_ms,
+            RunMode::Live => unix_ms(),
+        };
+        outcome
+            .events
+            .push(PipelineEvent::Shutdown { at_ms: ended_at });
+        tracing::info!(events = outcome.events.len(), "pipeline stopped");
+        Ok(outcome)
+    }
+
+    /// One deterministic evaluation pass (SPEC-P06 §4.5–§4.6).
+    ///
+    /// Emits one [`PipelineEvent::Decision`] per planned action, tracks tier
+    /// transitions (per market) into [`PipelineEvent::TierChanged`] /
+    /// [`PipelineEvent::ConsultScheduled`] plus sink alerts, and submits every
+    /// `Allow`-verdict order through the executor. Event order per action:
+    /// Decision → tier events → execution outcome → alert mirrors.
+    async fn evaluate(&mut self, now_ms: u64) -> Vec<PipelineEvent> {
+        let mut emitted = Vec::new();
+
+        // Snapshot the state under the lock; never hold it across awaits
+        // (the executor probes the same mutex).
+        let (account, markets, quality) = {
+            let state = self.state.lock().await;
+            (
+                state.account.clone(),
+                state.markets.clone(),
+                state.quality(),
+            )
+        };
+        let Some(account) = account else {
+            return emitted;
+        };
+
+        let planned = reflex::decide(
+            &account,
+            &markets,
+            &self.cfg,
+            &mut self.reflex,
+            &self.day,
+            &mut self.seq,
+            now_ms,
+            quality,
+        );
+
+        for action in planned {
+            emitted.push(PipelineEvent::Decision {
+                at_ms: now_ms,
+                decision_id: action.decision_id.clone(),
+                market_id: action.market_id.0,
+                tier: action.tier,
+                verdict: verdict_text(&action.verdict),
+                action: action_text(&action),
+            });
+
+            let symbol = markets
+                .iter()
+                .find(|market| market.id == action.market_id)
+                .map(|market| market.symbol.clone())
+                .unwrap_or_else(|| action.market_id.0.to_string());
+
+            // Tier transitions: the first evaluation of a market records the
+            // tier (emitting only for non-Green); later changes report from/to.
+            let mut alerts: Vec<Alert> = Vec::new();
+            let previous = self.last_tier.insert(action.market_id, action.tier);
+            let transition = match previous {
+                None if action.tier == RiskTier::Green => None,
+                None => Some(None),
+                Some(previous) if previous != action.tier => Some(Some(previous)),
+                Some(_) => None,
+            };
+            if let Some(from) = transition {
+                let distance = render_distance(action.distance_pct);
+                emitted.push(PipelineEvent::TierChanged {
+                    at_ms: now_ms,
+                    market_id: action.market_id.0,
+                    from,
+                    to: action.tier,
+                    distance_pct: distance.clone(),
+                });
+                if action.tier == RiskTier::Yellow {
+                    emitted.push(PipelineEvent::ConsultScheduled {
+                        at_ms: now_ms,
+                        market_id: action.market_id.0,
+                        tier: action.tier,
+                    });
+                }
+                if action.tier >= RiskTier::Yellow {
+                    alerts.push(tier_change_alert(
+                        action.market_id,
+                        &symbol,
+                        from,
+                        action.tier,
+                        &distance,
+                        now_ms,
+                    ));
+                }
+                if action.tier == RiskTier::Yellow {
+                    alerts.push(consult_alert(
+                        action.market_id,
+                        &symbol,
+                        action.tier,
+                        &distance,
+                        now_ms,
+                    ));
+                }
+            }
+
+            // Execution: only an `Allow` verdict with a sized order submits.
+            if let (Some(order), PolicyVerdict::Allow) = (&action.order, &action.verdict) {
+                match self.executor.submit(order).await {
+                    Ok(report) => {
+                        let status = format!("{:?}", report.status).to_lowercase();
+                        let size_text = format!("{}", report.filled_size);
+                        emitted.push(PipelineEvent::Executed {
+                            at_ms: now_ms,
+                            decision_id: action.decision_id.clone(),
+                            client_order_id: report.client_order_id.clone(),
+                            status: status.clone(),
+                            filled_size: report.filled_size,
+                            avg_price: report.avg_price,
+                        });
+                        alerts.push(reflex_alert(
+                            &action,
+                            &symbol,
+                            &status,
+                            &size_text,
+                            &report.client_order_id,
+                            now_ms,
+                        ));
+                        self.day.actions_today = self.day.actions_today.saturating_add(1);
+                    }
+                    Err(SentinelError::DuplicateOrder { key, .. }) => {
+                        emitted.push(PipelineEvent::DuplicateSuppressed {
+                            at_ms: now_ms,
+                            decision_id: action.decision_id.clone(),
+                            key,
+                        });
+                    }
+                    Err(err) => {
+                        emitted.push(PipelineEvent::SubmitFailed {
+                            at_ms: now_ms,
+                            decision_id: action.decision_id.clone(),
+                            error: err.to_string(),
+                        });
+                    }
+                }
+            }
+
+            // Alerts are delivered after this action's outcome events; every
+            // delivery is mirrored as a `PipelineEvent::Alert` regardless of
+            // sink failures (which are logged, never fatal).
+            for alert in alerts {
+                self.send_alert(alert, &mut emitted).await;
+            }
+        }
+
+        emitted
+    }
+
+    /// Deliver one alert; failures are `warn!`-logged (never fatal) and the
+    /// event stream always mirrors what was handed to the sink.
+    async fn send_alert(&self, alert: Alert, emitted: &mut Vec<PipelineEvent>) {
+        if let Err(err) = self.sink.send(&alert).await {
+            tracing::warn!(
+                error = %err,
+                kind = alert_kind_text(&alert.kind),
+                "alert delivery failed"
+            );
+        }
+        emitted.push(PipelineEvent::Alert {
+            at_ms: alert.at_ms,
+            kind: alert_kind_text(&alert.kind).to_string(),
+            market_id: alert.market_id.map(|market| market.0),
+            text: alert.text,
+        });
+    }
+
+    /// Whether this `Risk` delta triggers an evaluation pass: always in
+    /// replay; at most once per [`LIVE_EVAL_INTERVAL`] (wall clock) in live.
+    fn eval_due(&self, now_ms: u64, last_eval_ms: &mut Option<u64>) -> bool {
+        match self.run_mode {
+            RunMode::Replay => true,
+            RunMode::Live => {
+                let interval_ms = u64::try_from(LIVE_EVAL_INTERVAL.as_millis()).unwrap_or(u64::MAX);
+                let due = match *last_eval_ms {
+                    None => true,
+                    Some(previous) => now_ms.saturating_sub(previous) >= interval_ms,
+                };
+                if due {
+                    *last_eval_ms = Some(now_ms);
+                }
+                due
+            }
+        }
     }
 }
 
@@ -334,4 +697,822 @@ pub struct ReplayOpts {
     pub fixture: Option<PathBuf>,
     /// Effective mode string for logs/health.
     pub effective_mode: Option<ExecutionMode>,
+}
+
+// ---- helpers -----------------------------------------------------------------
+
+/// Σ unrealized PnL over every position of an account.
+fn total_unrealized_pnl(account: &AccountState) -> Decimal {
+    account
+        .positions
+        .iter()
+        .fold(Decimal::ZERO, |total, position| {
+            total + position.unrealized_pnl
+        })
+}
+
+/// Epoch milliseconds of a timestamp (0 for pre-epoch values — never real).
+fn datetime_ms(ts: DateTime<Utc>) -> u64 {
+    u64::try_from(ts.timestamp_millis()).unwrap_or(0)
+}
+
+/// Wall-clock unix milliseconds (live mode only; replay never reads it).
+fn unix_ms() -> u64 {
+    match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+        Ok(elapsed) => u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
+        Err(_) => 0,
+    }
+}
+
+/// Pipeline mode label for [`PipelineEvent::Started`] (`dry-run`/`testnet`).
+fn mode_label(mode: ExecutionMode) -> String {
+    match mode {
+        ExecutionMode::DryRun => "dry-run",
+        ExecutionMode::Testnet => "testnet",
+        ExecutionMode::Mainnet => "mainnet",
+    }
+    .to_string()
+}
+
+/// Rendered policy verdict (`allow` / `deny: …` / `needs_approval: …`).
+fn verdict_text(verdict: &PolicyVerdict) -> String {
+    match verdict {
+        PolicyVerdict::Allow => "allow".to_string(),
+        PolicyVerdict::Deny { reason } => format!("deny: {reason}"),
+        PolicyVerdict::NeedsApproval { reason } => format!("needs_approval: {reason}"),
+    }
+}
+
+/// Rendered action (`reduce 25%` / `close` / `add_collateral` / `alert` /
+/// `none`).
+fn action_text(action: &PlannedAction) -> String {
+    match &action.intent {
+        None => "none".to_string(),
+        Some(Intent::Reduce { fraction, .. }) => {
+            let pct = (*fraction * Decimal::ONE_HUNDRED).normalize();
+            format!("reduce {pct}%")
+        }
+        Some(Intent::Close { .. }) => "close".to_string(),
+        Some(Intent::AddCollateral { .. }) => "add_collateral".to_string(),
+        Some(Intent::Alert { .. }) => "alert".to_string(),
+    }
+}
+
+/// Distance-to-liquidation percent rendered to two decimals (`24.31%`).
+fn render_distance(distance: Decimal) -> String {
+    format!("{:.2}%", distance.round_dp(2))
+}
+
+/// Uppercase tier name for alert texts (`GREEN` … `RED`).
+fn tier_name(tier: RiskTier) -> &'static str {
+    match tier {
+        RiskTier::Green => "GREEN",
+        RiskTier::Yellow => "YELLOW",
+        RiskTier::Orange => "ORANGE",
+        RiskTier::Red => "RED",
+    }
+}
+
+/// Tier emoji for alert texts.
+fn tier_emoji(tier: RiskTier) -> &'static str {
+    match tier {
+        RiskTier::Green => "🟢",
+        RiskTier::Yellow => "🟡",
+        RiskTier::Orange => "🟠",
+        RiskTier::Red => "🔴",
+    }
+}
+
+/// Alert kind discriminator (matches the serde tag of [`AlertKind`]).
+fn alert_kind_text(kind: &AlertKind) -> &'static str {
+    match kind {
+        AlertKind::TierChange { .. } => "tier_change",
+        AlertKind::ReflexAction { .. } => "reflex_action",
+        AlertKind::ConsultScheduled { .. } => "consult_scheduled",
+        AlertKind::FeedStale { .. } => "feed_stale",
+    }
+}
+
+/// Tier-change alert: symbol, `#market`, FROM→TO and the rendered distance
+/// (`SPEC-P06.md` §3). Yellow entries announce the scheduled consult too.
+fn tier_change_alert(
+    market_id: MarketId,
+    symbol: &str,
+    from: Option<RiskTier>,
+    to: RiskTier,
+    distance: &str,
+    at_ms: u64,
+) -> Alert {
+    let from_name = from.map(tier_name).unwrap_or("NEW");
+    let mut text = format!(
+        "{} {}#{} {}→{} · distance {}",
+        tier_emoji(to),
+        symbol,
+        market_id.0,
+        from_name,
+        tier_name(to),
+        distance
+    );
+    if to == RiskTier::Yellow {
+        text.push_str(" · consult scheduled");
+    }
+    Alert {
+        kind: AlertKind::TierChange {
+            from,
+            to,
+            distance_pct: distance.to_string(),
+        },
+        market_id: Some(market_id),
+        text,
+        at_ms,
+    }
+}
+
+/// Consult-scheduled alert (Yellow entries).
+fn consult_alert(
+    market_id: MarketId,
+    symbol: &str,
+    tier: RiskTier,
+    distance: &str,
+    at_ms: u64,
+) -> Alert {
+    Alert {
+        kind: AlertKind::ConsultScheduled { tier },
+        market_id: Some(market_id),
+        text: format!(
+            "🧠 {}#{} {} · consult scheduled · distance {}",
+            symbol,
+            market_id.0,
+            tier_name(tier),
+            distance
+        ),
+        at_ms,
+    }
+}
+
+/// Reflex-action alert: action, size, client order id and status (`§4.6`).
+fn reflex_alert(
+    action: &PlannedAction,
+    symbol: &str,
+    status: &str,
+    size: &str,
+    client_order_id: &str,
+    at_ms: u64,
+) -> Alert {
+    Alert {
+        kind: AlertKind::ReflexAction {
+            decision_id: action.decision_id.clone(),
+            status: status.to_string(),
+            size: size.to_string(),
+            client_order_id: client_order_id.to_string(),
+        },
+        market_id: Some(action.market_id),
+        text: format!(
+            "⚡ {}#{} {} · size {} · {} · {}",
+            symbol,
+            action.market_id.0,
+            action_text(action),
+            size,
+            client_order_id,
+            status
+        ),
+        at_ms,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex as StdMutex};
+    use std::time::Duration as StdDuration;
+
+    use tokio::sync::mpsc;
+
+    use super::*;
+    use crate::execution::dry_run::DryRunExecutor;
+    use crate::perpl::{AccountUpdate, MockPerpl};
+
+    // ---- fixtures ------------------------------------------------------------
+
+    fn dec(text: &str) -> Decimal {
+        Decimal::from_str_exact(text).expect("valid decimal literal")
+    }
+
+    fn utc(ms: i64) -> DateTime<Utc> {
+        DateTime::from_timestamp_millis(ms).expect("valid timestamp")
+    }
+
+    /// ETH testnet-like market: price 2dp, size 3dp, mmr 0.05, 12x max.
+    fn eth_market() -> Market {
+        Market {
+            id: MarketId(32),
+            symbol: "ETH".to_string(),
+            base: "ETH Perp".to_string(),
+            price_decimals: 2,
+            size_decimals: 3,
+            initial_margin_fraction: dec("0.083333"),
+            maintenance_margin_fraction: dec("0.05"),
+            max_leverage: dec("12"),
+            min_size: Decimal::ZERO,
+            tick_size: dec("0.01"),
+            maker_fee_micros: 45,
+            taker_fee_micros: 345,
+            order_ttl_blocks: 20,
+        }
+    }
+
+    /// ETH long: entry 2700.00, isolated collateral 13560 (liq = 1479.00).
+    fn eth_position(size: Decimal, mark: Option<Decimal>) -> Position {
+        let entry_price = dec("2700.00");
+        let unrealized_pnl = match mark {
+            Some(mark) => (mark - entry_price) * size,
+            None => Decimal::ZERO,
+        };
+        Position {
+            market_id: MarketId(32),
+            symbol: "ETH".to_string(),
+            size,
+            entry_price,
+            mark_price: mark,
+            liq_price: None,
+            collateral: dec("13560"),
+            unrealized_pnl,
+            margin_ratio: None,
+            leverage: dec("2"),
+            opened_at: None,
+        }
+    }
+
+    /// A `Snapshot` feed event with one ETH position and the given equity.
+    fn snapshot_event(mark: Option<Decimal>, equity: Decimal, ms: i64) -> FeedEvent {
+        FeedEvent::Account(AccountEvent::Snapshot {
+            state: AccountState {
+                positions: vec![eth_position(dec("10"), mark)],
+                free_balance: dec("1000"),
+                equity,
+                fee_tier: 0,
+                snapshot_ts: utc(ms),
+            },
+        })
+    }
+
+    /// ETH mark update at `ms`.
+    fn mark_event(price: Decimal, ms: i64) -> FeedEvent {
+        FeedEvent::Market(MarketEvent::MarkPrice {
+            market_id: MarketId(32),
+            price,
+            ts: utc(ms),
+        })
+    }
+
+    /// Config mirroring the crash-demo environment (generous caps so the
+    /// reflex reduce reaches the executor).
+    fn test_config() -> Config {
+        let mut vars = HashMap::new();
+        vars.insert("PERPL_ENV".to_string(), "testnet".to_string());
+        vars.insert(
+            "PERPL_API_KEY_SECRET".to_string(),
+            "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff".to_string(),
+        );
+        vars.insert("PERPL_API_KEY".to_string(), "test-api-key".to_string());
+        vars.insert("QWEN_API_KEY".to_string(), "test".to_string());
+        vars.insert("KIMI_API_KEY".to_string(), "test".to_string());
+        vars.insert("NANSEN_PAYER_KEY".to_string(), "0x11".to_string());
+        vars.insert("TELEGRAM_ALLOWED_USER_IDS".to_string(), "1".to_string());
+        vars.insert("TELOXIDE_TOKEN".to_string(), "test".to_string());
+        vars.insert("EXECUTION_MODE".to_string(), "DRY_RUN".to_string());
+        vars.insert("MARKET_ALLOWLIST".to_string(), "32".to_string());
+        vars.insert("MAX_ORDER_SIZE_USD".to_string(), "100000".to_string());
+        vars.insert(
+            "REQUIRE_APPROVAL_ABOVE_USD".to_string(),
+            "100000".to_string(),
+        );
+        vars.insert("REFLEX_COOLDOWN_SECS".to_string(), "60".to_string());
+        Config::from_vars(vars).expect("test config")
+    }
+
+    /// Test-local sink (independent of the notify module's implementations).
+    #[derive(Clone, Default)]
+    struct TestSink {
+        alerts: Arc<StdMutex<Vec<Alert>>>,
+    }
+
+    impl TestSink {
+        fn new() -> Self {
+            Self::default()
+        }
+    }
+
+    impl AlertSink for TestSink {
+        async fn send(&self, alert: &Alert) -> Result<()> {
+            self.alerts
+                .lock()
+                .expect("alerts buffer")
+                .push(alert.clone());
+            Ok(())
+        }
+    }
+
+    // ---- LiveState::apply rules table -----------------------------------------
+
+    #[test]
+    fn apply_marks_revalue_positions_and_equity() {
+        let mut state = LiveState::new();
+        state.set_markets(vec![eth_market()]);
+
+        // Snapshot: equity = balance + Σ uPnL = 1000 + (2112.86 − 2700.00) × 10.
+        let event = snapshot_event(Some(dec("2112.86")), dec("-4871.40"), 1_700_000_000_000);
+        assert_eq!(state.apply(&event), StateDelta::Risk);
+        assert_eq!(state.base_balance, dec("1000"), "base = equity − Σ uPnL");
+        assert_eq!(
+            state.marks.get(&MarketId(32)).copied(),
+            Some(dec("2112.86"))
+        );
+        assert_eq!(state.now_ms, 1_700_000_000_000);
+
+        // Mark update revalues the position and the account equity.
+        assert_eq!(
+            state.apply(&mark_event(dec("1573.40"), 1_700_000_025_000)),
+            StateDelta::Risk
+        );
+        let account = state.account.as_ref().expect("account installed");
+        let position = &account.positions[0];
+        assert_eq!(position.mark_price, Some(dec("1573.40")));
+        assert_eq!(position.unrealized_pnl, dec("-11266.00")); // (1573.40 − 2700) × 10
+        assert_eq!(account.equity, dec("1000") + dec("-11266.00"));
+        assert_eq!(
+            state.marks.get(&MarketId(32)).copied(),
+            Some(dec("1573.40"))
+        );
+        assert_eq!(state.now_ms, 1_700_000_025_000);
+    }
+
+    #[test]
+    fn apply_snapshot_replaces_account_and_merges_marks() {
+        let mut state = LiveState::new();
+        state.set_markets(vec![eth_market()]);
+        // An unrelated market's mark survives the merge.
+        state.marks.insert(MarketId(99), dec("5"));
+
+        let event = snapshot_event(Some(dec("2112.86")), dec("-4871.40"), 1_700_000_000_000);
+        assert_eq!(state.apply(&event), StateDelta::Risk);
+        assert_eq!(
+            state.marks.get(&MarketId(32)).copied(),
+            Some(dec("2112.86"))
+        );
+        assert_eq!(state.marks.get(&MarketId(99)).copied(), Some(dec("5")));
+        assert_eq!(state.base_balance, dec("1000"));
+        assert_eq!(state.now_ms, 1_700_000_000_000);
+        assert_eq!(state.account.as_ref().expect("account").positions.len(), 1);
+
+        // A mark-less snapshot updates the account but never clears marks.
+        let event = snapshot_event(None, dec("1000"), 1_700_000_100_000);
+        assert_eq!(state.apply(&event), StateDelta::Risk);
+        assert_eq!(
+            state.marks.get(&MarketId(32)).copied(),
+            Some(dec("2112.86"))
+        );
+        assert_eq!(state.base_balance, dec("1000"));
+        assert_eq!(state.now_ms, 1_700_000_100_000);
+        let account = state.account.as_ref().expect("account");
+        assert_eq!(account.positions[0].mark_price, None);
+        assert_eq!(account.equity, dec("1000"));
+    }
+
+    #[test]
+    fn apply_update_patches_balances_and_keeps_marks() {
+        let mut state = LiveState::new();
+        state.set_markets(vec![eth_market()]);
+        let _ = state.apply(&snapshot_event(
+            Some(dec("2112.86")),
+            dec("-4871.40"),
+            1_700_000_000_000,
+        ));
+
+        let update = AccountUpdate {
+            account_id: 7,
+            free_balance: dec("750.5"),
+            fee_tier: 3,
+            forward_enabled: true,
+            last_forwarded_request_id: 42,
+            ts: Some(utc(1_700_000_010_000)),
+        };
+        assert_eq!(
+            state.apply(&FeedEvent::Account(AccountEvent::Update {
+                update: update.clone()
+            })),
+            StateDelta::Risk
+        );
+        let account = state.account.as_ref().expect("account");
+        assert_eq!(account.free_balance, dec("750.5"));
+        assert_eq!(account.fee_tier, 3);
+        // equity = base_balance + Σ uPnL = 1000 + (2112.86 − 2700) × 10.
+        assert_eq!(account.equity, dec("-4871.40"));
+        assert_eq!(
+            state.marks.get(&MarketId(32)).copied(),
+            Some(dec("2112.86"))
+        );
+        assert_eq!(state.now_ms, 1_700_000_010_000);
+
+        // An update without a timestamp leaves the clock unchanged.
+        let update = AccountUpdate { ts: None, ..update };
+        assert_eq!(
+            state.apply(&FeedEvent::Account(AccountEvent::Update { update })),
+            StateDelta::Risk
+        );
+        assert_eq!(state.now_ms, 1_700_000_010_000);
+    }
+
+    #[test]
+    fn apply_stale_sets_and_any_event_clears() {
+        let mut state = LiveState::new();
+        state.set_markets(vec![eth_market()]);
+        assert_eq!(state.quality(), DataQuality::Fresh);
+
+        assert_eq!(
+            state.apply(&FeedEvent::FeedStale { secs: 7 }),
+            StateDelta::Stale
+        );
+        assert_eq!(state.stale_secs, Some(7));
+        assert_eq!(state.quality(), DataQuality::Stale { secs: 7 });
+
+        // Reconnected clears the episode but never evaluates.
+        assert_eq!(
+            state.apply(&FeedEvent::Reconnected { attempt: 3 }),
+            StateDelta::Reconnected
+        );
+        assert_eq!(state.stale_secs, None);
+        assert_eq!(state.quality(), DataQuality::Fresh);
+
+        // Any data event clears staleness again.
+        assert_eq!(
+            state.apply(&FeedEvent::FeedStale { secs: 12 }),
+            StateDelta::Stale
+        );
+        assert_eq!(state.stale_secs, Some(12));
+        assert_eq!(
+            state.apply(&mark_event(dec("1573.40"), 1_700_000_025_000)),
+            StateDelta::Risk
+        );
+        assert_eq!(state.stale_secs, None);
+        assert_eq!(state.quality(), DataQuality::Fresh);
+    }
+
+    // ---- StateProbe ------------------------------------------------------------
+
+    #[tokio::test]
+    async fn state_probe_reads_positions_from_shared_state() {
+        let state = Arc::new(Mutex::new(LiveState::new()));
+        {
+            let mut live = state.lock().await;
+            live.set_markets(vec![eth_market()]);
+            let _ = live.apply(&snapshot_event(
+                Some(dec("2112.86")),
+                dec("-4871.40"),
+                1_700_000_000_000,
+            ));
+        }
+
+        let probe = StateProbe::new(Arc::clone(&state));
+        let found = probe.position(MarketId(32)).await.expect("probe read");
+        assert_eq!(found, Some(eth_position(dec("10"), Some(dec("2112.86")))));
+        assert_eq!(
+            probe.position(MarketId(99)).await.expect("probe read"),
+            None
+        );
+    }
+
+    // ---- supervised loop -------------------------------------------------------
+
+    /// Two-step declining-mark fixture: Green (30.0 %) → Red (6.0 %).
+    ///
+    /// REST: context (ETH id 32), ticker, wallet, positions (entry 2700.00,
+    /// size +10.000, collateral 13560 ⇒ liq 1479.00). WS: initial `mt:19` +
+    /// `mt:26` (composed with the marks known so far), then two `mt:9` steps
+    /// 25 s apart in logical time.
+    const FIXTURE_2STEP: &str = concat!(
+        r#"{"kind":"rest","path":"/v1/pub/context","resp":{"chain":{"chain_id":10143,"name":"Monad Testnet"},"instances":[{"id":12,"address":"0x1964c32f0be608e7d29302aff5e61268e72080cc"}],"tokens":[{"id":1,"symbol":"AUSD","decimals":6}],"markets":[{"ver":1,"id":32,"instance_id":12,"perpetual_id":32,"symbol":"ETH","name":"ETH Perp","funding_interval_sec":2580,"order_ttl_blocks":20,"config":{"price_decimals":2,"size_decimals":3,"min_posting_amount":"0","initial_margin":1200,"maintenance_margin":2000,"maker_fee":45,"taker_fee":345}}]}}"#,
+        "\n",
+        r#"{"kind":"rest","path":"/v1/market-data/ticker","resp":{"mt":9,"sn":1,"d":{"32":{"at":{"b":1,"t":1700000000000},"mrk":211286}}}}"#,
+        "\n",
+        r#"{"kind":"rest","path":"/v1/trading/wallet","resp":{"mt":19,"sn":68507460,"at":{"b":68507460,"t":1700000000000},"addr":"0x0000000000000000000000000000000000000007","n":12,"fl":0,"as":[{"mt":19,"in":12,"id":7,"fr":false,"fw":true,"ft":0,"lfr":41,"b":"1000000000","lb":"0"}],"sts":[]}}"#,
+        "\n",
+        r#"{"kind":"rest","path":"/v1/trading/positions","resp":{"mt":26,"sn":68507460,"at":{"b":68507460,"t":1700000000000},"d":[{"at":{"b":1,"t":1700000000000},"mkt":32,"acc":7,"pid":1001,"rq":41,"oid":555,"st":1,"sr":21,"sd":1,"c":"13560000000","ep":270000,"s":10000,"fee":"0","cfee":"0","efs":0,"lv":200,"dpnl":"0","fnd":"0","ots":{"b":1,"t":1700000000000}}]}}"#,
+        "\n",
+        r#"{"kind":"ws","t_ms":0,"msg":{"mt":19,"sn":68507460,"at":{"b":68507460,"t":1700000000000},"as":[{"mt":19,"in":12,"id":7,"fr":false,"fw":true,"ft":0,"lfr":41,"b":"1000000000","lb":"0"}]}}"#,
+        "\n",
+        r#"{"kind":"ws","t_ms":0,"msg":{"mt":26,"sn":68507460,"at":{"b":68507460,"t":1700000000000},"d":[{"at":{"b":1,"t":1700000000000},"mkt":32,"acc":7,"pid":1001,"rq":41,"oid":555,"st":1,"sr":21,"sd":1,"c":"13560000000","ep":270000,"s":10000,"fee":"0","cfee":"0","efs":0,"lv":200,"dpnl":"0","fnd":"0","ots":{"b":1,"t":1700000000000}}]}}"#,
+        "\n",
+        r#"{"kind":"ws","t_ms":25000,"msg":{"mt":9,"sn":2,"d":{"32":{"at":{"b":1,"t":1700000025000},"mrk":211286}}}}"#,
+        "\n",
+        r#"{"kind":"ws","t_ms":50000,"msg":{"mt":9,"sn":3,"d":{"32":{"at":{"b":1,"t":1700000050000},"mrk":157340}}}}"#,
+        "\n",
+    );
+
+    #[tokio::test]
+    async fn fixture_replay_emits_ordered_events() {
+        // Replay must be instantaneous: the pace divisor exceeds the fixture
+        // span, so every inter-message delta rounds to zero (SPEC-P06 §7).
+        // SAFETY: `set_var` is `unsafe` in edition 2024 (it races concurrent
+        // env reads); this test writes the variable *before* any `MockPerpl`
+        // replay starts and nothing else in this binary touches it.
+        unsafe { std::env::set_var("SENTINEL_MOCK_PACE", "100000") };
+
+        let dir = tempfile::tempdir().expect("tempdir");
+        let fixture = dir.path().join("scenario.jsonl");
+        std::fs::write(&fixture, FIXTURE_2STEP).expect("fixture written");
+        let feed = MockPerpl::from_fixture(&fixture).expect("fixture loads");
+
+        let state = Arc::new(Mutex::new(LiveState::new()));
+        let health = Arc::new(HealthState::new(ExecutionMode::DryRun));
+        let executor = DryRunExecutor::new(
+            StateProbe::new(Arc::clone(&state)),
+            10,
+            dir.path().join("reports.jsonl"),
+            0,
+        );
+        let sink = TestSink::new();
+        let recorded = Arc::clone(&sink.alerts);
+
+        let (_shutdown_tx, shutdown_rx) = watch::channel(false);
+        let pipeline = Pipeline::new(
+            test_config(),
+            feed,
+            executor,
+            sink,
+            Arc::clone(&state),
+            health,
+            RunMode::Replay,
+        );
+        let outcome = tokio::spawn(pipeline.run(shutdown_rx))
+            .await
+            .expect("task joins")
+            .expect("run succeeds");
+
+        // Evaluation clock is the latest applied event timestamp; the
+        // mark-less in-stream snapshot consumes `d-1`, so steps are d-2/d-3.
+        let expected = vec![
+            PipelineEvent::Started {
+                mode: "dry-run".to_string(),
+                replay: true,
+                markets: vec![32],
+                positions: 1,
+                at_ms: 1_700_000_000_000,
+            },
+            PipelineEvent::Decision {
+                at_ms: 1_700_000_025_000,
+                decision_id: "d-2".to_string(),
+                market_id: 32,
+                tier: RiskTier::Green,
+                verdict: "allow".to_string(),
+                action: "none".to_string(),
+            },
+            PipelineEvent::Decision {
+                at_ms: 1_700_000_050_000,
+                decision_id: "d-3".to_string(),
+                market_id: 32,
+                tier: RiskTier::Red,
+                verdict: "allow".to_string(),
+                action: "reduce 50%".to_string(),
+            },
+            PipelineEvent::TierChanged {
+                at_ms: 1_700_000_050_000,
+                market_id: 32,
+                from: Some(RiskTier::Green),
+                to: RiskTier::Red,
+                distance_pct: "6.00%".to_string(),
+            },
+            PipelineEvent::Executed {
+                at_ms: 1_700_000_050_000,
+                decision_id: "d-3".to_string(),
+                client_order_id: "sentinel-32-1".to_string(),
+                status: "simulated".to_string(),
+                filled_size: dec("5"),
+                avg_price: Some(dec("1571.82660")),
+            },
+            PipelineEvent::Alert {
+                at_ms: 1_700_000_050_000,
+                kind: "tier_change".to_string(),
+                market_id: Some(32),
+                text: "🔴 ETH#32 GREEN→RED · distance 6.00%".to_string(),
+            },
+            PipelineEvent::Alert {
+                at_ms: 1_700_000_050_000,
+                kind: "reflex_action".to_string(),
+                market_id: Some(32),
+                text: "⚡ ETH#32 reduce 50% · size 5.000 · sentinel-32-1 · simulated".to_string(),
+            },
+            PipelineEvent::Shutdown {
+                at_ms: 1_700_000_050_000,
+            },
+        ];
+        assert_eq!(outcome.events, expected);
+
+        // Every mirrored alert matches what the sink actually received.
+        let expected_alerts = vec![
+            Alert {
+                kind: AlertKind::TierChange {
+                    from: Some(RiskTier::Green),
+                    to: RiskTier::Red,
+                    distance_pct: "6.00%".to_string(),
+                },
+                market_id: Some(MarketId(32)),
+                text: "🔴 ETH#32 GREEN→RED · distance 6.00%".to_string(),
+                at_ms: 1_700_000_050_000,
+            },
+            Alert {
+                kind: AlertKind::ReflexAction {
+                    decision_id: "d-3".to_string(),
+                    status: "simulated".to_string(),
+                    size: "5.000".to_string(),
+                    client_order_id: "sentinel-32-1".to_string(),
+                },
+                market_id: Some(MarketId(32)),
+                text: "⚡ ETH#32 reduce 50% · size 5.000 · sentinel-32-1 · simulated".to_string(),
+                at_ms: 1_700_000_050_000,
+            },
+        ];
+        assert_eq!(*recorded.lock().expect("alerts buffer"), expected_alerts);
+    }
+
+    /// Feed under test control: `stream()` hands out a channel whose sender
+    /// the test keeps, so shutdown/close timing is deterministic (no pacing
+    /// environment variables involved).
+    struct ScriptedFeed {
+        markets: Vec<Market>,
+        account: AccountState,
+        sender: Arc<Mutex<Option<mpsc::Sender<FeedEvent>>>>,
+    }
+
+    impl ScriptedFeed {
+        fn new(
+            markets: Vec<Market>,
+            account: AccountState,
+        ) -> (Self, Arc<Mutex<Option<mpsc::Sender<FeedEvent>>>>) {
+            let slot = Arc::new(Mutex::new(None));
+            let feed = Self {
+                markets,
+                account,
+                sender: Arc::clone(&slot),
+            };
+            (feed, slot)
+        }
+    }
+
+    impl PerplFeed for ScriptedFeed {
+        async fn stream(&self) -> mpsc::Receiver<FeedEvent> {
+            let (sender, receiver) = mpsc::channel(16);
+            *self.sender.lock().await = Some(sender);
+            receiver
+        }
+
+        async fn snapshot(&self) -> Result<AccountState> {
+            Ok(self.account.clone())
+        }
+
+        async fn context(&self) -> Result<Vec<Market>> {
+            Ok(self.markets.clone())
+        }
+    }
+
+    /// An account with no positions (lifecycle tests need no decisions).
+    fn quiet_account() -> AccountState {
+        AccountState {
+            positions: Vec::new(),
+            free_balance: dec("1000"),
+            equity: dec("1000"),
+            fee_tier: 0,
+            snapshot_ts: utc(1_699_000_000_000),
+        }
+    }
+
+    async fn wait_for_sender(
+        slot: &Arc<Mutex<Option<mpsc::Sender<FeedEvent>>>>,
+    ) -> mpsc::Sender<FeedEvent> {
+        for _ in 0..1_000 {
+            if let Some(sender) = slot.lock().await.clone() {
+                return sender;
+            }
+            tokio::time::sleep(StdDuration::from_millis(5)).await;
+        }
+        panic!("feed stream() was never called");
+    }
+
+    async fn wait_for_now(state: &Arc<Mutex<LiveState>>, expected: u64) {
+        for _ in 0..1_000 {
+            if state.lock().await.now_ms == expected {
+                return;
+            }
+            tokio::time::sleep(StdDuration::from_millis(5)).await;
+        }
+        panic!("event at {expected} was never applied");
+    }
+
+    #[tokio::test]
+    async fn shutdown_mid_stream_returns_ok_with_exactly_one_shutdown() {
+        let (feed, slot) = ScriptedFeed::new(vec![eth_market()], quiet_account());
+        let state = Arc::new(Mutex::new(LiveState::new()));
+        let health = Arc::new(HealthState::new(ExecutionMode::DryRun));
+        let dir = tempfile::tempdir().expect("tempdir");
+        let executor = DryRunExecutor::new(
+            StateProbe::new(Arc::clone(&state)),
+            10,
+            dir.path().join("reports.jsonl"),
+            0,
+        );
+        let (shutdown_tx, shutdown_rx) = watch::channel(false);
+        let pipeline = Pipeline::new(
+            test_config(),
+            feed,
+            executor,
+            TestSink::new(),
+            Arc::clone(&state),
+            health,
+            RunMode::Replay,
+        );
+        let task = tokio::spawn(pipeline.run(shutdown_rx));
+
+        // Drive one event through, then flip the watch while the stream is
+        // still open: the pipeline must stop consuming and end cleanly.
+        let sender = wait_for_sender(&slot).await;
+        sender
+            .send(mark_event(dec("1573.40"), 1_700_000_010_000))
+            .await
+            .expect("send mark");
+        wait_for_now(&state, 1_700_000_010_000).await;
+
+        shutdown_tx.send(true).expect("signal shutdown");
+        let outcome = task.await.expect("task joins").expect("run succeeds");
+
+        assert!(matches!(
+            outcome.events.first(),
+            Some(PipelineEvent::Started { .. })
+        ));
+        let shutdowns = outcome
+            .events
+            .iter()
+            .filter(|event| matches!(event, PipelineEvent::Shutdown { .. }))
+            .count();
+        assert_eq!(shutdowns, 1, "exactly one Shutdown");
+        assert_eq!(
+            outcome.events.last(),
+            Some(&PipelineEvent::Shutdown {
+                at_ms: 1_700_000_010_000
+            })
+        );
+        assert_eq!(state.lock().await.now_ms, 1_700_000_010_000);
+    }
+
+    #[tokio::test]
+    async fn channel_close_ends_gracefully_with_shutdown() {
+        let (feed, slot) = ScriptedFeed::new(vec![eth_market()], quiet_account());
+        let state = Arc::new(Mutex::new(LiveState::new()));
+        let health = Arc::new(HealthState::new(ExecutionMode::DryRun));
+        let dir = tempfile::tempdir().expect("tempdir");
+        let executor = DryRunExecutor::new(
+            StateProbe::new(Arc::clone(&state)),
+            10,
+            dir.path().join("reports.jsonl"),
+            0,
+        );
+        let (_shutdown_tx, shutdown_rx) = watch::channel(false);
+        let pipeline = Pipeline::new(
+            test_config(),
+            feed,
+            executor,
+            TestSink::new(),
+            Arc::clone(&state),
+            health,
+            RunMode::Replay,
+        );
+        let task = tokio::spawn(pipeline.run(shutdown_rx));
+
+        let sender = wait_for_sender(&slot).await;
+        sender
+            .send(mark_event(dec("1573.40"), 1_700_000_020_000))
+            .await
+            .expect("send mark");
+        wait_for_now(&state, 1_700_000_020_000).await;
+
+        // Producer death: drop both the local clone and the registered one.
+        slot.lock().await.take();
+        drop(sender);
+
+        let outcome = task.await.expect("task joins").expect("run succeeds");
+        assert_eq!(
+            outcome.events,
+            vec![
+                PipelineEvent::Started {
+                    mode: "dry-run".to_string(),
+                    replay: true,
+                    markets: vec![32],
+                    positions: 0,
+                    at_ms: 1_699_000_000_000,
+                },
+                PipelineEvent::Shutdown {
+                    at_ms: 1_700_000_020_000
+                },
+            ]
+        );
+    }
 }

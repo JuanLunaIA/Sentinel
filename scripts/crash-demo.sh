@@ -25,10 +25,12 @@ export LOG_FORMAT=pretty
 export SENTINEL_MOCK_PACE=1
 export SENTINEL_MOCK_CAP_MS="${SENTINEL_MOCK_CAP_MS:-3200}"
 # Demo policy: testnet markets only, caps high enough for the save sequence.
-# Cooldown 150 s (logical): gates the second Orange cadence tick (75 s and
-# 125 s after the first action) and lets the Red entry fire cleanly at +150 s.
+# Cooldown 170 s (logical): evaluations run per feed event, and multi-market
+# frames are iterated in sorted id order (BTC before ETH), so the Orange
+# cadence must be gated across the whole 150 s crash gap; the Red first-breach
+# reduce then fires at the next eligible evaluation (+175 s).
 export MARKET_ALLOWLIST=32,16
-export REFLEX_COOLDOWN_SECS="${REFLEX_COOLDOWN_SECS:-150}"
+export REFLEX_COOLDOWN_SECS="${REFLEX_COOLDOWN_SECS:-170}"
 export MAX_ORDER_SIZE_USD=100000
 export REQUIRE_APPROVAL_ABOVE_USD=100000
 

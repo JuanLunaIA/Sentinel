@@ -95,6 +95,7 @@ pub fn intent_fraction(intent: &Intent) -> Option<Decimal> {
 /// `quality` is the feed freshness at evaluation time. Positions without a
 /// market entry or without a derivable distance are skipped with a warning
 /// (they cannot be classified safely).
+#[allow(clippy::too_many_arguments)] // decision context is explicit by design (SPEC-P06 §4)
 pub fn decide(
     state: &AccountState,
     markets: &[Market],

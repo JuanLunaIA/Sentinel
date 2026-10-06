@@ -103,11 +103,11 @@ def context_payload() -> dict:
     }
 
 
-def wallet_payload() -> dict:
+def wallet_payload(at_t: int = BASE_TS) -> dict:
     return {
         "mt": 19,
         "sn": 1,
-        "at": {"b": 1, "t": BASE_TS},
+        "at": {"b": 1, "t": at_t},
         "addr": "0x0000000000000000000000000000000000000007",
         "n": 12,
         "fl": 0,
@@ -215,8 +215,11 @@ def main() -> None:
         rest("/v1/trading/positions", positions_payload(1)),
     ]
 
-    # Initial WS snapshot: wallet then positions (MockPerpl composes on both).
+    # Initial WS snapshot: wallet, a first mark frame (so the composed
+    # snapshot carries marks and no evaluation ever runs mark-less), then
+    # positions (MockPerpl composes on wallet+positions).
     lines.append(ws(100, wallet_payload()))
+    lines.append(ws(150, mark_frame(99, raw_int(M_FIRST, 2), BASE_TS + 150)))
     lines.append(ws(200, positions_payload(2)))
 
     print(f"ETH liq = {ETH_LIQ}  | BTC liq = {BTC_LIQ}")
@@ -229,6 +232,9 @@ def main() -> None:
         )
         lines.append(ws(t_ms, mark_frame(100 + k, raw_int(mark, 2), at_t)))
         if k in (6, 12, 18):
+            # Refresh the wallet timestamp so re-composed snapshots keep a
+            # monotonic logical clock (snapshot_ts = wallet `at`).
+            lines.append(ws(t_ms, wallet_payload(BASE_TS + t_ms)))
             lines.append(ws(t_ms + 1, positions_payload(200 + k)))
         dist = distance_pct(mark, ETH_LIQ)
         tier = (

@@ -1,0 +1,12 @@
+2026-10-06T01:05:04.521765Z  INFO sentinel: sentinel starting mode=DRY_RUN replay=true perpl_env=testnet chain_id=10143 version="0.1.0"
+2026-10-06T01:05:04.526875Z  INFO sentinel: alerts: tracing only (no telegram chat configured)
+2026-10-06T01:05:04.533055Z  INFO sentinel::pipeline: pipeline started markets=2 positions=2 replay=true
+2026-10-06T01:05:27.951058Z  INFO sentinel::alert: alert kind="tier_change" market_id=32 text=🟡 ETH#32 GREEN→YELLOW · distance 24.10% · consult scheduled
+2026-10-06T01:05:27.951286Z  INFO sentinel::alert: alert kind="consult_scheduled" market_id=32 text=🧠 ETH#32 YELLOW · consult scheduled · distance 24.10%
+2026-10-06T01:05:57.019886Z  INFO sentinel::alert: alert kind="tier_change" market_id=32 text=🟠 ETH#32 YELLOW→ORANGE · distance 14.88%
+2026-10-06T01:05:57.020251Z  INFO sentinel::alert: alert kind="reflex_action" market_id=32 text=⚡ ETH#32 reduce 25% · size 2.500 · sentinel-32-1 · simulated
+2026-10-06T01:06:15.976321Z  INFO sentinel::alert: alert kind="tier_change" market_id=32 text=🔴 ETH#32 ORANGE→RED · distance 7.38%
+2026-10-06T01:06:19.177908Z  INFO sentinel::alert: alert kind="reflex_action" market_id=32 text=⚡ ETH#32 reduce 50% · size 5.000 · sentinel-32-2 · simulated
+2026-10-06T01:06:19.178416Z  WARN sentinel::pipeline: feed event channel closed; ending pipeline
+2026-10-06T01:06:19.178552Z  INFO sentinel::pipeline: pipeline stopped events=128
+2026-10-06T01:06:19.181100Z  INFO sentinel: pipeline finished events=128 executed=2 alerts=6 denied=0

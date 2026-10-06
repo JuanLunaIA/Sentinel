@@ -13,13 +13,16 @@ use sentinel::execution::dry_run::DryRunExecutor;
 use sentinel::health::HealthState;
 use sentinel::notify::{Alert, RecordingSink};
 use sentinel::perpl::MockPerpl;
-use sentinel::pipeline::{LiveState, Pipeline, PipelineEvent, PipelineOutcome, RunMode, StateProbe};
+use sentinel::pipeline::{
+    LiveState, Pipeline, PipelineEvent, PipelineOutcome, RunMode, StateProbe,
+};
 use tokio::sync::{Mutex, watch};
 
 const SECRET: &str = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 fn fixture() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/perpl/crash-scenario.jsonl")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures/perpl/crash-scenario.jsonl")
 }
 
 fn demo_cfg() -> Config {
@@ -34,7 +37,7 @@ fn demo_cfg() -> Config {
         ("NANSEN_PAYER_KEY", "0x00"),
         ("EXECUTION_MODE", "DRY_RUN"),
         ("MARKET_ALLOWLIST", "32,16"),
-        ("REFLEX_COOLDOWN_SECS", "150"),
+        ("REFLEX_COOLDOWN_SECS", "170"),
         ("MAX_ORDER_SIZE_USD", "100000"),
         ("REQUIRE_APPROVAL_ABOVE_USD", "100000"),
     ];
@@ -64,7 +67,12 @@ async fn run_once() -> (String, Vec<Alert>, PipelineOutcome) {
     let state = Arc::new(Mutex::new(LiveState::new()));
     let health = Arc::new(HealthState::new(cfg.execution.mode));
     let feed = MockPerpl::from_fixture(&fixture()).expect("fixture loads");
-    let executor = DryRunExecutor::new(StateProbe::new(Arc::clone(&state)), 10, dry_run_report_path(), 0);
+    let executor = DryRunExecutor::new(
+        StateProbe::new(Arc::clone(&state)),
+        10,
+        dry_run_report_path(),
+        0,
+    );
     let sink = RecordingSink::new();
     let alerts = Arc::clone(&sink.alerts);
     let pipeline = Pipeline::new(cfg, feed, executor, sink, state, health, RunMode::Replay);
@@ -86,8 +94,14 @@ async fn replay_is_deterministic_and_hits_the_golden_sequence() {
     fast_pacing();
     let (jsonl_a, alerts_a, _) = run_once().await;
     let (jsonl_b, alerts_b, _) = run_once().await;
-    assert_eq!(jsonl_a, jsonl_b, "same fixture must yield an identical event stream");
-    assert_eq!(alerts_a, alerts_b, "same fixture must yield identical alerts");
+    assert_eq!(
+        jsonl_a, jsonl_b,
+        "same fixture must yield an identical event stream"
+    );
+    assert_eq!(
+        alerts_a, alerts_b,
+        "same fixture must yield identical alerts"
+    );
     assert!(!jsonl_a.is_empty());
 
     let events: Vec<serde_json::Value> = jsonl_a
@@ -131,7 +145,10 @@ async fn replay_is_deterministic_and_hits_the_golden_sequence() {
     assert!((fills[0] - 2.5).abs() < 1e-9 && (fills[1] - 5.0).abs() < 1e-9);
 
     // Exactly one shutdown, at the very end.
-    let shutdowns = events.iter().filter(|event| event["event"] == "shutdown").count();
+    let shutdowns = events
+        .iter()
+        .filter(|event| event["event"] == "shutdown")
+        .count();
     assert_eq!(shutdowns, 1);
     assert_eq!(events.last().expect("non-empty")["event"], "shutdown");
 }
@@ -143,7 +160,12 @@ async fn shutdown_drains_and_reports_once() {
     let state = Arc::new(Mutex::new(LiveState::new()));
     let health = Arc::new(HealthState::new(cfg.execution.mode));
     let feed = MockPerpl::from_fixture(&fixture()).expect("fixture loads");
-    let executor = DryRunExecutor::new(StateProbe::new(Arc::clone(&state)), 10, dry_run_report_path(), 0);
+    let executor = DryRunExecutor::new(
+        StateProbe::new(Arc::clone(&state)),
+        10,
+        dry_run_report_path(),
+        0,
+    );
     let sink = RecordingSink::new();
     let pipeline = Pipeline::new(cfg, feed, executor, sink, state, health, RunMode::Replay);
     let (tx, rx) = watch::channel(false);
@@ -163,5 +185,8 @@ async fn shutdown_drains_and_reports_once() {
         .filter(|event| matches!(event, PipelineEvent::Shutdown { .. }))
         .count();
     assert_eq!(shutdowns, 1, "exactly one shutdown event");
-    assert!(matches!(outcome.events.last(), Some(PipelineEvent::Shutdown { .. })));
+    assert!(matches!(
+        outcome.events.last(),
+        Some(PipelineEvent::Shutdown { .. })
+    ));
 }

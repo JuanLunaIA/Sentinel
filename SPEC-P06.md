@@ -123,7 +123,7 @@ wallet, positions. WS: initial `mt:19`+`mt:26`, then `mt:9` steps with a
 marks). Replay does not apply fills to state (documented; P13 models
 savings). Demo env in `scripts/crash-demo.sh`: `MARKET_ALLOWLIST=32,16`,
 `MAX_ORDER_SIZE_USD=100000`, `REQUIRE_APPROVAL_ABOVE_USD=100000`,
-`REFLEX_COOLDOWN_SECS=150` (one Orange action; the 150 s gate cleanly admits the Red entry), `SENTINEL_MOCK_PACE=1`, `SENTINEL_MOCK_CAP_MS≈3200`
+`REFLEX_COOLDOWN_SECS=170` (per-event evaluation + sorted intra-frame market order require gating the Orange cadence across the 150 s crash gap), `SENTINEL_MOCK_PACE=1`, `SENTINEL_MOCK_CAP_MS≈3200`
 (≈80 s wall). Expected sequence: Yellow consult-scheduled → Orange reduce
 2.500 → Red reduce 5.000, alerts each step.
 
@@ -170,3 +170,24 @@ waiting is normal.
 ## 11 Report format
 
 JSON `{files_created, tests[{cmd,exit,observed}], open_issues}` as in P04/P05.
+
+## 12 Changelog (integration-time changes only)
+
+- **v1.0.1 (parent, integration):**
+  (a) §7 demo cooldown 150 → 170 s: evaluations run per feed event and
+  multi-market frames iterate in sorted id order (BTreeMap: BTC before ETH),
+  so the frame carrying the Red-level ETH mark first evaluates ETH on its
+  previous Orange mark — a 150 s-equals-cooldown cadence reduce consumed the
+  cooldown exactly at the crossing (verifier finding, reproduced). 170 s gates
+  every evaluation up to +175 s and yields fills `[2.5, 5.0]` (Orange, Red).
+  (b) Fixture: `mt:19` wallet refreshes accompany every `mt:26` re-send so
+  re-composed snapshots keep a monotonic logical clock (snapshot_ts = wallet
+  `at`; marked backsteps previously reached -451 s; determinism unaffected).
+  (c) Formats pinned: `Started.mode` lowercase (`dry-run`/`testnet`);
+  `Decision.action` = `reduce {pct}%` (no space); distances rendered `{:.2}%`.
+  (d) Clock: `LiveState.now_ms` advances from the event timestamp in **both**
+  modes; wall clock is used only for the live evaluation throttle and live
+  `Shutdown.at_ms` (replay stays fully logical).
+  (e) `serve()` may take the already-flipped shutdown fast path before
+  awaiting `changed()` (observably equivalent; keeps a pre-flipped channel
+  from hanging the server).
