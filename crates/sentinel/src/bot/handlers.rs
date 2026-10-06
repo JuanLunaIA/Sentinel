@@ -40,7 +40,7 @@ use crate::bot::format::{self, PositionRow};
 use crate::bot::policy_admin::{SharedPolicy, apply_to_config};
 use crate::brain::engine::{ConsultInput, StrategyEngine};
 use crate::brain::prompts::{PolicySummary, ReflexSummary, SmartMoneyContext};
-use crate::brain::providers::Provider;
+use crate::brain::providers::{KimiProvider, Provider, QwenProvider};
 use crate::config::Config;
 use crate::execution::Executor as _;
 use crate::health::HealthState;
@@ -67,7 +67,7 @@ impl Reply {
 }
 
 /// Shared handler state (built by `main.rs`).
-pub struct BotContext<P: Provider, F: Provider> {
+pub struct BotContext {
     /// Application configuration (effective at bot start).
     pub cfg: Config,
     /// Live account state (shared with the pipeline).
@@ -80,8 +80,10 @@ pub struct BotContext<P: Provider, F: Provider> {
     pub policy: Arc<SharedPolicy>,
     /// Approval queue.
     pub approvals: Arc<ApprovalQueue>,
-    /// Strategy engine (None when keys/features are unavailable).
-    pub engine: Option<StrategyEngine<P, F>>,
+    /// Strategy engine (None when keys/features are unavailable). The daemon
+    /// builds it ONCE and shares the same `Arc` with the consult task
+    /// (SPEC-P20 §2).
+    pub engine: Option<Arc<StrategyEngine<QwenProvider, KimiProvider>>>,
     /// Executor for human-approved orders (None ⇒ orders cannot execute).
     pub executor: Option<HumanExecutor>,
     /// Spend ledger handle.
@@ -100,11 +102,7 @@ const DAY_MS: u64 = 86_400_000;
 const CLOSE_SLIPPAGE_BPS: u16 = 50;
 
 /// Route one command to its reply.
-pub async fn handle<P: Provider + Sync, F: Provider + Sync>(
-    cmd: Command,
-    ctx: &BotContext<P, F>,
-    now_ms: u64,
-) -> Reply {
+pub async fn handle(cmd: Command, ctx: &BotContext, now_ms: u64) -> Reply {
     match cmd {
         Command::Start | Command::Help => onboarding(ctx),
         Command::Status => status(ctx, now_ms).await,
@@ -123,11 +121,7 @@ pub async fn handle<P: Provider + Sync, F: Provider + Sync>(
 }
 
 /// Non-command text (the typed `PAUSE` confirmation).
-pub async fn handle_text<P: Provider + Sync, F: Provider + Sync>(
-    text: &str,
-    ctx: &BotContext<P, F>,
-    now_ms: u64,
-) -> Option<Reply> {
+pub async fn handle_text(text: &str, ctx: &BotContext, now_ms: u64) -> Option<Reply> {
     if !(text.trim().eq_ignore_ascii_case("PAUSE")
         && ctx.pause_pending.swap(false, Ordering::SeqCst))
     {
@@ -154,8 +148,8 @@ pub async fn handle_text<P: Provider + Sync, F: Provider + Sync>(
 }
 
 /// Approve/Deny inline-button callback.
-pub async fn handle_approval_callback<P: Provider + Sync, F: Provider + Sync>(
-    ctx: &BotContext<P, F>,
+pub async fn handle_approval_callback(
+    ctx: &BotContext,
     id: &str,
     approve: bool,
     now_ms: u64,
@@ -256,10 +250,7 @@ pub async fn handle_approval_callback<P: Provider + Sync, F: Provider + Sync>(
 }
 
 /// Periodic expiry pass; returns notifications to deliver.
-pub async fn housekeeping<P: Provider + Sync, F: Provider + Sync>(
-    ctx: &BotContext<P, F>,
-    now_ms: u64,
-) -> Vec<Reply> {
+pub async fn housekeeping(ctx: &BotContext, now_ms: u64) -> Vec<Reply> {
     let expired = ctx.approvals.expire_due(now_ms);
     let mut replies = Vec::with_capacity(expired.len());
     for pending in expired {
@@ -281,7 +272,7 @@ pub async fn housekeeping<P: Provider + Sync, F: Provider + Sync>(
 // ---- commands ----------------------------------------------------------------
 
 /// `/status` — positions, distance-to-liq tiers, feed freshness and mode.
-async fn status<P: Provider, F: Provider>(ctx: &BotContext<P, F>, now_ms: u64) -> Reply {
+async fn status(ctx: &BotContext, now_ms: u64) -> Reply {
     let thresholds = risk_thresholds(&ctx.cfg);
     let (rows, free_balance) = {
         let state = ctx.state.lock().await;
@@ -329,14 +320,22 @@ async fn status<P: Provider, F: Provider>(ctx: &BotContext<P, F>, now_ms: u64) -
 }
 
 /// `/risk [market]` — force a strategy consult and render its decision.
-async fn risk<P: Provider, F: Provider>(
-    ctx: &BotContext<P, F>,
-    market: Option<u32>,
-    now_ms: u64,
-) -> Reply {
+async fn risk(ctx: &BotContext, market: Option<u32>, now_ms: u64) -> Reply {
     let Some(engine) = &ctx.engine else {
         return escaped_reply("DEGRADED: strategy engine unavailable (check provider keys)");
     };
+    consult_with_engine(engine, ctx, market, now_ms).await
+}
+
+/// The consult half of `/risk`, generic over the engine's provider slots so
+/// tests can drive it with mock providers; the daemon always passes the
+/// shared concrete engine built in `main` (SPEC-P20 §2).
+async fn consult_with_engine<P: Provider, F: Provider>(
+    engine: &StrategyEngine<P, F>,
+    ctx: &BotContext,
+    market: Option<u32>,
+    now_ms: u64,
+) -> Reply {
     let (account, markets) = {
         let state = ctx.state.lock().await;
         (state.account.clone(), state.markets.clone())
@@ -388,12 +387,7 @@ async fn risk<P: Provider, F: Provider>(
 
 /// `/close <market> [fraction]` — policy-gated human reduce with a confirm
 /// keyboard; the order is queued for approval and journaled as pending.
-async fn close<P: Provider, F: Provider>(
-    ctx: &BotContext<P, F>,
-    market: u32,
-    fraction: Option<Decimal>,
-    now_ms: u64,
-) -> Reply {
+async fn close(ctx: &BotContext, market: u32, fraction: Option<Decimal>, now_ms: u64) -> Reply {
     let fraction = fraction.unwrap_or(Decimal::ONE);
     if fraction <= Decimal::ZERO || fraction > Decimal::ONE {
         return escaped_reply(format!("invalid fraction {fraction} — must be in (0, 1]"));
@@ -494,7 +488,7 @@ async fn close<P: Provider, F: Provider>(
 
 /// `/pause` — arm the typed confirmation; the kill switch flips in
 /// [`handle_text`] when the operator sends the literal `PAUSE`.
-fn pause<P: Provider, F: Provider>(ctx: &BotContext<P, F>) -> Reply {
+fn pause(ctx: &BotContext) -> Reply {
     ctx.pause_pending.store(true, Ordering::SeqCst);
     escaped_reply(
         "Type PAUSE (uppercase) as your next message to confirm the kill switch. \
@@ -503,7 +497,7 @@ fn pause<P: Provider, F: Provider>(ctx: &BotContext<P, F>) -> Reply {
 }
 
 /// `/resume` — release the kill switch (flag + overlay).
-async fn resume<P: Provider, F: Provider>(ctx: &BotContext<P, F>, now_ms: u64) -> Reply {
+async fn resume(ctx: &BotContext, now_ms: u64) -> Reply {
     ctx.kill.store(false, Ordering::SeqCst);
     let _ = ctx.policy.set_key("kill_switch", "false");
     let payload = json!({ "action": "kill_switch", "state": "resumed" });
@@ -521,12 +515,12 @@ async fn resume<P: Provider, F: Provider>(ctx: &BotContext<P, F>, now_ms: u64) -
 }
 
 /// `/policy` — the effective overlay + caps, one `key = value` line each.
-fn policy_view<P: Provider, F: Provider>(ctx: &BotContext<P, F>) -> Reply {
+fn policy_view(ctx: &BotContext) -> Reply {
     Reply::text(format::policy_card(&policy_lines(ctx)))
 }
 
 /// `/policy set <key> <value>` — validated overlay mutation + refreshed card.
-fn policy_set<P: Provider, F: Provider>(ctx: &BotContext<P, F>, key: &str, value: &str) -> Reply {
+fn policy_set(ctx: &BotContext, key: &str, value: &str) -> Reply {
     match ctx.policy.set_key(key, value) {
         Ok(_) => {
             let mut text = format::escape_md2(&format!("policy updated: {key} = {value}"));
@@ -540,7 +534,7 @@ fn policy_set<P: Provider, F: Provider>(ctx: &BotContext<P, F>, key: &str, value
 
 /// `/audit [n]` — the trailing `n` journal entries plus the on-chain
 /// cross-check pointer.
-async fn audit<P: Provider, F: Provider>(ctx: &BotContext<P, F>, n: usize) -> Reply {
+async fn audit(ctx: &BotContext, n: usize) -> Reply {
     let Some(journal) = &ctx.journal else {
         return escaped_reply("audit journal unavailable");
     };
@@ -563,7 +557,7 @@ async fn audit<P: Provider, F: Provider>(ctx: &BotContext<P, F>, n: usize) -> Re
 }
 
 /// `/spend` — Nansen x402 totals (sliding hour/day) + last five purchases.
-fn spend<P: Provider, F: Provider>(ctx: &BotContext<P, F>, now_ms: u64) -> Reply {
+fn spend(ctx: &BotContext, now_ms: u64) -> Reply {
     let Some(ledger) = &ctx.spend_ledger else {
         return escaped_reply("spend ledger unavailable");
     };
@@ -584,7 +578,7 @@ fn spend<P: Provider, F: Provider>(ctx: &BotContext<P, F>, now_ms: u64) -> Reply
 }
 
 /// `/mode` — honest about the restart requirement.
-fn mode<P: Provider, F: Provider>(ctx: &BotContext<P, F>) -> Reply {
+fn mode(ctx: &BotContext) -> Reply {
     escaped_reply(format!(
         "mode: {} — switching requires a config-level restart",
         ctx.cfg.execution.mode
@@ -592,7 +586,7 @@ fn mode<P: Provider, F: Provider>(ctx: &BotContext<P, F>) -> Reply {
 }
 
 /// `/start` / `/help` — onboarding card.
-fn onboarding<P: Provider, F: Provider>(ctx: &BotContext<P, F>) -> Reply {
+fn onboarding(ctx: &BotContext) -> Reply {
     escaped_reply(format!(
         "Sentinel — verifiable AI risk guardian for isolated-margin perpetuals on Perpl (Monad).\n\
          mode: {mode}\n\n\
@@ -621,7 +615,7 @@ fn escaped_reply(text: impl AsRef<str>) -> Reply {
 }
 
 /// Feed age in seconds (`None` until the first applied feed event).
-fn feed_age_s<P: Provider, F: Provider>(ctx: &BotContext<P, F>, now_ms: u64) -> Option<u64> {
+fn feed_age_s(ctx: &BotContext, now_ms: u64) -> Option<u64> {
     let last_feed_ms = ctx.health.last_feed_ms.load(Ordering::Relaxed);
     if last_feed_ms == 0 {
         None
@@ -673,7 +667,7 @@ fn policy_summary(cfg: &Config) -> PolicySummary {
 }
 
 /// Effective `key = value` lines for the policy card (overlay over config).
-fn policy_lines<P: Provider, F: Provider>(ctx: &BotContext<P, F>) -> Vec<String> {
+fn policy_lines(ctx: &BotContext) -> Vec<String> {
     let overlay = ctx.policy.snapshot();
     let effective = apply_to_config(&ctx.cfg, &overlay);
     let risk = &effective.risk;
@@ -695,47 +689,17 @@ fn policy_lines<P: Provider, F: Provider>(ctx: &BotContext<P, F>) -> Vec<String>
 }
 
 /// The policy verdict of a consulted decision (display only): the implied
-/// intent is evaluated through the same gate a real action would face.
-fn consulted_verdict<P: Provider, F: Provider>(
-    ctx: &BotContext<P, F>,
+/// intent (shared mapping with the consult task, SPEC-P20 §2.4) is evaluated
+/// through the same gate a real action would face.
+fn consulted_verdict(
+    ctx: &BotContext,
     account: &AccountState,
     markets: &[Market],
     decision: &Decision,
 ) -> String {
     let market_id = MarketId(decision.market_id);
-    let intent = match decision.action {
-        DecisionAction::Reduce => {
-            let Some(position) = account
-                .positions
-                .iter()
-                .find(|position| position.market_id == market_id)
-            else {
-                return "n/a".to_string();
-            };
-            let Some(amount) = decision.amount else {
-                return "n/a".to_string();
-            };
-            if position.size.is_zero() {
-                return "n/a".to_string();
-            }
-            Intent::Reduce {
-                fraction: amount / position.size.abs(),
-                reason: decision.reason.clone(),
-            }
-        }
-        DecisionAction::Close => Intent::Close {
-            reason: decision.reason.clone(),
-        },
-        DecisionAction::AddCollateral => {
-            let Some(amount) = decision.amount else {
-                return "n/a".to_string();
-            };
-            Intent::AddCollateral {
-                amount,
-                reason: decision.reason.clone(),
-            }
-        }
-        DecisionAction::Hold | DecisionAction::Escalate => return "n/a".to_string(),
+    let Some(intent) = crate::consult::decision_intent(account, decision) else {
+        return "n/a".to_string();
     };
     let thresholds = risk_thresholds(&ctx.cfg);
     let tier = account
@@ -881,7 +845,6 @@ mod tests {
     use sentinel_core::types::Position;
 
     use super::*;
-    use crate::brain::chain::NoProvider;
     use crate::brain::providers::MockProvider;
     use crate::execution::GuardedExecutor;
     use crate::execution::dry_run::DryRunExecutor;
@@ -1026,15 +989,12 @@ mod tests {
 
     /// A bot context over the fixture state (tempdir journal + overlay).
     struct World {
-        ctx: BotContext<MockProvider, NoProvider>,
+        ctx: BotContext,
         dir: tempfile::TempDir,
         state: Arc<Mutex<LiveState>>,
     }
 
-    fn world(
-        engine: Option<StrategyEngine<MockProvider, NoProvider>>,
-        spend: Option<SpendLedger>,
-    ) -> World {
+    fn world(spend: Option<SpendLedger>) -> World {
         let dir = tempfile::tempdir().expect("tempdir");
         let cfg = test_config();
         let mode = cfg.execution.mode;
@@ -1049,7 +1009,7 @@ mod tests {
             journal: Some(Arc::new(Mutex::new(journal))),
             policy: Arc::new(SharedPolicy::load(dir.path().join("policy.json"))),
             approvals: Arc::new(ApprovalQueue::new()),
-            engine,
+            engine: None,
             executor: None,
             spend_ledger: spend,
             kill: Arc::new(AtomicBool::new(false)),
@@ -1082,7 +1042,7 @@ mod tests {
         ))
     }
 
-    async fn journal_entries(ctx: &BotContext<MockProvider, NoProvider>) -> Vec<AuditEntry> {
+    async fn journal_entries(ctx: &BotContext) -> Vec<AuditEntry> {
         let journal = ctx.journal.as_ref().expect("journal attached");
         let guard = journal.lock().await;
         guard.read_entries(0, 100).expect("read journal")
@@ -1111,7 +1071,7 @@ mod tests {
 
     #[tokio::test]
     async fn status_card_renders_positions_and_freshness() {
-        let world = world(None, None);
+        let world = world(None);
         let reply = handle(Command::Status, &world.ctx, NOW_MS).await;
         assert!(reply.keyboard.is_none());
         let text = &reply.text;
@@ -1130,6 +1090,8 @@ mod tests {
 
     #[tokio::test]
     async fn risk_with_engine_returns_a_consult_card() {
+        // The concrete BotContext carries the daemon's shared engine; the
+        // consult half is generic and is what these tests drive directly.
         let engine = StrategyEngine::new(
             MockProvider::canned(vec![
                 reduce_json(32, "1.0", "0.72"),
@@ -1138,8 +1100,8 @@ mod tests {
             0,
             d("0.6"),
         );
-        let world = world(Some(engine), None);
-        let reply = handle(Command::Risk { market: None }, &world.ctx, NOW_MS).await;
+        let world = world(None);
+        let reply = consult_with_engine(&engine, &world.ctx, None, NOW_MS).await;
         let text = &reply.text;
         assert!(!text.contains("DEGRADED"), "card expected: {text}");
         assert!(text.contains("REDUCE"), "action: {text}");
@@ -1149,7 +1111,7 @@ mod tests {
         assert!(text.contains("allow"), "policy verdict: {text}");
 
         // An explicit market takes the same consult path.
-        let reply = handle(Command::Risk { market: Some(32) }, &world.ctx, NOW_MS + 1).await;
+        let reply = consult_with_engine(&engine, &world.ctx, Some(32), NOW_MS + 1).await;
         assert!(
             !reply.text.contains("DEGRADED"),
             "card expected: {}",
@@ -1159,7 +1121,7 @@ mod tests {
 
     #[tokio::test]
     async fn risk_without_engine_degrades_honestly() {
-        let world = world(None, None);
+        let world = world(None);
         let reply = handle(Command::Risk { market: Some(32) }, &world.ctx, NOW_MS).await;
         assert_eq!(
             reply.text,
@@ -1170,8 +1132,8 @@ mod tests {
     #[tokio::test]
     async fn risk_consult_failure_degrades_with_the_error() {
         let engine = StrategyEngine::new(MockProvider::canned(Vec::new()), 0, d("0.6"));
-        let world = world(Some(engine), None);
-        let reply = handle(Command::Risk { market: None }, &world.ctx, NOW_MS).await;
+        let world = world(None);
+        let reply = consult_with_engine(&engine, &world.ctx, None, NOW_MS).await;
         assert!(reply.text.contains("DEGRADED"), "reply: {}", reply.text);
         assert!(
             reply.text.contains("mock queue exhausted"),
@@ -1184,7 +1146,7 @@ mod tests {
 
     #[tokio::test]
     async fn close_builds_confirm_keyboard_and_journals_pending() {
-        let world = world(None, None);
+        let world = world(None);
         let reply = handle(
             Command::Close {
                 market: 32,
@@ -1242,7 +1204,7 @@ mod tests {
 
     #[tokio::test]
     async fn close_defaults_to_full_position_and_validates_fraction() {
-        let world = world(None, None);
+        let world = world(None);
         let reply = handle(
             Command::Close {
                 market: 32,
@@ -1297,7 +1259,7 @@ mod tests {
 
     #[tokio::test]
     async fn close_is_denied_when_the_kill_switch_is_engaged() {
-        let world = world(None, None);
+        let world = world(None);
         let _ = world.ctx.policy.set_key("kill_switch", "true");
         let reply = handle(
             Command::Close {
@@ -1321,7 +1283,7 @@ mod tests {
 
     #[tokio::test]
     async fn approve_callback_executes_and_journals_human_approved() {
-        let mut world = world(None, None);
+        let mut world = world(None);
         world.ctx.executor = Some(dry_human_executor(&world.dir, &world.state));
         let id = enqueue_close(&world, "0.3", NOW_MS).await;
 
@@ -1375,7 +1337,7 @@ mod tests {
 
     #[tokio::test]
     async fn approve_without_executor_fails_closed() {
-        let world = world(None, None);
+        let world = world(None);
         let id = enqueue_close(&world, "0.3", NOW_MS).await;
         let reply = handle_approval_callback(&world.ctx, &id, true, NOW_MS + 10).await;
         assert!(
@@ -1393,7 +1355,7 @@ mod tests {
 
     #[tokio::test]
     async fn deny_callback_journals_denied_and_replies() {
-        let world = world(None, None);
+        let world = world(None);
         let id = enqueue_close(&world, "0.5", NOW_MS).await;
         let reply = handle_approval_callback(&world.ctx, &id, false, NOW_MS + 5_000).await;
         assert!(reply.keyboard.is_none());
@@ -1413,7 +1375,7 @@ mod tests {
 
     #[tokio::test]
     async fn unknown_approval_callback_is_honest() {
-        let world = world(None, None);
+        let world = world(None);
         let reply = handle_approval_callback(&world.ctx, "ap-00000000", true, NOW_MS).await;
         assert!(
             reply
@@ -1426,7 +1388,7 @@ mod tests {
 
     #[tokio::test]
     async fn housekeeping_expires_and_journals() {
-        let world = world(None, None);
+        let world = world(None);
         let id = enqueue_close(&world, "0.5", NOW_MS).await;
         assert_eq!(world.ctx.approvals.len(), 1);
 
@@ -1456,7 +1418,7 @@ mod tests {
 
     #[tokio::test]
     async fn pause_flow_flips_kill_and_overlay() {
-        let world = world(None, None);
+        let world = world(None);
 
         let ask = handle(Command::Pause, &world.ctx, NOW_MS).await;
         assert!(ask.text.contains("PAUSE"), "reply: {}", ask.text);
@@ -1522,7 +1484,7 @@ mod tests {
 
     #[tokio::test]
     async fn policy_view_and_set() {
-        let world = world(None, None);
+        let world = world(None);
         let view = handle(Command::Policy, &world.ctx, NOW_MS).await;
         assert!(view.text.contains("50000"), "effective cap: {}", view.text);
         assert!(
@@ -1578,7 +1540,7 @@ mod tests {
 
     #[tokio::test]
     async fn audit_lists_entries_and_points_at_the_cli() {
-        let world = world(None, None);
+        let world = world(None);
         // Seed two journal entries through the kill-switch flow.
         let _ = handle(Command::Pause, &world.ctx, NOW_MS).await;
         let _ = handle_text("PAUSE", &world.ctx, NOW_MS).await;
@@ -1596,7 +1558,7 @@ mod tests {
 
     #[tokio::test]
     async fn audit_without_journal_is_honest() {
-        let mut world = world(None, None);
+        let mut world = world(None);
         world.ctx.journal = None;
         let reply = handle(Command::Audit { n: 5 }, &world.ctx, NOW_MS).await;
         assert!(
@@ -1610,7 +1572,7 @@ mod tests {
 
     #[tokio::test]
     async fn spend_reports_ledger_totals() {
-        let mut world = world(None, None);
+        let mut world = world(None);
         let ledger = SpendLedger::new(world.dir.path().join("nansen-spend.jsonl"));
         for (ts_ms, cost, endpoint) in [
             (NOW_MS - 2_000, "0.05", "/api/v1/smart-money/netflow"),
@@ -1641,7 +1603,7 @@ mod tests {
 
     #[tokio::test]
     async fn spend_without_ledger_is_honest() {
-        let world = world(None, None);
+        let world = world(None);
         let reply = handle(Command::Spend, &world.ctx, NOW_MS).await;
         assert!(
             reply
@@ -1654,7 +1616,7 @@ mod tests {
 
     #[tokio::test]
     async fn mode_is_honest_about_restarts() {
-        let world = world(None, None);
+        let world = world(None);
         let reply = handle(Command::Mode, &world.ctx, NOW_MS).await;
         assert!(reply.text.contains("DRY"), "mode badge: {}", reply.text);
         assert!(
@@ -1668,7 +1630,7 @@ mod tests {
 
     #[tokio::test]
     async fn start_and_help_render_the_onboarding() {
-        let world = world(None, None);
+        let world = world(None);
         for cmd in [Command::Start, Command::Help] {
             let reply = handle(cmd, &world.ctx, NOW_MS).await;
             assert!(reply.text.contains("Sentinel"), "reply: {}", reply.text);

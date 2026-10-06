@@ -337,8 +337,8 @@ rail selected", [p09-x402-check.txt](evidence/p09-x402-check.txt)); the paid cal
 mock-harness scoreboard: action-class accuracy (core) 12/12, schema validity 14/14,
 injection schema validity 2/2, grounding 14/14
 ([p07-brain-eval-mock.txt](evidence/p07-brain-eval-mock.txt)); automatic pipeline
-triggers (Yellow entry / post-reflex / 30-min review) remain **STUB-15** while the manual
-`/risk` path is wired (`crates/sentinel/src/bot/handlers.rs`).
+triggers (Yellow entry / post-reflex / periodic review, `STRATEGY_REVIEW_INTERVAL_SECS`) are wired through the P20 consult task; the manual
+`/risk` path stays available (`crates/sentinel/src/bot/handlers.rs`).
 
 ### 5.4 Approval flow — a human decides, then the same guard executes
 

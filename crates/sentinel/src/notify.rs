@@ -57,6 +57,31 @@ pub enum AlertKind {
         /// Seconds since the last event.
         secs: u64,
     },
+    /// Anchor heartbeats/batches failed consecutively, or recovered after a
+    /// degraded streak (STUB-19 partial, `SPEC-P20.md` §4). The anchor task
+    /// emits this at 3 consecutive failures and once when anchoring lands
+    /// again.
+    AnchoringDegraded {
+        /// Consecutive failed anchor attempts when this alert was emitted:
+        /// the threshold N on the degradation alert, `0` on the recovery
+        /// alert.
+        consecutive_failures: u32,
+        /// `false` when degradation starts, `true` when anchoring recovers.
+        recovering: bool,
+    },
+    /// A strategy consult produced a decision, or its approved order was
+    /// submitted (`SPEC-P20.md` §2.5). The consult task emits this for
+    /// gated / needs-approval / ESCALATE outcomes; the pipeline mirrors the
+    /// execution status of an approved strategy order through the same kind.
+    StrategyDecision {
+        /// Consult decision correlation id (`s-<n>` on the daemon path).
+        decision_id: String,
+        /// Rendered decision action (`REDUCE`, `CLOSE`, `HOLD`, `ESCALATE`).
+        action: String,
+        /// Rendered policy verdict or execution status (`allow: queued`,
+        /// `needs_approval: ...`, `deny: ...`, `simulated`, ...).
+        status: String,
+    },
 }
 
 /// One outbound alert.
@@ -73,10 +98,13 @@ pub struct Alert {
 }
 
 /// Destination for alerts. Errors are logged by the pipeline, never fatal.
-#[allow(async_fn_in_trait)]
+///
+/// The returned future is `Send` by contract so supervised tasks (SPEC-P20
+/// consult task) can own a sink and be spawned on the multithreaded runtime;
+/// every existing `async fn` implementation satisfies this bound unchanged.
 pub trait AlertSink {
     /// Deliver one alert.
-    async fn send(&self, alert: &Alert) -> Result<()>;
+    fn send(&self, alert: &Alert) -> impl std::future::Future<Output = Result<()>> + Send;
 }
 
 /// Logs every alert via `tracing` (target `sentinel::alert`).
@@ -372,6 +400,8 @@ fn kind_label(kind: &AlertKind) -> &'static str {
         AlertKind::ReflexAction { .. } => "reflex_action",
         AlertKind::ConsultScheduled { .. } => "consult_scheduled",
         AlertKind::FeedStale { .. } => "feed_stale",
+        AlertKind::AnchoringDegraded { .. } => "anchoring_degraded",
+        AlertKind::StrategyDecision { .. } => "strategy_decision",
     }
 }
 
@@ -602,6 +632,68 @@ mod tests {
         sink.send(&alert).await.expect("forwarded");
         sink.send(&alert).await.expect("forwarded again");
         assert_eq!(captured(&capture).len(), 2);
+    }
+
+    #[test]
+    fn anchoring_degraded_serializes_with_the_kind_tag_and_fields() {
+        // P20 §4 / STUB-19: the additive alert class follows the frozen serde
+        // pattern — the enum tag is `kind` (snake_case) plus the payload, and
+        // inside `Alert` the kind nests under the `kind` field exactly like
+        // every other variant.
+        let degraded = Alert {
+            kind: AlertKind::AnchoringDegraded {
+                consecutive_failures: 3,
+                recovering: false,
+            },
+            market_id: None,
+            text: "⚠️ anchoring degraded — 3 consecutive heartbeat/batch failures".to_string(),
+            at_ms: T0,
+        };
+        let kind = serde_json::to_value(&degraded.kind).expect("kind serializes");
+        assert_eq!(kind["kind"], "anchoring_degraded");
+        assert_eq!(kind["consecutive_failures"], 3);
+        assert_eq!(kind["recovering"], false);
+
+        let alert = serde_json::to_value(&degraded).expect("alert serializes");
+        assert_eq!(alert["kind"]["kind"], "anchoring_degraded");
+        assert_eq!(alert["kind"]["consecutive_failures"], 3);
+        assert!(alert["market_id"].is_null());
+        assert_eq!(alert["at_ms"], T0);
+
+        let recovered = Alert {
+            kind: AlertKind::AnchoringDegraded {
+                consecutive_failures: 0,
+                recovering: true,
+            },
+            market_id: None,
+            text: "✅ anchoring recovered — heartbeats and batch anchors are landing again"
+                .to_string(),
+            at_ms: T0 + 1,
+        };
+        let kind = serde_json::to_value(&recovered.kind).expect("kind serializes");
+        assert_eq!(kind["kind"], "anchoring_degraded");
+        assert_eq!(kind["consecutive_failures"], 0);
+        assert_eq!(kind["recovering"], true);
+    }
+
+    #[tokio::test]
+    async fn dedupe_passes_anchoring_degraded_alerts_through_unchanged() {
+        // Non-tier kinds are never deduped (same rule as stale/consult).
+        let (sink, capture) = dedupe_recorder();
+        let alert = Alert {
+            kind: AlertKind::AnchoringDegraded {
+                consecutive_failures: 3,
+                recovering: false,
+            },
+            market_id: None,
+            text: "⚠️ anchoring degraded — 3 consecutive heartbeat/batch failures".to_string(),
+            at_ms: T0,
+        };
+        sink.send(&alert).await.expect("first passes");
+        sink.send(&alert)
+            .await
+            .expect("identical repeat passes too");
+        assert_eq!(captured(&capture), vec![alert.clone(), alert]);
     }
 
     #[tokio::test]

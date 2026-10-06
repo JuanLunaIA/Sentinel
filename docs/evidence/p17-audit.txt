@@ -255,3 +255,8 @@ re-run PASS. Refreshed pins:
   e9bbca65ce864de6095d161231a2121c472fd0c6cf87301ed208601fae8d7be3  README.md
   13642820e5ead6182c3d9ecfe95ae367e1551bc45255348b0217214865a6a7c3  docs/architecture.md
   b2e2a0bb40d71be646effa80158227598904774069b753b8f806ab4f9b0baf08  docs/submission/bounty-answers.md
+
+POST-FIX #3 (P20 integration): docs/architecture.md STUB-15 wording updated (automatic
+consults now wired via the P20 consult task); link gate re-run PASS. Refreshed pin:
+  1de989f760681e747525b4893a0bae27d3e51fa9524f91138b2acab5df0f6bff  docs/architecture.md
+  (supersedes the previous POST-FIX #3 pin)  d09c40a67ede77eb3e101aa652dbba54c5e44713a6941744cdb741d4cae316a9  docs/architecture.md

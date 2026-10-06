@@ -5,6 +5,13 @@
 //! contract (same fixture ⇒ identical JSONL of events); the logical clock in
 //! replay is the latest applied event timestamp.
 //!
+//! P20 adds two optional channels around the existing path (SPEC-P20 §2–§3):
+//! a `ConsultTrigger` sender toward the consult task (Yellow-entry and
+//! post-reflex-review triggers) and an `ApprovedOrder` receiver carrying
+//! policy-allowed strategy orders into the **existing** executor/event/alert
+//! path. Both default to `None` — tests and replay keep the pre-P20
+//! behaviour byte-for-byte.
+//!
 //! **P06 status:** implemented — [`LiveState`] revaluation, the supervised
 //! event loop ([`Pipeline::run`]) and the decision/alert emission rules live
 //! here; alert transport lives in [`crate::notify`].
@@ -22,9 +29,10 @@ use sentinel_core::types::{
     RiskTier,
 };
 use serde::{Deserialize, Serialize};
-use tokio::sync::{Mutex, watch};
+use tokio::sync::{Mutex, mpsc, watch};
 
 use crate::config::Config;
+use crate::consult::{ApprovedOrder, ConsultTrigger};
 use crate::error::{Result, SentinelError};
 use crate::execution::{Executor, PositionProbe};
 use crate::health::HealthState;
@@ -365,6 +373,12 @@ pub struct Pipeline<F, E, S> {
     kill: Arc<std::sync::atomic::AtomicBool>,
     /// Last applied overlay version.
     last_policy_version: u64,
+    /// Trigger sender toward the consult task (SPEC-P20 §2); `None` keeps
+    /// the pre-P20 path (no triggers, no events — determinism preserved).
+    consult_tx: Option<mpsc::Sender<ConsultTrigger>>,
+    /// Approved strategy orders inbound from the consult task (SPEC-P20 §2.4);
+    /// `None` keeps the pre-P20 path.
+    strategy_rx: Option<mpsc::Receiver<ApprovedOrder>>,
 }
 
 impl<F, E, S> Pipeline<F, E, S> {
@@ -396,7 +410,26 @@ impl<F, E, S> Pipeline<F, E, S> {
             policy: None,
             kill: Arc::new(std::sync::atomic::AtomicBool::new(false)),
             last_policy_version: 0,
+            consult_tx: None,
+            strategy_rx: None,
         }
+    }
+
+    /// Attach the trigger sender toward the consult task (SPEC-P20 §2):
+    /// Yellow entries and executed Orange/Red reduces queue [`ConsultTrigger`]s
+    /// for the consult task. `None` (tests, replay without an engine) keeps
+    /// the pipeline's event stream byte-identical.
+    pub fn with_consult_tx(mut self, tx: Option<mpsc::Sender<ConsultTrigger>>) -> Self {
+        self.consult_tx = tx;
+        self
+    }
+
+    /// Attach the approved-order receiver (SPEC-P20 §2.4): orders are polled
+    /// in the event loop and submitted through the existing executor/event/
+    /// alert path. `None` keeps the pre-P20 path.
+    pub fn with_strategy_rx(mut self, rx: Option<mpsc::Receiver<ApprovedOrder>>) -> Self {
+        self.strategy_rx = rx;
+        self
     }
 
     /// Attach the audit journal (SPEC-P10 §8): every intent-bearing decision
@@ -580,12 +613,17 @@ where
 
         let mut rx = self.feed.stream().await;
         let mut last_eval_ms: Option<u64> = None;
+        // P20: the approved-order receiver is polled alongside the feed. It
+        // is owned by the loop (not `self`) so branch handlers can borrow
+        // `self` mutably; `None` keeps the pre-P20 select shape.
+        let mut strategy_rx = self.strategy_rx.take();
 
         // --- Event loop: apply, then evaluate; shutdown stops consumption.
         loop {
             if *shutdown.borrow() {
                 break;
             }
+            let mut strategy_closed = false;
             tokio::select! {
                 biased;
                 change = shutdown.changed() => {
@@ -640,6 +678,23 @@ where
                         outcome.events.extend(produced);
                     }
                 }
+                approved = recv_optional(strategy_rx.as_mut()) => {
+                    match approved {
+                        Some(approved) => {
+                            let now_ms = match self.run_mode {
+                                RunMode::Replay => self.state.lock().await.now_ms,
+                                RunMode::Live => unix_ms(),
+                            };
+                            let produced = self.submit_strategy_order(approved, now_ms).await;
+                            outcome.events.extend(produced);
+                        }
+                        None => strategy_closed = true,
+                    }
+                }
+            }
+            if strategy_closed {
+                strategy_rx = None;
+                tracing::info!("strategy order channel closed; not polling it again");
             }
         }
 
@@ -743,6 +798,11 @@ where
                         market_id: action.market_id.0,
                         tier: action.tier,
                     });
+                    // P20: per-market Yellow-ENTRY trigger for the consult
+                    // task (SPEC-P07 §5a); a no-op without a trigger channel.
+                    self.send_consult_trigger(ConsultTrigger::YellowEntry {
+                        market_id: action.market_id,
+                    });
                 }
                 if action.tier >= RiskTier::Yellow {
                     alerts.push(tier_change_alert(
@@ -807,6 +867,15 @@ where
                             }),
                         )
                         .await;
+                        // P20: an executed Orange/Red reduce schedules a
+                        // post-reflex strategy review (SPEC-P07 §5b); a
+                        // no-op without a trigger channel.
+                        if action.tier >= RiskTier::Orange {
+                            self.send_consult_trigger(ConsultTrigger::PostReflexReduce {
+                                market_id: action.market_id,
+                                tier: action.tier,
+                            });
+                        }
                     }
                     Err(SentinelError::DuplicateOrder { key, .. }) => {
                         self.journal_outcome(
@@ -911,6 +980,167 @@ where
             }
         }
     }
+
+    /// Queue one consult trigger (no-op without a channel, SPEC-P20 §2).
+    /// Best-effort by design: a full or closed channel costs a warning, never
+    /// a stalled evaluation pass.
+    fn send_consult_trigger(&self, trigger: ConsultTrigger) {
+        let Some(tx) = &self.consult_tx else {
+            return;
+        };
+        if let Err(err) = tx.try_send(trigger) {
+            tracing::warn!(error = %err, "consult trigger dropped");
+        }
+    }
+
+    /// Submit one approved strategy order through the existing executor /
+    /// event / alert path (SPEC-P20 §2.4), journaling the STRATEGY outcome
+    /// with the execution status. The matching STRATEGY intent was journaled
+    /// by the consult task (audit-before-action).
+    async fn submit_strategy_order(
+        &mut self,
+        approved: ApprovedOrder,
+        now_ms: u64,
+    ) -> Vec<PipelineEvent> {
+        let mut emitted = Vec::new();
+        let market_id = approved.order.market_id;
+        let (account, symbol) = {
+            let state = self.state.lock().await;
+            (
+                state.account.clone(),
+                state
+                    .markets
+                    .iter()
+                    .find(|market| market.id == market_id)
+                    .map(|market| market.symbol.clone())
+                    .unwrap_or_else(|| market_id.0.to_string()),
+            )
+        };
+
+        match self.executor.submit(&approved.order).await {
+            Ok(report) => {
+                let status = format!("{:?}", report.status).to_lowercase();
+                let size_text = format!("{}", report.filled_size);
+                emitted.push(PipelineEvent::Executed {
+                    at_ms: now_ms,
+                    decision_id: approved.decision_id.clone(),
+                    client_order_id: report.client_order_id.clone(),
+                    status: status.clone(),
+                    filled_size: report.filled_size,
+                    avg_price: report.avg_price,
+                });
+                let alert = strategy_execution_alert(
+                    &approved,
+                    &symbol,
+                    &status,
+                    &size_text,
+                    &report.client_order_id,
+                    now_ms,
+                );
+                self.day.actions_today = self.day.actions_today.saturating_add(1);
+                self.journal_strategy_outcome(
+                    &approved,
+                    account.as_ref(),
+                    now_ms,
+                    serde_json::json!({
+                        "status": status,
+                        "mode": mode_label(self.cfg.execution.mode),
+                        "order_id": report.client_order_id,
+                        "tx_hash": report.tx_hash,
+                        "fill": {
+                            "filled_size": report.filled_size.to_string(),
+                            "avg_price": report.avg_price.map(|price| price.to_string()),
+                            "status": status,
+                        },
+                    }),
+                )
+                .await;
+                self.send_alert(alert, &mut emitted).await;
+            }
+            Err(SentinelError::DuplicateOrder { key, .. }) => {
+                self.journal_strategy_outcome(
+                    &approved,
+                    account.as_ref(),
+                    now_ms,
+                    serde_json::json!({
+                        "status": "duplicate",
+                        "key": key,
+                        "mode": mode_label(self.cfg.execution.mode),
+                    }),
+                )
+                .await;
+                emitted.push(PipelineEvent::DuplicateSuppressed {
+                    at_ms: now_ms,
+                    decision_id: approved.decision_id.clone(),
+                    key,
+                });
+            }
+            Err(err) => {
+                self.journal_strategy_outcome(
+                    &approved,
+                    account.as_ref(),
+                    now_ms,
+                    serde_json::json!({
+                        "status": "failed",
+                        "error": err.to_string(),
+                        "mode": mode_label(self.cfg.execution.mode),
+                    }),
+                )
+                .await;
+                emitted.push(PipelineEvent::SubmitFailed {
+                    at_ms: now_ms,
+                    decision_id: approved.decision_id.clone(),
+                    error: err.to_string(),
+                });
+            }
+        }
+        emitted
+    }
+
+    /// Journal the STRATEGY outcome of an approved order with its execution
+    /// status (SPEC-P20 §2.4); no-op without a journal.
+    async fn journal_strategy_outcome(
+        &self,
+        approved: &ApprovedOrder,
+        account: Option<&sentinel_core::types::AccountState>,
+        now_ms: u64,
+        execution: serde_json::Value,
+    ) {
+        let Some(journal) = &self.journal else {
+            return;
+        };
+        let input_hash = match account {
+            Some(account) => journal_input_hash(account, now_ms),
+            None => sentinel_core::audit::hash_input(&[&serde_json::json!({ "now_ms": now_ms })]),
+        };
+        let record = sentinel_core::audit::OutcomeRecord {
+            trigger: sentinel_core::audit::Trigger::Strategy,
+            account: self.account_label(),
+            market_id: Some(approved.order.market_id.0),
+            input_hash,
+            decision: serde_json::json!({
+                "decision_id": approved.decision_id,
+                "market_id": approved.order.market_id.0,
+                "action": "reduce",
+                "source": "strategy_consult",
+                "order": serde_json::to_value(&approved.order)
+                    .unwrap_or(serde_json::Value::Null),
+            }),
+            policy_verdict: serde_json::json!({
+                "verdict": "allow",
+                "note": "gated by the consult task (PolicySource::Strategy)",
+            }),
+            execution,
+        };
+        let mut guard = journal.lock().await;
+        if let Err(err) = guard.record_outcome(&record, chrono::Utc::now()) {
+            tracing::error!(
+                error = %err,
+                decision_id = %approved.decision_id,
+                "strategy outcome journal write failed"
+            );
+        }
+    }
 }
 
 /// Default live evaluation throttle (`SPEC-P06` §4): at most one decision
@@ -948,6 +1178,16 @@ fn unix_ms() -> u64 {
     match std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
         Ok(elapsed) => u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX),
         Err(_) => 0,
+    }
+}
+
+/// Await the next value on an optional strategy receiver; pending forever
+/// when no channel is attached (the pipeline then behaves exactly as before
+/// P20 — the branch can never win the select).
+async fn recv_optional<T>(rx: Option<&mut mpsc::Receiver<T>>) -> Option<T> {
+    match rx {
+        Some(rx) => rx.recv().await,
+        None => std::future::pending().await,
     }
 }
 
@@ -1017,6 +1257,8 @@ fn alert_kind_text(kind: &AlertKind) -> &'static str {
         AlertKind::ReflexAction { .. } => "reflex_action",
         AlertKind::ConsultScheduled { .. } => "consult_scheduled",
         AlertKind::FeedStale { .. } => "feed_stale",
+        AlertKind::AnchoringDegraded { .. } => "anchoring_degraded",
+        AlertKind::StrategyDecision { .. } => "strategy_decision",
     }
 }
 
@@ -1102,6 +1344,31 @@ fn reflex_alert(
             size,
             client_order_id,
             status
+        ),
+        at_ms,
+    }
+}
+
+/// Strategy-order execution alert (SPEC-P20 §2.4–§2.5): mirrors the reflex
+/// alert shape for orders that entered through the consult task.
+fn strategy_execution_alert(
+    approved: &ApprovedOrder,
+    symbol: &str,
+    status: &str,
+    size: &str,
+    client_order_id: &str,
+    at_ms: u64,
+) -> Alert {
+    Alert {
+        kind: AlertKind::StrategyDecision {
+            decision_id: approved.decision_id.clone(),
+            action: "REDUCE".to_string(),
+            status: status.to_string(),
+        },
+        market_id: Some(approved.order.market_id),
+        text: format!(
+            "🧠 {}#{} strategy reduce · size {} · {} · {}",
+            symbol, approved.order.market_id.0, size, client_order_id, status
         ),
         at_ms,
     }

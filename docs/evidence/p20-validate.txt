@@ -1,0 +1,16 @@
+# P20 integration — build + official judge-demo + gates (2026-10-06T17:49:12-03:00)
+== judge-demo (builds fresh release) ==
+DEMO_RC=0
+  verify again:  ./target/release/audit-verify --no-chain
+  replay again:  bash scripts/judge-demo.sh
+  transcript:    JUDGE_DEMO_CAPTURE=1 bash scripts/judge-demo.sh
+==================================================================
+[cleanup] daemon stopped; work dir removed (script exit 0)
+[judge-demo] transcript written to docs/evidence/p20-judge-demo.txt (exit 0)
+== cargo test --workspace ==
+TEST_RC=0
+39 suites, 912 tests OK
+FAILED_SUITES=0
+CLIPPY_RC=0
+FMT_OK
+P20_CHAIN_DONE

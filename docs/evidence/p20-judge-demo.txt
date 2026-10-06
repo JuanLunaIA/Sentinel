@@ -1,0 +1,104 @@
+==================================================================
+  SENTINEL — JUDGE DEMO (zero keys · deterministic replay)
+  date: 2026-10-06T17:49:12-03:00
+==================================================================
+
+== [0/5] build (release: sentinel + backtest + audit-verify) ==
+   Compiling sentinel-core v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel-core)
+   Compiling sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
+    Finished `release` profile [optimized] target(s) in 5m 23s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+
+== [1/5] daemon: replay tests/fixtures/perpl/crash-scenario.jsonl on http://127.0.0.1:8090 ==
+   daemon pid 10842 · log: logs/p20-judge-demo-daemon.log
+
+== [2/5] wait for /healthz ==
+healthz: {"feed_age_s":null,"mode":"DRY_RUN","uptime_s":0,"version":"0.1.0"}
+
+==================================================================
+  THE TOUR — open http://localhost:8090/
+==================================================================
+  The daemon is replaying a recorded ETH crash (≈30% → 6% distance
+  to liquidation) through the real decision pipeline: DRY_RUN
+  executor, zero keys, zero network. At default pacing the replay
+  runs ≈21 s: Yellow ≈ +7 s, Orange ≈ +18 s, Red + the 50 % reduce
+  ≈ +20 s. (Prefer a slower watch? SENTINEL_MOCK_CAP_MS=3200 ≈ 75 s.)
+
+  READ THE PANELS IN THIS ORDER
+  ------------------------------------------------------------------
+  1) POSITIONS (top left)
+     ETH #32 / BTC #16 cards: entry → mark, distance-to-liquidation,
+     collateral and the tier badge. Watch ETH slip
+     GREEN → YELLOW → ORANGE → RED as the crash replays; BTC stays
+     GREEN as the contrast.
+  2) LIVE DECISION FEED (below positions)
+     Every evaluation as it happens: tier_change alerts,
+     consult_scheduled on Yellow, reflex_action reduces with DRY_RUN
+     fills (sentinel-32-1, sentinel-32-2).
+  3) AUDIT VERIFIER (right column)
+     The SHA-256 journal chain: verified entries, valid-up-to seq,
+     first seq, anchored seq / running root / latest anchor tx.
+     Zero-key local replay: the chain verifies locally (0 anchored —
+     no wallet configured; live anchors are PENDING-WALLET, STUB-17).
+     Press "verify now" — it re-walks data/audit in place.
+  4) BACKTEST (bottom)
+     Fresh output from this run (regenerated in the next step): 14
+     crash scenarios, $60,163.37 notional, $5,972.14 saved (9.93%),
+     baseline liquidations 11 → with Sentinel: 0.
+  ------------------------------------------------------------------
+  Also on the page: the Resilience strip (heartbeat/breaker/CRE),
+  the Nansen x402 spend panel and the kill switch (PAUSE needs
+  DASHBOARD_ADMIN_KEY; it is unset here, so mutations stay disabled).
+
+  The daemon exits when the replay fixture ends (≈21 s at default
+  pacing). This script holds the dashboard open for 20 more
+  second(s) after the report step (JUDGE_DEMO_HOLD_SECS), then stops
+  it.
+==================================================================
+
+== [3/5] fresh report: backtest --scenario all ==
+black-swan-60 [synthetic]: ticks=31 saved=$66.26270574 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+correlated-dump [synthetic]: ticks=52 saved=$458.7552085407 baseline_liq=2 sentinel_liq=0 avoided=2 false_positives=0 policy_violations=0
+dust-position [synthetic]: ticks=11 saved=$-0.0236036754 baseline_liq=0 sentinel_liq=0 avoided=0 false_positives=0 policy_violations=0
+flash-crash-30 [synthetic]: ticks=61 saved=$30.1132697496 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+funding-squeeze [synthetic]: ticks=25 saved=$174.33613302457625 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+gap-through-liq [synthetic]: ticks=12 saved=$259.0257658875 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+reconstructed-testnet-eth [reconstructed]: ticks=47 saved=$2452.478986637625 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+recorded-session-20261005 [recorded]: ticks=3 saved=$0 baseline_liq=0 sentinel_liq=0 avoided=0 false_positives=0 policy_violations=0
+recovery-v [synthetic]: ticks=13 saved=$-93.3279756737 baseline_liq=0 sentinel_liq=0 avoided=0 false_positives=2 policy_violations=0
+repeated-orange-cooldown [synthetic]: ticks=19 saved=$137.259328989700 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+slow-bleed-15 [synthetic]: ticks=13 saved=$36.76835638168 baseline_liq=0 sentinel_liq=0 avoided=0 false_positives=1 policy_violations=0
+stale-feed-outage [synthetic]: ticks=39 saved=$211.40764461 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+whale-vs-caps [synthetic]: ticks=25 saved=$1971.7639420597 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+wick-both [synthetic]: ticks=20 saved=$267.31569884495 baseline_liq=1 sentinel_liq=0 avoided=1 false_positives=0 policy_violations=0
+aggregate: 14 scenarios, notional $60163.365, saved $5972.13546111693125 (9.93%), baseline liquidations: 11 -> with Sentinel: 0
+wrote docs/backtest-report.json and docs/backtest-report.md
+
+== [3/5] fresh report: audit-verify --no-chain ==
+✅ journal consistent; 79 entries; 0 anchored; root matches at seq —
+
+== [4/5] hold: dashboard live for 20s (JUDGE_DEMO_HOLD_SECS) ==
+   dashboard: http://localhost:8090/ — click through the panels now
+   replay finished at 20s into the hold; the dashboard is now offline
+
+== [5/5] summary ==
+   dashboard:    http://localhost:8090/ (stopping now)
+   daemon log:   logs/p20-judge-demo-daemon.log
+--- daemon alerts so far ---
+[2m2026-10-06T20:54:43.038333Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"tier_change" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🟡 ETH#32 GREEN→YELLOW · distance 24.10% · consult scheduled
+[2m2026-10-06T20:54:43.038378Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"consult_scheduled" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🧠 ETH#32 YELLOW · consult scheduled · distance 24.10%
+[2m2026-10-06T20:54:50.250523Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"tier_change" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🟠 ETH#32 YELLOW→ORANGE · distance 14.88%
+[2m2026-10-06T20:54:50.250575Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"reflex_action" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m⚡ ETH#32 reduce 25% · size 2.500 · sentinel-32-1 · simulated
+[2m2026-10-06T20:54:55.058654Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"tier_change" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🔴 ETH#32 ORANGE→RED · distance 7.38%
+[2m2026-10-06T20:54:55.859954Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"reflex_action" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m⚡ ETH#32 reduce 50% · size 5.000 · sentinel-32-2 · simulated
+[2m2026-10-06T20:54:55.860133Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m pipeline finished [3mevents[0m[2m=[0m128 [3mexecuted[0m[2m=[0m2 [3malerts[0m[2m=[0m6 [3mdenied[0m[2m=[0m0
+
+==================================================================
+  JUDGE TOUR COMPLETE (exit 0)
+  fresh report:  docs/backtest-report.{json,md} (Backtest panel source)
+  verify again:  ./target/release/audit-verify --no-chain
+  replay again:  bash scripts/judge-demo.sh
+  transcript:    JUDGE_DEMO_CAPTURE=1 bash scripts/judge-demo.sh
+==================================================================
+[cleanup] daemon stopped; work dir removed (script exit 0)

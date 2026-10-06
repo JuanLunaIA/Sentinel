@@ -27,8 +27,9 @@ use crate::bot::handlers::{BotContext, Reply};
 use crate::config::Config;
 use crate::error::{Result, SentinelError};
 
-/// Handler context the bot runs with (`main.rs` builds the concrete pair).
-type Ctx = BotContext<crate::brain::providers::QwenProvider, crate::brain::providers::KimiProvider>;
+/// Handler context the bot runs with (`main.rs` builds the concrete pair;
+/// the engine is the daemon-shared `Arc`, SPEC-P20 §2).
+type Ctx = BotContext;
 
 /// Housekeeping cadence (approval expiry pass), seconds.
 const HOUSEKEEPING_INTERVAL_SECS: u64 = 30;
@@ -55,10 +56,7 @@ pub struct BotRunConfig {
 /// shape, dispatcher build).
 pub async fn run(
     bot_cfg: BotRunConfig,
-    ctx: handlers::BotContext<
-        crate::brain::providers::QwenProvider,
-        crate::brain::providers::KimiProvider,
-    >,
+    ctx: handlers::BotContext,
     mut shutdown: watch::Receiver<bool>,
 ) -> Result<()> {
     let BotRunConfig {

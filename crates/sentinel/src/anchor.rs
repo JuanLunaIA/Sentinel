@@ -60,6 +60,7 @@ use sentinel_core::audit::{AuditJournal, Trigger};
 
 use crate::config::Config;
 use crate::error::{Result, SentinelError};
+use crate::notify::{Alert, AlertKind, AlertSink, TracingSink};
 
 /// Generated alloy bindings for the `SentinelAuditAnchor` contract (§4).
 ///
@@ -104,6 +105,11 @@ const BACKOFF_MAX: Duration = Duration::from_secs(30);
 /// Risk tier committed by heartbeats until P14 wires real breaker inputs.
 const HEARTBEAT_MAX_TIER: u8 = 3;
 
+/// Consecutive heartbeat/batch failures before the degraded alert fires
+/// (STUB-19 partial, `SPEC-P20.md` §4). One alert per degraded streak; the
+/// matching recovery alert fires once when anchoring succeeds again.
+const ANCHOR_DEGRADE_THRESHOLD: u32 = 3;
+
 /// What the run loop reports when it stops.
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct AnchorRunReport {
@@ -115,6 +121,91 @@ pub struct AnchorRunReport {
     pub heartbeats: u64,
     /// Sink failures seen (batch attempts and heartbeats).
     pub failures: u64,
+}
+
+/// Consecutive-failure streak shared by batch attempts and heartbeats.
+///
+/// `SPEC-P20.md` §4 (STUB-19 partial): after [`ANCHOR_DEGRADE_THRESHOLD`]
+/// consecutive failures the service emits one [`crate::notify::Alert`] of
+/// kind `anchoring_degraded` (and logs); the first success after a degraded
+/// streak emits the recovery alert, once. Works against the same alert
+/// plumbing the pipeline uses ([`AlertSink`]).
+#[derive(Debug, Default)]
+struct AnchoringHealth {
+    /// Failures since the last successful attempt (batch or heartbeat).
+    consecutive_failures: u32,
+    /// Set while the streak is degraded and its alert was emitted.
+    degraded: bool,
+}
+
+impl AnchoringHealth {
+    /// Record one failed attempt; yields the degraded alert exactly once,
+    /// when the streak reaches the threshold.
+    fn failure(&mut self, at_ms: u64) -> Option<Alert> {
+        self.consecutive_failures = self.consecutive_failures.saturating_add(1);
+        if self.degraded || self.consecutive_failures < ANCHOR_DEGRADE_THRESHOLD {
+            return None;
+        }
+        self.degraded = true;
+        Some(anchoring_degraded_alert(
+            self.consecutive_failures,
+            false,
+            at_ms,
+        ))
+    }
+
+    /// Record one successful attempt; yields the recovery alert exactly once
+    /// when the streak had reached the threshold.
+    fn success(&mut self, at_ms: u64) -> Option<Alert> {
+        self.consecutive_failures = 0;
+        if !self.degraded {
+            return None;
+        }
+        self.degraded = false;
+        Some(anchoring_degraded_alert(0, true, at_ms))
+    }
+}
+
+/// The `SPEC-P20.md` §4 anchoring alert (degradation or recovery).
+fn anchoring_degraded_alert(consecutive_failures: u32, recovering: bool, at_ms: u64) -> Alert {
+    let text = if recovering {
+        "✅ anchoring recovered — heartbeats and batch anchors are landing again".to_string()
+    } else {
+        format!(
+            "⚠️ anchoring degraded — {consecutive_failures} consecutive heartbeat/batch failures"
+        )
+    };
+    Alert {
+        kind: AlertKind::AnchoringDegraded {
+            consecutive_failures,
+            recovering,
+        },
+        market_id: None,
+        text,
+        at_ms,
+    }
+}
+
+/// Deliver one anchoring alert through the shared alert plumbing and log it.
+///
+/// Delivery errors are logged and swallowed: alerting must never disturb
+/// anchoring (the anchor task, like the pipeline, treats sinks as best-effort).
+async fn emit_anchoring_alert<A: AlertSink>(alerts: &A, alert: &Alert) {
+    let recovering = matches!(
+        &alert.kind,
+        AlertKind::AnchoringDegraded {
+            recovering: true,
+            ..
+        }
+    );
+    if recovering {
+        info!(text = %alert.text, "anchor: anchoring alert emitted");
+    } else {
+        warn!(text = %alert.text, "anchor: anchoring alert emitted");
+    }
+    if let Err(err) = alerts.send(alert).await {
+        warn!(error = %err, "anchor: anchoring alert delivery failed; logged only");
+    }
 }
 
 /// RPC-side abstraction (mockable in tests).
@@ -339,7 +430,10 @@ pub fn risk_state_hash(canonical_summary: &str, max_tier: u8) -> String {
 /// in-flight sink calls are awaited to completion (never abandoned), so
 /// shutdown never loses a possibly-landed transaction. Successful beats and
 /// batch anchors update the heartbeat status file (`SPEC-P16` §2) at
-/// `HEARTBEAT_PATH` (default `data/heartbeat.json`).
+/// `HEARTBEAT_PATH` (default `data/heartbeat.json`). Degraded/recovered
+/// anchoring emits `anchoring_degraded` alerts through the shared
+/// [`AlertSink`] plumbing (`SPEC-P20` §4); this entry point logs them
+/// through [`TracingSink`], exactly like a daemon without a Telegram sink.
 ///
 /// # Errors
 /// `SentinelError::Internal` for startup-level problems only.
@@ -350,17 +444,19 @@ pub async fn run<S: AnchorSink>(
     shutdown: watch::Receiver<bool>,
 ) -> Result<AnchorRunReport> {
     let status_path = heartbeat_status_path();
-    run_with_status_path(cfg, journal, sink, shutdown, &status_path).await
+    run_with_status_path(cfg, journal, sink, shutdown, &status_path, &TracingSink).await
 }
 
-/// [`run`] with an explicit heartbeat status file path (the daemon resolves
-/// `HEARTBEAT_PATH` / `data/heartbeat.json`; tests use a scratch path).
-async fn run_with_status_path<S: AnchorSink>(
+/// [`run`] with an explicit heartbeat status file path and alert sink (the
+/// daemon resolves `HEARTBEAT_PATH` / `data/heartbeat.json`; tests use a
+/// scratch path and a recording sink).
+async fn run_with_status_path<S: AnchorSink, A: AlertSink + Sync>(
     cfg: &Config,
     journal: Arc<Mutex<AuditJournal>>,
     sink: S,
     mut shutdown: watch::Receiver<bool>,
     status_path: &Path,
+    alerts: &A,
 ) -> Result<AnchorRunReport> {
     let mut report = AnchorRunReport::default();
 
@@ -393,6 +489,9 @@ async fn run_with_status_path<S: AnchorSink>(
     let mut beat_due = false;
     let mut beat_attempt_at = Instant::now();
     let mut beat_backoff = BACKOFF_MIN;
+    // P20 §4 (STUB-19 partial): consecutive-failure streak shared by batch
+    // attempts and heartbeats; alerts are emitted once per streak.
+    let mut health = AnchoringHealth::default();
 
     loop {
         if *shutdown.borrow_and_update() {
@@ -426,6 +525,9 @@ async fn run_with_status_path<S: AnchorSink>(
                         tx = %tx,
                         "anchor: batch anchored"
                     );
+                    if let Some(alert) = health.success(unix_ms()) {
+                        emit_anchoring_alert(alerts, &alert).await;
+                    }
                     next_seq = next_seq.saturating_add(batch.hashes.len() as u64);
                     report.batches += 1;
                     report.entries_anchored += batch.hashes.len() as u64;
@@ -437,6 +539,9 @@ async fn run_with_status_path<S: AnchorSink>(
                 }
                 Err(err) => {
                     report.failures += 1;
+                    if let Some(alert) = health.failure(unix_ms()) {
+                        emit_anchoring_alert(alerts, &alert).await;
+                    }
                     let delay = backoff;
                     backoff = (backoff * 2).min(BACKOFF_MAX);
                     batch.attempt_at = Instant::now() + delay;
@@ -463,6 +568,9 @@ async fn run_with_status_path<S: AnchorSink>(
             match sink.beat(&hash, 0, HEARTBEAT_MAX_TIER).await {
                 Ok(tx) => {
                     info!(tx = %tx, seq = last_seq, "anchor: heartbeat posted");
+                    if let Some(alert) = health.success(unix_ms()) {
+                        emit_anchoring_alert(alerts, &alert).await;
+                    }
                     report.heartbeats += 1;
                     beat_backoff = BACKOFF_MIN;
                     beat_due = false;
@@ -472,6 +580,9 @@ async fn run_with_status_path<S: AnchorSink>(
                 }
                 Err(err) => {
                     report.failures += 1;
+                    if let Some(alert) = health.failure(unix_ms()) {
+                        emit_anchoring_alert(alerts, &alert).await;
+                    }
                     let delay = beat_backoff;
                     beat_backoff = (beat_backoff * 2).min(BACKOFF_MAX);
                     beat_attempt_at = Instant::now() + delay;
@@ -1026,9 +1137,31 @@ mod tests {
         tokio::task::JoinHandle<Result<AnchorRunReport>>,
         watch::Sender<bool>,
     ) {
+        spawn_run_with_alerts(
+            cfg,
+            journal,
+            sink,
+            status_path,
+            crate::notify::RecordingSink::new(),
+        )
+    }
+
+    /// [`spawn_run`] against an explicit alert sink — clone the sink's
+    /// `alerts` buffer before the call to observe what the anchor task
+    /// emitted (P20 §4).
+    fn spawn_run_with_alerts(
+        cfg: Config,
+        journal: Arc<Mutex<AuditJournal>>,
+        sink: MockSink,
+        status_path: PathBuf,
+        alerts: crate::notify::RecordingSink,
+    ) -> (
+        tokio::task::JoinHandle<Result<AnchorRunReport>>,
+        watch::Sender<bool>,
+    ) {
         let (tx, rx) = watch::channel(false);
         let handle = tokio::spawn(async move {
-            run_with_status_path(&cfg, journal, sink, rx, &status_path).await
+            run_with_status_path(&cfg, journal, sink, rx, &status_path, &alerts).await
         });
         (handle, tx)
     }
@@ -1290,6 +1423,7 @@ mod tests {
                 sink.clone(),
                 rx,
                 &status_file(&status_dir),
+                &TracingSink,
             ),
         )
         .await
@@ -1488,5 +1622,195 @@ mod tests {
         assert!(!is_placeholder(
             "0x1964c32f0be608e7d29302aff5e61268e72080cc"
         ));
+    }
+
+    // ---- P20 §4: anchoring degraded / recovered alerts ---------------------
+
+    /// Base timestamp used by the alert-state assertions (wall-clock ms; the
+    /// anchor task is not part of the logical-clock replay path).
+    const DEGRADE_T0_MS: u64 = 1_700_000_000_000;
+
+    /// Alert sink that always fails, counting attempts — proves delivery
+    /// errors are logged and never disturb anchoring.
+    struct FailingAlertSink {
+        attempts: Arc<std::sync::atomic::AtomicUsize>,
+    }
+
+    impl AlertSink for FailingAlertSink {
+        async fn send(&self, _alert: &Alert) -> Result<()> {
+            self.attempts
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Err(SentinelError::Internal("alert boom".to_string()))
+        }
+    }
+
+    /// Poll the alert capture until it holds at least `n` alerts.
+    async fn wait_for_alerts(
+        capture: &Arc<StdMutex<Vec<Alert>>>,
+        n: usize,
+        timeout: Duration,
+    ) -> Vec<Alert> {
+        let deadline = Instant::now() + timeout;
+        loop {
+            let alerts = capture.lock().expect("capture lock").clone();
+            if alerts.len() >= n {
+                return alerts;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "timed out waiting for {n} alert(s); saw {}",
+                alerts.len()
+            );
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+    }
+
+    #[test]
+    fn anchoring_health_alerts_at_three_consecutive_failures_once_and_recovers_once() {
+        let mut health = AnchoringHealth::default();
+        assert!(health.failure(DEGRADE_T0_MS).is_none(), "failure 1");
+        assert!(health.failure(DEGRADE_T0_MS + 1).is_none(), "failure 2");
+
+        let degraded = health.failure(DEGRADE_T0_MS + 2).expect("failure 3 alerts");
+        assert_eq!(
+            degraded.kind,
+            AlertKind::AnchoringDegraded {
+                consecutive_failures: 3,
+                recovering: false,
+            }
+        );
+        assert!(degraded.market_id.is_none());
+        assert_eq!(degraded.at_ms, DEGRADE_T0_MS + 2);
+        assert!(
+            degraded.text.contains("3 consecutive"),
+            "text: {}",
+            degraded.text
+        );
+
+        assert!(
+            health.failure(DEGRADE_T0_MS + 3).is_none(),
+            "no repeat while already degraded"
+        );
+
+        let recovered = health.success(DEGRADE_T0_MS + 4).expect("recovery alert");
+        assert_eq!(
+            recovered.kind,
+            AlertKind::AnchoringDegraded {
+                consecutive_failures: 0,
+                recovering: true,
+            }
+        );
+        assert_eq!(recovered.at_ms, DEGRADE_T0_MS + 4);
+        assert!(
+            recovered.text.contains("recovered"),
+            "text: {}",
+            recovered.text
+        );
+        assert!(
+            health.success(DEGRADE_T0_MS + 5).is_none(),
+            "recovery fires once"
+        );
+
+        // A fresh streak alerts again.
+        assert!(health.failure(DEGRADE_T0_MS + 6).is_none());
+        assert!(health.failure(DEGRADE_T0_MS + 7).is_none());
+        assert!(
+            health.failure(DEGRADE_T0_MS + 8).is_some(),
+            "a new streak emits a new degraded alert"
+        );
+    }
+
+    #[tokio::test]
+    async fn run_emits_degraded_then_recovery_alerts_against_a_failing_sink() {
+        let (_dir, journal, _) = test_journal(2);
+        // Batch attempts 1-2 fail while heartbeat attempts keep failing: the
+        // shared streak crosses N=3 within the first three attempts and the
+        // next batch success recovers it. The emission order is deterministic:
+        // the batch attempt is checked before the heartbeat in each loop pass.
+        let sink = MockSink::failing(Some(0), 2);
+        sink.state.lock().expect("mock lock").fail_beat_attempts = 10;
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let recorder = crate::notify::RecordingSink::new();
+        let capture = Arc::clone(&recorder.alerts);
+        let (handle, shutdown) = spawn_run_with_alerts(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status_file(&status_dir),
+            recorder,
+        );
+
+        let alerts = wait_for_alerts(&capture, 2, Duration::from_secs(10)).await;
+        let _ = shutdown.send(true);
+        let report = tokio::time::timeout(Duration::from_secs(2), handle)
+            .await
+            .expect("shutdown is prompt")
+            .expect("task joins")
+            .expect("run is Ok");
+
+        assert_eq!(alerts.len(), 2, "exactly two alerts: {alerts:?}");
+        assert!(matches!(
+            &alerts[0].kind,
+            AlertKind::AnchoringDegraded {
+                consecutive_failures: 3,
+                recovering: false,
+            }
+        ));
+        assert!(matches!(
+            &alerts[1].kind,
+            AlertKind::AnchoringDegraded {
+                consecutive_failures: 0,
+                recovering: true,
+            }
+        ));
+        assert!(alerts.iter().all(|alert| alert.market_id.is_none()));
+        assert!(alerts[0].text.contains("degraded"), "{:?}", alerts[0]);
+        assert!(alerts[1].text.contains("recovered"), "{:?}", alerts[1]);
+        assert!(alerts[0].at_ms <= alerts[1].at_ms);
+        assert!(
+            report.failures >= 3,
+            "the failing streak is counted: {report:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn run_survives_alert_delivery_errors() {
+        let (_dir, journal, _) = test_journal(2);
+        // Batches and heartbeats fail past the threshold; the alert sink also
+        // fails: the service must keep retrying and stop cleanly.
+        let sink = MockSink::failing(Some(0), usize::MAX);
+        sink.state.lock().expect("mock lock").fail_beat_attempts = usize::MAX;
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let attempts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let alerts = FailingAlertSink {
+            attempts: Arc::clone(&attempts),
+        };
+        let (tx, rx) = watch::channel(false);
+        let task_sink = sink.clone();
+        let handle = tokio::spawn(async move {
+            run_with_status_path(
+                &test_cfg(1),
+                journal,
+                task_sink,
+                rx,
+                &status_file(&status_dir),
+                &alerts,
+            )
+            .await
+        });
+
+        let _ = wait_for_batches(&sink, 3, Duration::from_secs(10)).await;
+        let _ = tx.send(true);
+        let report = tokio::time::timeout(Duration::from_secs(2), handle)
+            .await
+            .expect("shutdown is prompt")
+            .expect("task joins")
+            .expect("run is Ok");
+
+        assert!(
+            attempts.load(std::sync::atomic::Ordering::SeqCst) >= 1,
+            "the degraded alert was attempted despite delivery errors"
+        );
+        assert!(report.failures >= 3, "run kept retrying: {report:?}");
     }
 }

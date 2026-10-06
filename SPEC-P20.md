@@ -94,6 +94,24 @@ heartbeat/batch anchoring fails N=3 consecutive times, and when it recovers; bud
 - After integration: STUB-15 -> Resolved; README/architecture STUB-15 mentions updated
   by parent (pins refreshed); full gates green.
 
+## 5bis. Changelog v1.0.1 (integration, 2026-10-06)
+
+- (a) Rate-limit clock: the consult task paces the per-market window on the wall clock
+  (the engine's own limiter), not the live-state logical clock — spec-silent; replay-mode
+  consult pacing is therefore not logical-clock-derived. Accepted; the enforceable
+  invariant (one decision outcome per market per window) is pinned by the verifier.
+- (b) `notify::AlertSink::send` signature hardened to
+  `fn -> impl Future<Output=Result<()>> + Send` (required to supervise the consult task;
+  every existing async-fn impl satisfies it unchanged) — additive.
+- (c) `AlertKind::StrategyDecision` + `AlertKind::AnchoringDegraded` added additively
+  (kind labels `strategy_decision` / `anchoring_degraded`).
+- (d) Anchoring alerts are delivered to whatever sink the anchor task receives; the daemon
+  entry hands it a TracingSink (Telegram routing for these classes = STUB-19 partial).
+- (e) judge-demo pacing: `SENTINEL_MOCK_CAP_MS=800` default inside the script so the full
+  tier cascade fits the hold window (probe table in the S2 report); env overrides kept.
+- (f) Pipeline gained two mechanical `alert_kind_text` arms for the new kinds (exhaustive
+  match); no behavior change elsewhere.
+
 ## 6. Standing rules
 
 No git from children; latest versions via live registries; loud stubs; no network in

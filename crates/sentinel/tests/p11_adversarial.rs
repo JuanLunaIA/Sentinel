@@ -38,7 +38,6 @@ use sentinel::bot::policy_admin::{
     POLICY_OVERLAY_PATH, PolicyOverlay, SharedPolicy, WHITELISTED_KEYS, apply_to_config,
     load as policy_load, save as policy_save, validate_key_value,
 };
-use sentinel::brain::providers::MockProvider;
 use sentinel::config::Config;
 use sentinel::health::HealthState;
 use sentinel::perpl::{AccountEvent, FeedEvent};
@@ -168,8 +167,8 @@ fn eth_snapshot() -> FeedEvent {
     })
 }
 
-async fn test_ctx(dir: &Path) -> BotContext<MockProvider, MockProvider> {
-    BotContext::<MockProvider, MockProvider> {
+async fn test_ctx(dir: &Path) -> BotContext {
+    BotContext {
         cfg: demo_cfg(),
         state: Arc::new(Mutex::new(LiveState::new())),
         health: Arc::new(HealthState::new(ExecutionMode::DryRun)),

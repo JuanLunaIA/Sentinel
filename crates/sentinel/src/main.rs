@@ -20,10 +20,12 @@ use sentinel::bot::policy_admin::{POLICY_OVERLAY_PATH, SharedPolicy};
 use sentinel::brain::engine::StrategyEngine;
 use sentinel::brain::providers::{KimiProvider, QwenProvider};
 use sentinel::config::Config;
+use sentinel::consult::{ApprovedOrder, ConsultTask, ConsultTrigger, DEFAULT_REVIEW_INTERVAL_SECS};
 use sentinel::execution::GuardedExecutor;
 use sentinel::execution::dry_run::DryRunExecutor;
 use sentinel::execution::idempotency::IdempotencyStore;
 use sentinel::health::HealthState;
+use sentinel::nansen::NansenClient;
 use sentinel::nansen::SPEND_LEDGER_PATH;
 use sentinel::nansen::spend::SpendLedger;
 use sentinel::notify::{AlertSink, DedupeSink, TelegramSink, TracingSink};
@@ -34,7 +36,7 @@ use sentinel::pipeline::{
 use sentinel_core::audit::AuditJournal;
 use sentinel_core::types::ExecutionMode;
 use std::sync::atomic::AtomicBool;
-use tokio::sync::{Mutex, watch};
+use tokio::sync::{Mutex, mpsc, watch};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -84,6 +86,31 @@ async fn main() -> anyhow::Result<()> {
     ));
     let kill = Arc::new(AtomicBool::new(false));
 
+    // ---- Strategy engine (SPEC-P20 §2): built ONCE and shared by the bot
+    // and the consult task; `None` (feature off / placeholder key) keeps
+    // every pre-P20 path.
+    let strategy_engine = build_strategy_engine(&cfg);
+
+    // ---- Consult channels (SPEC-P20 §2–§3): triggers flow pipeline ->
+    // consult task, approved orders flow back. Created only when an engine
+    // exists; otherwise the pipeline is built with `None` channels and stays
+    // byte-identical.
+    let (consult_tx, consult_rx, orders_tx, strategy_rx) = match &strategy_engine {
+        Some(_) => {
+            let (consult_tx, consult_rx) = mpsc::channel(CONSULT_QUEUE_CAPACITY);
+            let (orders_tx, strategy_rx) = mpsc::channel(CONSULT_QUEUE_CAPACITY);
+            (
+                Some(consult_tx),
+                Some(consult_rx),
+                Some(orders_tx),
+                Some(strategy_rx),
+            )
+        }
+        None => (None, None, None, None),
+    };
+    let review_interval_secs = review_interval_secs();
+    let nansen = build_nansen_client(&cfg, strategy_engine.is_some());
+
     let token = cfg.telegram.token.expose().trim().to_string();
     let bot_enabled = !token.is_empty()
         && !token.contains("replace")
@@ -100,6 +127,7 @@ async fn main() -> anyhow::Result<()> {
         let bot_policy = Arc::clone(&policy);
         let bot_kill = Arc::clone(&kill);
         let bot_token = token.clone();
+        let bot_engine = strategy_engine.clone();
         // Supervised (SPEC-P16 §2): a bot panic/exit is caught, logged with the
         // task name + restart counter, and retried with backoff; the context is
         // rebuilt per attempt because the executors/engines are not `Clone`.
@@ -113,23 +141,11 @@ async fn main() -> anyhow::Result<()> {
             let approvals = Arc::clone(&bot_approvals);
             let token = bot_token.clone();
             let bot_shutdown = bot_watch.clone();
+            // The shared strategy engine (built once in `main`, P20 §2);
+            // cloned per attempt outside the async block so the supervisor's
+            // `FnMut` closure can rebuild the attempt future.
+            let engine = bot_engine.clone();
             async move {
-                let engine = if cfg.features.enable_strategy {
-                    Some(
-                        StrategyEngine::new(
-                            QwenProvider::new(&cfg.qwen),
-                            cfg.strategy.min_interval_secs,
-                            cfg.strategy.confidence_floor,
-                        )
-                        .with_fallback(KimiProvider::new(&cfg.kimi))
-                        .with_budget(
-                            cfg.strategy.max_consults_per_hour,
-                            cfg.strategy.max_tokens_per_day,
-                        ),
-                    )
-                } else {
-                    None
-                };
                 let human_executor = match build_human_executor(&cfg, &state).await {
                     Ok(executor) => Some(executor),
                     Err(err) => {
@@ -169,6 +185,20 @@ async fn main() -> anyhow::Result<()> {
     match (cfg.telegram.approval_chat_id, token.is_empty()) {
         (Some(chat_id), false) => {
             tracing::info!(chat_id, "alerts: telegram + tracing");
+            let alert_token = token.clone();
+            spawn_consult(
+                strategy_engine.clone(),
+                cfg.clone(),
+                Arc::clone(&state),
+                journal.clone(),
+                Arc::clone(&policy),
+                consult_rx,
+                orders_tx,
+                nansen.clone(),
+                review_interval_secs,
+                shutdown_tx.subscribe(),
+                move || DedupeSink::new(TelegramSink::new(&alert_token, chat_id)),
+            );
             let sink = DedupeSink::new(TelegramSink::new(&token, chat_id));
             dispatch(
                 cfg,
@@ -180,11 +210,28 @@ async fn main() -> anyhow::Result<()> {
                 journal,
                 policy,
                 kill,
+                ConsultChannels {
+                    consult_tx,
+                    strategy_rx,
+                },
             )
             .await
         }
         _ => {
             tracing::info!("alerts: tracing only (no telegram chat configured)");
+            spawn_consult(
+                strategy_engine.clone(),
+                cfg.clone(),
+                Arc::clone(&state),
+                journal.clone(),
+                Arc::clone(&policy),
+                consult_rx,
+                orders_tx,
+                nansen.clone(),
+                review_interval_secs,
+                shutdown_tx.subscribe(),
+                || DedupeSink::new(TracingSink),
+            );
             let sink = DedupeSink::new(TracingSink);
             dispatch(
                 cfg,
@@ -196,6 +243,10 @@ async fn main() -> anyhow::Result<()> {
                 journal,
                 policy,
                 kill,
+                ConsultChannels {
+                    consult_tx,
+                    strategy_rx,
+                },
             )
             .await
         }
@@ -214,6 +265,7 @@ async fn dispatch<S>(
     journal: Option<Arc<Mutex<AuditJournal>>>,
     policy: Arc<SharedPolicy>,
     kill: Arc<AtomicBool>,
+    consult: ConsultChannels,
 ) -> anyhow::Result<()>
 where
     S: AlertSink + Sync,
@@ -221,16 +273,22 @@ where
     match cli.replay {
         Some(path) => {
             run_replay(
-                cfg, &path, state, health, shutdown, sink, journal, policy, kill,
+                cfg, &path, state, health, shutdown, sink, journal, policy, kill, consult,
             )
             .await
         }
         None => match cfg.execution.mode {
             ExecutionMode::DryRun => {
-                run_live_dry(cfg, state, health, shutdown, sink, journal, policy, kill).await
+                run_live_dry(
+                    cfg, state, health, shutdown, sink, journal, policy, kill, consult,
+                )
+                .await
             }
             ExecutionMode::Testnet => {
-                run_live_testnet(cfg, state, health, shutdown, sink, journal, policy, kill).await
+                run_live_testnet(
+                    cfg, state, health, shutdown, sink, journal, policy, kill, consult,
+                )
+                .await
             }
             ExecutionMode::Mainnet => {
                 anyhow::bail!(
@@ -239,6 +297,16 @@ where
             }
         },
     }
+}
+
+/// P20 channels threaded from `main` into every run mode: the trigger sender
+/// toward the consult task and the approved-order receiver for the pipeline
+/// (both `None` without a strategy engine — the pre-P20 path).
+struct ConsultChannels {
+    /// Trigger sender toward the consult task.
+    consult_tx: Option<mpsc::Sender<ConsultTrigger>>,
+    /// Approved-order receiver for the pipeline.
+    strategy_rx: Option<mpsc::Receiver<ApprovedOrder>>,
 }
 
 /// Deterministic replay: `MockPerpl` fixture + unguarded DRY_RUN executor
@@ -255,6 +323,7 @@ async fn run_replay<S>(
     journal: Option<Arc<Mutex<AuditJournal>>>,
     policy: Arc<SharedPolicy>,
     kill: Arc<AtomicBool>,
+    consult: ConsultChannels,
 ) -> anyhow::Result<()>
 where
     S: AlertSink + Sync,
@@ -281,7 +350,11 @@ where
         Some(journal) => pipeline.with_journal(journal),
         None => pipeline,
     };
-    let pipeline = pipeline.with_policy(policy).with_kill_switch(kill);
+    let pipeline = pipeline
+        .with_policy(policy)
+        .with_kill_switch(kill)
+        .with_consult_tx(consult.consult_tx)
+        .with_strategy_rx(consult.strategy_rx);
     finish(pipeline.run(shutdown).await.context("pipeline run")?)
 }
 
@@ -296,6 +369,7 @@ async fn run_live_dry<S>(
     journal: Option<Arc<Mutex<AuditJournal>>>,
     policy: Arc<SharedPolicy>,
     kill: Arc<AtomicBool>,
+    consult: ConsultChannels,
 ) -> anyhow::Result<()>
 where
     S: AlertSink + Sync,
@@ -332,7 +406,11 @@ where
         Some(journal) => pipeline.with_journal(journal),
         None => pipeline,
     };
-    let pipeline = pipeline.with_policy(policy).with_kill_switch(kill);
+    let pipeline = pipeline
+        .with_policy(policy)
+        .with_kill_switch(kill)
+        .with_consult_tx(consult.consult_tx)
+        .with_strategy_rx(consult.strategy_rx);
     finish(pipeline.run(shutdown).await.context("pipeline run")?)
 }
 
@@ -349,6 +427,7 @@ async fn run_live_testnet<S>(
     journal: Option<Arc<Mutex<AuditJournal>>>,
     policy: Arc<SharedPolicy>,
     kill: Arc<AtomicBool>,
+    consult: ConsultChannels,
 ) -> anyhow::Result<()>
 where
     S: AlertSink + Sync,
@@ -395,7 +474,11 @@ where
         Some(journal) => pipeline.with_journal(journal),
         None => pipeline,
     };
-    let pipeline = pipeline.with_policy(policy).with_kill_switch(kill);
+    let pipeline = pipeline
+        .with_policy(policy)
+        .with_kill_switch(kill)
+        .with_consult_tx(consult.consult_tx)
+        .with_strategy_rx(consult.strategy_rx);
     finish(pipeline.run(shutdown).await.context("pipeline run")?)
 }
 
@@ -600,4 +683,143 @@ fn spawn_anchor(
             }
         }
     });
+}
+
+/// Consult channel capacity (triggers / approved orders each).
+pub const CONSULT_QUEUE_CAPACITY: usize = 32;
+
+/// Build the strategy engine ONCE (SPEC-P20 §2): active only when
+/// `ENABLE_STRATEGY` is set AND the Qwen key looks real. `None` keeps every
+/// pre-P20 path (bot `/risk` degrades honestly, no consult task is spawned,
+/// the pipeline runs unchanged).
+fn build_strategy_engine(cfg: &Config) -> Option<Arc<StrategyEngine<QwenProvider, KimiProvider>>> {
+    if !cfg.features.enable_strategy {
+        tracing::info!("strategy engine disabled (ENABLE_STRATEGY=false)");
+        return None;
+    }
+    if !provider_key_present(cfg.qwen.api_key.expose()) {
+        tracing::warn!(
+            "strategy engine disabled: QWEN_API_KEY is missing or still a placeholder \
+             (see SETUP-MANUAL)"
+        );
+        return None;
+    }
+    Some(Arc::new(
+        StrategyEngine::new(
+            QwenProvider::new(&cfg.qwen),
+            cfg.strategy.min_interval_secs,
+            cfg.strategy.confidence_floor,
+        )
+        .with_fallback(KimiProvider::new(&cfg.kimi))
+        .with_budget(
+            cfg.strategy.max_consults_per_hour,
+            cfg.strategy.max_tokens_per_day,
+        ),
+    ))
+}
+
+/// True when an API key looks real (non-empty, no placeholder markers).
+fn provider_key_present(key: &str) -> bool {
+    let value = key.trim();
+    if value.is_empty() {
+        return false;
+    }
+    let lowered = value.to_ascii_lowercase();
+    !(lowered.contains("replace-me")
+        || lowered.contains("replace_me")
+        || lowered.contains("placeholder")
+        || lowered.contains("your_")
+        || value.starts_with('<'))
+}
+
+/// `STRATEGY_REVIEW_INTERVAL_SECS` (default
+/// [`DEFAULT_REVIEW_INTERVAL_SECS`], `SPEC-P20` §2c).
+fn review_interval_secs() -> u64 {
+    std::env::var("STRATEGY_REVIEW_INTERVAL_SECS")
+        .ok()
+        .and_then(|raw| raw.trim().parse::<u64>().ok())
+        .filter(|secs| *secs > 0)
+        .unwrap_or(DEFAULT_REVIEW_INTERVAL_SECS)
+}
+
+/// Build the cache-first Nansen client for the consult task (best-effort):
+/// `None` when the feature is off, there is no engine to serve, or the payer
+/// key is missing/shape-invalid — the consult task then degrades to
+/// `SmartMoneyContext::unavailable`.
+fn build_nansen_client(cfg: &Config, engine_active: bool) -> Option<Arc<NansenClient>> {
+    if !engine_active {
+        return None;
+    }
+    if !cfg.features.enable_nansen {
+        tracing::info!("nansen disabled (ENABLE_NANSEN=false)");
+        return None;
+    }
+    match NansenClient::new(&cfg.nansen) {
+        Ok(client) => {
+            tracing::info!(payer = %client.address(), "nansen x402 client ready");
+            Some(Arc::new(client))
+        }
+        Err(err) => {
+            tracing::warn!(
+                error = %err,
+                "nansen client unavailable (check NANSEN_PAYER_KEY); smart-money context disabled"
+            );
+            None
+        }
+    }
+}
+
+/// Spawn the supervised consult task (SPEC-P20 §2) in every run mode, active
+/// only when a strategy engine exists; the sink factory rebuilds the alert
+/// destination per attempt (the daemon sinks are not `Clone`).
+#[allow(clippy::too_many_arguments)] // daemon wiring is explicit by design (SPEC-P20 §2)
+fn spawn_consult<S, M>(
+    engine: Option<Arc<StrategyEngine<QwenProvider, KimiProvider>>>,
+    cfg: Config,
+    state: Arc<Mutex<LiveState>>,
+    journal: Option<Arc<Mutex<AuditJournal>>>,
+    policy: Arc<SharedPolicy>,
+    triggers: Option<mpsc::Receiver<ConsultTrigger>>,
+    orders: Option<mpsc::Sender<ApprovedOrder>>,
+    nansen: Option<Arc<NansenClient>>,
+    review_interval_secs: u64,
+    shutdown: watch::Receiver<bool>,
+    make_sink: M,
+) where
+    M: Fn() -> S + Send + 'static,
+    S: AlertSink + Send + Sync + 'static,
+{
+    let (Some(_), Some(triggers), Some(orders)) = (engine.as_ref(), triggers, orders) else {
+        tracing::info!("consult task disabled (no strategy engine)");
+        return;
+    };
+    let triggers = Arc::new(Mutex::new(triggers));
+    sentinel::supervisor::spawn("consult", shutdown.clone(), move || {
+        let engine = engine.clone();
+        let cfg = cfg.clone();
+        let state = Arc::clone(&state);
+        let journal = journal.clone();
+        let policy = Arc::clone(&policy);
+        let triggers = Arc::clone(&triggers);
+        let orders = orders.clone();
+        let nansen = nansen.clone();
+        let sink = make_sink();
+        let run_shutdown = shutdown.clone();
+        async move {
+            let task = ConsultTask::new(
+                engine,
+                cfg,
+                state,
+                journal,
+                policy,
+                triggers,
+                orders,
+                sink,
+                nansen,
+                review_interval_secs,
+            );
+            task.run(run_shutdown).await;
+        }
+    });
+    tracing::info!(review_interval_secs, "strategy consult task spawned");
 }
