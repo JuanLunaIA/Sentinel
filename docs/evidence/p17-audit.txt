@@ -248,3 +248,10 @@ Manual mapping confirmation: with the three rewordings, every number in
 README/architecture/bounty-answers traces to a fact-sheet evidence file;
 unsourced list is now EMPTY. Full external re-audit worth re-running once
 more on Oct 12 (final pass), after which pins freeze for submission.
+
+POST-FIX #2 (parent, 2026-10-06, pre-freeze cleanup): STUB-06/11 merge reference
+update (README.md + docs/architecture.md: "(STUB-11)" -> "(STUB-06)"); link gate
+re-run PASS. Refreshed pins:
+  e9bbca65ce864de6095d161231a2121c472fd0c6cf87301ed208601fae8d7be3  README.md
+  13642820e5ead6182c3d9ecfe95ae367e1551bc45255348b0217214865a6a7c3  docs/architecture.md
+  b2e2a0bb40d71be646effa80158227598904774069b753b8f806ab4f9b0baf08  docs/submission/bounty-answers.md

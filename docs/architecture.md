@@ -645,7 +645,7 @@ daemon refuses `--mode mainnet`.
 
 **Known limitations (kept loud).** One writer per journal (RUNBOOK §5) · venue minimum
 order size not exposed — clamp dormant (STUB-10) · funding-drag term not modeled
-(STUB-11) · no reprice retry after a post-verify timeout (STUB-13) · backtest
+(STUB-06) · no reprice retry after a post-verify timeout (STUB-13) · backtest
 `live-brain` hook unwired — fails honestly (STUB-22) · x402 low-balance alert deferred
 (STUB-25) · Telegram retries inherit teloxide's ~10 s per-attempt server-error delay
 (~45 s to abandon) while connection failures use the 0.5 s base (RUNBOOK §5 note) ·

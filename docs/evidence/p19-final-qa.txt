@@ -1,0 +1,28 @@
+# FINAL VERIFICATION PASS (pre-freeze, 2026-10-06T13:05:39-03:00)
+== cargo test --workspace ==
+TEST_RC=0
+38 suites, 878 tests OK
+FAILED_SUITES=0
+== clippy ==
+CLIPPY_RC=0
+== fmt ==
+FMT_OK
+== audit-verify ==
+✅ journal consistent; 59 entries; 0 anchored; root matches at seq —
+== check-links ==
+============================================================================
+== anvil-dev-key scan (tracked files) ==
+crates/sentinel/tests/p10_anvil_e2e.rs
+crates/sentinel/tests/p16_resilience_storage.rs
+docs/video/demo-script.md
+indexer/README.md
+indexer/config.local-anvil.yaml
+scripts/breaker-demo.sh
+scripts/p10-anvil-e2e.sh
+FINAL_CHAIN_DONE
+
+NOTE (parent): the check-links line above captured only the separator; the explicit
+result was: RESULT: PASS — all 150 relative file target(s) exist [exit 0]
+(run 2026-10-06 13:1x, see also docs/evidence/p17-audit.txt POST-FIX #2).
+Anvil-dev-key scan: all 7 hits are the WELL-KNOWN public anvil dev key used by
+tests/demo scripts/runbooks — no real key material in tracked files.

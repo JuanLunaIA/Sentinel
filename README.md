@@ -539,7 +539,7 @@ Sentinel's threat model assumes the guardian itself can fail and that its operat
 - **Mainnet is deliberately not wired** — `MAINNET` mode refuses to start until MPC/session-key custody and a funded deployment land.
 - **Live execution is PENDING-KEY / PENDING-WALLET** — testnet reduce (STUB-09/12), anchor testnet deploy (STUB-17), x402 paid smoke (STUB-16), Railway deploy (STUB-24), Envio Cloud (STUB-20), CRE registration (STUB-03), Telegram live checklist (STUB-18).
 - **`--mode live-brain` backtests are not wired** — the sim engine is deliberately synchronous; the flag fails loudly rather than faking it (STUB-22).
-- **Funding drag is not modeled in v1.0** (STUB-11); funding events in scenarios are explicitly noted as ignored.
+- **Funding drag is not modeled in v1.0** (STUB-06); funding events in scenarios are explicitly noted as ignored.
 - **Perpl exchange-event indexing** (fills/liquidations) is roadmap until the exchange ABI is resolved (STUB-21).
 - Container egress on the dev host needed `--network=host` due to a local firewall policy — an environment quirk, not a product requirement ([docs/RUNBOOK.md](docs/RUNBOOK.md) §8).
 
