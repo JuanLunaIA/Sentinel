@@ -12,6 +12,7 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 pub mod args;
+pub mod brain;
 pub mod config;
 pub mod error;
 pub mod execution;

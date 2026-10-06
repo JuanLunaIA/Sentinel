@@ -102,6 +102,15 @@ pub enum BrainError {
         /// The last error encountered.
         last: String,
     },
+
+    /// A consult was refused by the per-market rate limit.
+    #[error("rate limited on market {market_id}: {remaining_ms} ms remaining")]
+    RateLimited {
+        /// Market under rate limit.
+        market_id: u32,
+        /// Milliseconds remaining until the next allowed consult.
+        remaining_ms: u64,
+    },
 }
 
 /// Nansen x402 client errors.

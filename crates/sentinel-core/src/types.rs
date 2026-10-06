@@ -220,3 +220,63 @@ impl fmt::Display for ExecutionMode {
         })
     }
 }
+
+/// Action classes of the strategy-brain decision schema v3 (`SPEC-P07.md` §2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum DecisionAction {
+    /// Keep the position as-is.
+    Hold,
+    /// Reduce exposure by `amount` (base units).
+    Reduce,
+    /// Close the position entirely.
+    Close,
+    /// Add `amount` collateral to the isolated position.
+    AddCollateral,
+    /// Needs a human (below confidence floor, ambiguous, or above policy).
+    Escalate,
+}
+
+/// Operational urgency of a strategy decision.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Urgency {
+    /// No time pressure.
+    Routine,
+    /// Act soon.
+    Elevated,
+    /// Act now.
+    Critical,
+}
+
+/// Strategy-brain decision (schema v3). `amount` is a decimal **string** on
+/// the wire (`"1.25"` or `null`) and is required (`> 0`) for `Reduce`/
+/// `ADD_COLLATERAL`; unknown JSON fields are tolerated, missing required
+/// fields are a typed error.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Decision {
+    /// What the model wants to do.
+    pub action: DecisionAction,
+    /// Market the decision concerns.
+    pub market_id: u32,
+    /// Amount in base units (required for `Reduce`/`AddCollateral`).
+    #[serde(default)]
+    pub amount: Option<Decimal>,
+    /// Model confidence in `[0, 1]`.
+    pub confidence: Decimal,
+    /// How urgent the action is.
+    pub urgency: Urgency,
+    /// Short rationale grounded in the provided data.
+    pub reason: String,
+}
+
+impl Decision {
+    /// Range/business validation against the consulted snapshot's markets.
+    ///
+    /// # Errors
+    /// Static description of the first violated rule (`SPEC-P07.md` §2).
+    pub fn validate(&self, allowed_markets: &[MarketId]) -> Result<(), String> {
+        let _ = allowed_markets;
+        todo!("P07 agent decision-types: schema v3 validation")
+    }
+}
