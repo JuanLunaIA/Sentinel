@@ -354,6 +354,9 @@ pub struct Pipeline<F, E, S> {
     seq: u64,
     /// Last tier per market (for transition detection).
     last_tier: std::collections::HashMap<MarketId, RiskTier>,
+    /// Optional audit journal (SPEC-P10 §8): intents before execution,
+    /// outcomes after; `None` keeps the pipeline journal-free (P06 tests).
+    journal: Option<Arc<Mutex<sentinel_core::audit::AuditJournal>>>,
 }
 
 impl<F, E, S> Pipeline<F, E, S> {
@@ -379,7 +382,121 @@ impl<F, E, S> Pipeline<F, E, S> {
             day: DayState::default(),
             seq: 0,
             last_tier: std::collections::HashMap::new(),
+            journal: None,
         }
+    }
+
+    /// Attach the audit journal (SPEC-P10 §8): every intent-bearing decision
+    /// is journaled before execution and its outcome right after.
+    pub fn with_journal(mut self, journal: Arc<Mutex<sentinel_core::audit::AuditJournal>>) -> Self {
+        self.journal = Some(journal);
+        self
+    }
+
+    /// Journal one intent (no-op when no journal is attached). Failures log
+    /// loudly and PROCEED: a rescue action outranks audit availability
+    /// (revisited in P16 with in-memory buffering).
+    async fn journal_intent(
+        &self,
+        action: &crate::reflex::PlannedAction,
+        account: &sentinel_core::types::AccountState,
+        now_ms: u64,
+    ) {
+        let Some(journal) = &self.journal else {
+            return;
+        };
+        let record = sentinel_core::audit::IntentRecord {
+            trigger: sentinel_core::audit::Trigger::Reflex,
+            account: self.account_label(),
+            market_id: Some(action.market_id.0),
+            input_hash: journal_input_hash(account, now_ms),
+            decision: decision_json(action),
+            policy_verdict: serde_json::json!({
+                "verdict": verdict_text(&action.verdict),
+                "note": action.note,
+            }),
+        };
+        let mut guard = journal.lock().await;
+        if let Err(err) = guard.record_intent(&record, chrono::Utc::now()) {
+            tracing::error!(
+                error = %err,
+                decision_id = %action.decision_id,
+                "audit journal intent write failed; proceeding"
+            );
+        }
+    }
+
+    /// Journal the outcome of a previously recorded intent.
+    async fn journal_outcome(
+        &self,
+        action: &crate::reflex::PlannedAction,
+        account: &sentinel_core::types::AccountState,
+        now_ms: u64,
+        execution: serde_json::Value,
+    ) {
+        let Some(journal) = &self.journal else {
+            return;
+        };
+        let record = sentinel_core::audit::OutcomeRecord {
+            trigger: sentinel_core::audit::Trigger::Reflex,
+            account: self.account_label(),
+            market_id: Some(action.market_id.0),
+            input_hash: journal_input_hash(account, now_ms),
+            decision: decision_json(action),
+            policy_verdict: serde_json::json!({
+                "verdict": verdict_text(&action.verdict),
+                "note": action.note,
+            }),
+            execution,
+        };
+        let mut guard = journal.lock().await;
+        if let Err(err) = guard.record_outcome(&record, chrono::Utc::now()) {
+            tracing::error!(
+                error = %err,
+                decision_id = %action.decision_id,
+                "audit journal outcome write failed"
+            );
+        }
+    }
+
+    /// Account label for journal entries.
+    fn account_label(&self) -> String {
+        self.cfg
+            .perpl
+            .account
+            .clone()
+            .unwrap_or_else(|| "unknown".to_string())
+    }
+}
+
+/// Inputs hash for a reflex decision (canonical account snapshot + clock).
+fn journal_input_hash(account: &sentinel_core::types::AccountState, now_ms: u64) -> String {
+    let account_json = serde_json::to_value(account).unwrap_or(serde_json::Value::Null);
+    let meta = serde_json::json!({ "now_ms": now_ms });
+    sentinel_core::audit::hash_input(&[&account_json, &meta])
+}
+
+/// Decision document for journal entries.
+fn decision_json(action: &crate::reflex::PlannedAction) -> serde_json::Value {
+    serde_json::json!({
+        "decision_id": action.decision_id,
+        "market_id": action.market_id.0,
+        "tier": format!("{:?}", action.tier),
+        "action": action_text(action),
+        "note": action.note,
+        "order": action
+            .order
+            .as_ref()
+            .map(|order| serde_json::to_value(order).unwrap_or(serde_json::Value::Null)),
+    })
+}
+
+/// Outcome status for decisions that never reached the executor.
+fn no_order_status(action: &crate::reflex::PlannedAction) -> &'static str {
+    match &action.verdict {
+        PolicyVerdict::Deny { .. } => "denied",
+        PolicyVerdict::NeedsApproval { .. } => "needs_approval",
+        PolicyVerdict::Allow => "skipped",
     }
 }
 
@@ -543,6 +660,12 @@ where
                 action: action_text(&action),
             });
 
+            // Audit-before-action (P00 #2): intent-bearing decisions are
+            // journaled before any submission.
+            if action.intent.is_some() {
+                self.journal_intent(&action, &account, now_ms).await;
+            }
+
             let symbol = markets
                 .iter()
                 .find(|market| market.id == action.market_id)
@@ -597,7 +720,9 @@ where
             }
 
             // Execution: only an `Allow` verdict with a sized order submits.
+            let mut submitted = false;
             if let (Some(order), PolicyVerdict::Allow) = (&action.order, &action.verdict) {
+                submitted = true;
                 match self.executor.submit(order).await {
                     Ok(report) => {
                         let status = format!("{:?}", report.status).to_lowercase();
@@ -619,8 +744,36 @@ where
                             now_ms,
                         ));
                         self.day.actions_today = self.day.actions_today.saturating_add(1);
+                        self.journal_outcome(
+                            &action,
+                            &account,
+                            now_ms,
+                            serde_json::json!({
+                                "status": status,
+                                "mode": mode_label(self.cfg.execution.mode),
+                                "order_id": report.client_order_id,
+                                "tx_hash": report.tx_hash,
+                                "fill": {
+                                    "filled_size": report.filled_size.to_string(),
+                                    "avg_price": report.avg_price.map(|price| price.to_string()),
+                                    "status": status,
+                                },
+                            }),
+                        )
+                        .await;
                     }
                     Err(SentinelError::DuplicateOrder { key, .. }) => {
+                        self.journal_outcome(
+                            &action,
+                            &account,
+                            now_ms,
+                            serde_json::json!({
+                                "status": "duplicate",
+                                "key": key,
+                                "mode": mode_label(self.cfg.execution.mode),
+                            }),
+                        )
+                        .await;
                         emitted.push(PipelineEvent::DuplicateSuppressed {
                             at_ms: now_ms,
                             decision_id: action.decision_id.clone(),
@@ -628,6 +781,17 @@ where
                         });
                     }
                     Err(err) => {
+                        self.journal_outcome(
+                            &action,
+                            &account,
+                            now_ms,
+                            serde_json::json!({
+                                "status": "failed",
+                                "error": err.to_string(),
+                                "mode": mode_label(self.cfg.execution.mode),
+                            }),
+                        )
+                        .await;
                         emitted.push(PipelineEvent::SubmitFailed {
                             at_ms: now_ms,
                             decision_id: action.decision_id.clone(),
@@ -635,6 +799,23 @@ where
                         });
                     }
                 }
+            }
+
+            // Outcome for decisions that never reached the executor
+            // (denied / needs-approval / skipped): journaled immediately so
+            // every intent has a matching outcome entry.
+            if !submitted && action.intent.is_some() {
+                self.journal_outcome(
+                    &action,
+                    &account,
+                    now_ms,
+                    serde_json::json!({
+                        "status": no_order_status(&action),
+                        "mode": mode_label(self.cfg.execution.mode),
+                        "note": action.note,
+                    }),
+                )
+                .await;
             }
 
             // Alerts are delivered after this action's outcome events; every

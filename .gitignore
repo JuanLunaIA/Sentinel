@@ -38,3 +38,7 @@ Thumbs.db
 
 # --- Misc tooling ---
 .envio/
+
+# --- Foundry (contracts/) ---
+/contracts/out/
+/contracts/cache/

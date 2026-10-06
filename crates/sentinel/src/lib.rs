@@ -11,6 +11,8 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
+pub mod anchor;
+pub mod api;
 pub mod args;
 pub mod brain;
 pub mod config;

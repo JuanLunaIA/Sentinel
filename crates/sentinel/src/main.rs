@@ -23,6 +23,7 @@ use sentinel::perpl::{LivePerpl, MockPerpl};
 use sentinel::pipeline::{
     LiveState, Pipeline, PipelineEvent, PipelineOutcome, RunMode, StateProbe,
 };
+use sentinel_core::audit::AuditJournal;
 use sentinel_core::types::ExecutionMode;
 use tokio::sync::{Mutex, watch};
 
@@ -51,17 +52,33 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(Mutex::new(LiveState::new()));
     let health = Arc::new(HealthState::new(cfg.execution.mode));
 
+    // Audit journal (SPEC-P10): open/create data/audit; degrade loudly.
+    let journal = match AuditJournal::open("data/audit") {
+        Ok(journal) => {
+            tracing::info!(
+                next_seq = journal.seq(),
+                dir = "data/audit",
+                "audit journal open"
+            );
+            Some(Arc::new(Mutex::new(journal)))
+        }
+        Err(err) => {
+            tracing::error!(error = %err, "audit journal unavailable; continuing without journaling");
+            None
+        }
+    };
+
     let token = cfg.telegram.token.expose().trim().to_string();
     match (cfg.telegram.approval_chat_id, token.is_empty()) {
         (Some(chat_id), false) => {
             tracing::info!(chat_id, "alerts: telegram + tracing");
             let sink = DedupeSink::new(TelegramSink::new(&token, chat_id));
-            dispatch(cfg, cli, state, health, shutdown_rx, sink).await
+            dispatch(cfg, cli, state, health, shutdown_rx, sink, journal).await
         }
         _ => {
             tracing::info!("alerts: tracing only (no telegram chat configured)");
             let sink = DedupeSink::new(TracingSink);
-            dispatch(cfg, cli, state, health, shutdown_rx, sink).await
+            dispatch(cfg, cli, state, health, shutdown_rx, sink, journal).await
         }
     }
 }
@@ -74,15 +91,20 @@ async fn dispatch<S>(
     health: Arc<HealthState>,
     shutdown: watch::Receiver<bool>,
     sink: S,
+    journal: Option<Arc<Mutex<AuditJournal>>>,
 ) -> anyhow::Result<()>
 where
     S: AlertSink + Sync,
 {
     match cli.replay {
-        Some(path) => run_replay(cfg, &path, state, health, shutdown, sink).await,
+        Some(path) => run_replay(cfg, &path, state, health, shutdown, sink, journal).await,
         None => match cfg.execution.mode {
-            ExecutionMode::DryRun => run_live_dry(cfg, state, health, shutdown, sink).await,
-            ExecutionMode::Testnet => run_live_testnet(cfg, state, health, shutdown, sink).await,
+            ExecutionMode::DryRun => {
+                run_live_dry(cfg, state, health, shutdown, sink, journal).await
+            }
+            ExecutionMode::Testnet => {
+                run_live_testnet(cfg, state, health, shutdown, sink, journal).await
+            }
             ExecutionMode::Mainnet => {
                 anyhow::bail!(
                     "mainnet is not wired yet (testnet-first per P00); refusing to start in MAINNET mode"
@@ -102,6 +124,7 @@ async fn run_replay<S>(
     health: Arc<HealthState>,
     shutdown: watch::Receiver<bool>,
     sink: S,
+    journal: Option<Arc<Mutex<AuditJournal>>>,
 ) -> anyhow::Result<()>
 where
     S: AlertSink + Sync,
@@ -114,6 +137,10 @@ where
         0,
     );
     let pipeline = Pipeline::new(cfg, feed, executor, sink, state, health, RunMode::Replay);
+    let pipeline = match journal {
+        Some(journal) => pipeline.with_journal(journal),
+        None => pipeline,
+    };
     finish(pipeline.run(shutdown).await.context("pipeline run")?)
 }
 
@@ -124,6 +151,7 @@ async fn run_live_dry<S>(
     health: Arc<HealthState>,
     shutdown: watch::Receiver<bool>,
     sink: S,
+    journal: Option<Arc<Mutex<AuditJournal>>>,
 ) -> anyhow::Result<()>
 where
     S: AlertSink + Sync,
@@ -147,8 +175,13 @@ where
         StateProbe::new(Arc::clone(&state)),
         Duration::from_secs(3),
     );
-    spawn_health(Arc::clone(&health), shutdown.clone());
+    spawn_health(Arc::clone(&health), journal.clone(), shutdown.clone());
+    spawn_anchor(&cfg, journal.clone(), shutdown.clone());
     let pipeline = Pipeline::new(cfg, feed, executor, sink, state, health, RunMode::Live);
+    let pipeline = match journal {
+        Some(journal) => pipeline.with_journal(journal),
+        None => pipeline,
+    };
     finish(pipeline.run(shutdown).await.context("pipeline run")?)
 }
 
@@ -161,6 +194,7 @@ async fn run_live_testnet<S>(
     health: Arc<HealthState>,
     shutdown: watch::Receiver<bool>,
     sink: S,
+    journal: Option<Arc<Mutex<AuditJournal>>>,
 ) -> anyhow::Result<()>
 where
     S: AlertSink + Sync,
@@ -194,8 +228,13 @@ where
         StateProbe::new(Arc::clone(&state)),
         Duration::from_secs(5),
     );
-    spawn_health(Arc::clone(&health), shutdown.clone());
+    spawn_health(Arc::clone(&health), journal.clone(), shutdown.clone());
+    spawn_anchor(&cfg, journal.clone(), shutdown.clone());
     let pipeline = Pipeline::new(cfg, feed, executor, sink, state, health, RunMode::Live);
+    let pipeline = match journal {
+        Some(journal) => pipeline.with_journal(journal),
+        None => pipeline,
+    };
     finish(pipeline.run(shutdown).await.context("pipeline run")?)
 }
 
@@ -241,16 +280,74 @@ fn spawn_signal_forwarder(shutdown_tx: watch::Sender<bool>) {
     });
 }
 
-/// Spawn the health surface (live modes only).
-fn spawn_health(health: Arc<HealthState>, shutdown: watch::Receiver<bool>) {
+/// Spawn the health + audit API surface (live modes only).
+fn spawn_health(
+    health: Arc<HealthState>,
+    journal: Option<Arc<Mutex<AuditJournal>>>,
+    shutdown: watch::Receiver<bool>,
+) {
     let port = std::env::var("PORT")
         .ok()
         .and_then(|value| value.parse::<u16>().ok())
         .unwrap_or(8080);
+    let app = match journal {
+        Some(journal) => sentinel::health::router(Arc::clone(&health))
+            .merge(sentinel::api::audit_router(journal)),
+        None => sentinel::health::router(health),
+    };
     tokio::spawn(async move {
-        tracing::info!(port, "health surface on /healthz");
-        if let Err(err) = sentinel::health::serve(health, port, shutdown).await {
+        let listener = match tokio::net::TcpListener::bind(("0.0.0.0", port)).await {
+            Ok(listener) => listener,
+            Err(err) => {
+                tracing::warn!(error = %err, "health server bind failed");
+                return;
+            }
+        };
+        tracing::info!(port, "health + audit API on /healthz, /api/audit");
+        if let Err(err) = axum::serve(listener, app)
+            .with_graceful_shutdown(async move {
+                let mut shutdown = shutdown;
+                let _ = shutdown.changed().await;
+            })
+            .await
+        {
             tracing::warn!(error = %err, "health server stopped");
         }
     });
+}
+
+/// Spawn the on-chain anchor service when configured (`ENABLE_ANCHOR`,
+/// contract address, signer key; otherwise PENDING-WALLET note).
+fn spawn_anchor(
+    cfg: &Config,
+    journal: Option<Arc<Mutex<AuditJournal>>>,
+    shutdown: watch::Receiver<bool>,
+) {
+    if !cfg.features.enable_anchor {
+        tracing::info!("anchor disabled (ENABLE_ANCHOR=false)");
+        return;
+    }
+    let Some(journal) = journal else {
+        tracing::warn!("anchor skipped: no audit journal");
+        return;
+    };
+    if cfg.anchor.contract_address.is_none() || cfg.anchor.rpc_signer_key.is_none() {
+        tracing::warn!(
+            "anchor skipped: ANCHOR_CONTRACT_ADDRESS / RPC_SIGNER_KEY not configured \
+             (PENDING-WALLET, see STUBS.md)"
+        );
+        return;
+    }
+    match sentinel::anchor::AlloyAnchorSink::new(cfg) {
+        Ok(sink) => {
+            let cfg = cfg.clone();
+            tokio::spawn(async move {
+                match sentinel::anchor::run(&cfg, journal, sink, shutdown).await {
+                    Ok(report) => tracing::info!(?report, "anchor service finished"),
+                    Err(err) => tracing::warn!(error = %err, "anchor service stopped"),
+                }
+            });
+        }
+        Err(err) => tracing::warn!(error = %err, "anchor service unavailable"),
+    }
 }

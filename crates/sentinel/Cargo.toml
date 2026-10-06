@@ -30,6 +30,10 @@ path = "src/bin/brain_eval.rs"
 name = "test-nansen"
 path = "src/bin/test_nansen.rs"
 
+[[bin]]
+name = "audit-verify"
+path = "src/bin/audit_verify.rs"
+
 [lints]
 workspace = true
 
