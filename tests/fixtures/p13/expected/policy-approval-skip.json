@@ -1,0 +1,19 @@
+{
+  "scenario": "policy-approval-skip",
+  "oracle_cmd": "python3 oracle.py scenarios/policy-approval-skip.json",
+  "hand_verified": true,
+  "note": "pinned by construction: reduce notional 1450 > approval 500 with Orange tier (no Red bypass), NeedsApproval, no fills.",
+  "ticks": 2,
+  "baseline_loss_usd": "100",
+  "sentinel_loss_usd": "100",
+  "capital_saved_usd": "0",
+  "sim_fees_usd": "0",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 0,
+  "pin_sentinel": true,
+  "executed": [],
+  "skipped_ts": [
+    1700000000000
+  ]
+}

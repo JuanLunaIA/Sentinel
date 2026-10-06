@@ -1,0 +1,19 @@
+{
+  "scenario": "policy-notional-cap",
+  "oracle_cmd": "python3 oracle.py scenarios/policy-notional-cap.json",
+  "hand_verified": true,
+  "note": "pinned by construction: reduce notional 1450 > cap 1000, Deny, no fills; totals stay at the no-action values.",
+  "ticks": 2,
+  "baseline_loss_usd": "100",
+  "sentinel_loss_usd": "100",
+  "capital_saved_usd": "0",
+  "sim_fees_usd": "0",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 0,
+  "pin_sentinel": true,
+  "executed": [],
+  "skipped_ts": [
+    1700000000000
+  ]
+}

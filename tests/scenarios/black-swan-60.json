@@ -1,0 +1,195 @@
+{
+  "id": "black-swan-60",
+  "label": "synthetic",
+  "description": "black swan -60% over 60 min, 10x long; the sentinel trims at the first breach and closes at the cooldown boundary; baseline liquidates at -6%",
+  "start_free_balance": "10000",
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "positions": [
+    {
+      "market_id": 32,
+      "symbol": "ETH",
+      "size": "0.5",
+      "entry_price": "2720",
+      "mark_price": "2720",
+      "liq_price": null,
+      "collateral": "136",
+      "unrealized_pnl": "0",
+      "margin_ratio": null,
+      "leverage": "10",
+      "opened_at": null
+    }
+  ],
+  "price_path": [
+    {
+      "ts_ms": 1791240000000,
+      "market_id": 32,
+      "mark_price": "2720"
+    },
+    {
+      "ts_ms": 1791240120000,
+      "market_id": 32,
+      "mark_price": "2665.6"
+    },
+    {
+      "ts_ms": 1791240240000,
+      "market_id": 32,
+      "mark_price": "2611.2"
+    },
+    {
+      "ts_ms": 1791240360000,
+      "market_id": 32,
+      "mark_price": "2556.8"
+    },
+    {
+      "ts_ms": 1791240480000,
+      "market_id": 32,
+      "mark_price": "2502.4"
+    },
+    {
+      "ts_ms": 1791240600000,
+      "market_id": 32,
+      "mark_price": "2448"
+    },
+    {
+      "ts_ms": 1791240720000,
+      "market_id": 32,
+      "mark_price": "2393.6"
+    },
+    {
+      "ts_ms": 1791240840000,
+      "market_id": 32,
+      "mark_price": "2339.2"
+    },
+    {
+      "ts_ms": 1791240960000,
+      "market_id": 32,
+      "mark_price": "2284.8"
+    },
+    {
+      "ts_ms": 1791241080000,
+      "market_id": 32,
+      "mark_price": "2230.4"
+    },
+    {
+      "ts_ms": 1791241200000,
+      "market_id": 32,
+      "mark_price": "2176"
+    },
+    {
+      "ts_ms": 1791241320000,
+      "market_id": 32,
+      "mark_price": "2121.6"
+    },
+    {
+      "ts_ms": 1791241440000,
+      "market_id": 32,
+      "mark_price": "2067.2"
+    },
+    {
+      "ts_ms": 1791241560000,
+      "market_id": 32,
+      "mark_price": "2012.8"
+    },
+    {
+      "ts_ms": 1791241680000,
+      "market_id": 32,
+      "mark_price": "1958.4"
+    },
+    {
+      "ts_ms": 1791241800000,
+      "market_id": 32,
+      "mark_price": "1904"
+    },
+    {
+      "ts_ms": 1791241920000,
+      "market_id": 32,
+      "mark_price": "1849.6"
+    },
+    {
+      "ts_ms": 1791242040000,
+      "market_id": 32,
+      "mark_price": "1795.2"
+    },
+    {
+      "ts_ms": 1791242160000,
+      "market_id": 32,
+      "mark_price": "1740.8"
+    },
+    {
+      "ts_ms": 1791242280000,
+      "market_id": 32,
+      "mark_price": "1686.4"
+    },
+    {
+      "ts_ms": 1791242400000,
+      "market_id": 32,
+      "mark_price": "1632"
+    },
+    {
+      "ts_ms": 1791242520000,
+      "market_id": 32,
+      "mark_price": "1577.6"
+    },
+    {
+      "ts_ms": 1791242640000,
+      "market_id": 32,
+      "mark_price": "1523.2"
+    },
+    {
+      "ts_ms": 1791242760000,
+      "market_id": 32,
+      "mark_price": "1468.8"
+    },
+    {
+      "ts_ms": 1791242880000,
+      "market_id": 32,
+      "mark_price": "1414.4"
+    },
+    {
+      "ts_ms": 1791243000000,
+      "market_id": 32,
+      "mark_price": "1360"
+    },
+    {
+      "ts_ms": 1791243120000,
+      "market_id": 32,
+      "mark_price": "1305.6"
+    },
+    {
+      "ts_ms": 1791243240000,
+      "market_id": 32,
+      "mark_price": "1251.2"
+    },
+    {
+      "ts_ms": 1791243360000,
+      "market_id": 32,
+      "mark_price": "1196.8"
+    },
+    {
+      "ts_ms": 1791243480000,
+      "market_id": 32,
+      "mark_price": "1142.4"
+    },
+    {
+      "ts_ms": 1791243600000,
+      "market_id": 32,
+      "mark_price": "1088"
+    }
+  ]
+}

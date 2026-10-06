@@ -1,0 +1,5 @@
+{
+  "id": "bad-json",
+  "label": "synthetic",
+  "description": "INVALID: intentionally malformed JSON (trailing junk, unterminated).",
+  "markets": [

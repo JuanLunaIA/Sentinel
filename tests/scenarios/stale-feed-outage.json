@@ -1,0 +1,243 @@
+{
+  "id": "stale-feed-outage",
+  "label": "synthetic",
+  "description": "market-data outage: alert-only while stale (production stale_reduce=false); the sentinel resumes after the stale alert's cooldown and trims, baseline liquidates",
+  "start_free_balance": "10000",
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "positions": [
+    {
+      "market_id": 32,
+      "symbol": "ETH",
+      "size": "0.6",
+      "entry_price": "2720",
+      "mark_price": "2725",
+      "liq_price": null,
+      "collateral": "326.4",
+      "unrealized_pnl": "3",
+      "margin_ratio": null,
+      "leverage": "5",
+      "opened_at": null
+    }
+  ],
+  "price_path": [
+    {
+      "ts_ms": 1791240000000,
+      "market_id": 32,
+      "mark_price": "2725"
+    },
+    {
+      "ts_ms": 1791240030000,
+      "market_id": 32,
+      "mark_price": "2722"
+    },
+    {
+      "ts_ms": 1791240060000,
+      "market_id": 32,
+      "mark_price": "2720"
+    },
+    {
+      "ts_ms": 1791240090000,
+      "market_id": 32,
+      "mark_price": "2715"
+    },
+    {
+      "ts_ms": 1791240120000,
+      "market_id": 32,
+      "mark_price": "2700"
+    },
+    {
+      "ts_ms": 1791240150000,
+      "market_id": 32,
+      "mark_price": "2685"
+    },
+    {
+      "ts_ms": 1791240180000,
+      "market_id": 32,
+      "mark_price": "2670"
+    },
+    {
+      "ts_ms": 1791240210000,
+      "market_id": 32,
+      "mark_price": "2655"
+    },
+    {
+      "ts_ms": 1791240240000,
+      "market_id": 32,
+      "mark_price": "2640"
+    },
+    {
+      "ts_ms": 1791240270000,
+      "market_id": 32,
+      "mark_price": "2625"
+    },
+    {
+      "ts_ms": 1791240300000,
+      "market_id": 32,
+      "mark_price": "2610"
+    },
+    {
+      "ts_ms": 1791240330000,
+      "market_id": 32,
+      "mark_price": "2595"
+    },
+    {
+      "ts_ms": 1791240360000,
+      "market_id": 32,
+      "mark_price": "2580"
+    },
+    {
+      "ts_ms": 1791240390000,
+      "market_id": 32,
+      "mark_price": "2565"
+    },
+    {
+      "ts_ms": 1791240420000,
+      "market_id": 32,
+      "mark_price": "2550"
+    },
+    {
+      "ts_ms": 1791240450000,
+      "market_id": 32,
+      "mark_price": "2540"
+    },
+    {
+      "ts_ms": 1791240480000,
+      "market_id": 32,
+      "mark_price": "2528"
+    },
+    {
+      "ts_ms": 1791240510000,
+      "market_id": 32,
+      "mark_price": "2518"
+    },
+    {
+      "ts_ms": 1791240540000,
+      "market_id": 32,
+      "mark_price": "2510"
+    },
+    {
+      "ts_ms": 1791240570000,
+      "market_id": 32,
+      "mark_price": "2500"
+    },
+    {
+      "ts_ms": 1791240630000,
+      "market_id": 32,
+      "mark_price": "2495"
+    },
+    {
+      "ts_ms": 1791240660000,
+      "market_id": 32,
+      "mark_price": "2480"
+    },
+    {
+      "ts_ms": 1791240690000,
+      "market_id": 32,
+      "mark_price": "2460"
+    },
+    {
+      "ts_ms": 1791240720000,
+      "market_id": 32,
+      "mark_price": "2440"
+    },
+    {
+      "ts_ms": 1791240750000,
+      "market_id": 32,
+      "mark_price": "2420"
+    },
+    {
+      "ts_ms": 1791240780000,
+      "market_id": 32,
+      "mark_price": "2400"
+    },
+    {
+      "ts_ms": 1791240810000,
+      "market_id": 32,
+      "mark_price": "2380"
+    },
+    {
+      "ts_ms": 1791240840000,
+      "market_id": 32,
+      "mark_price": "2355"
+    },
+    {
+      "ts_ms": 1791240870000,
+      "market_id": 32,
+      "mark_price": "2330"
+    },
+    {
+      "ts_ms": 1791240900000,
+      "market_id": 32,
+      "mark_price": "2310"
+    },
+    {
+      "ts_ms": 1791240930000,
+      "market_id": 32,
+      "mark_price": "2300"
+    },
+    {
+      "ts_ms": 1791240960000,
+      "market_id": 32,
+      "mark_price": "2310"
+    },
+    {
+      "ts_ms": 1791240990000,
+      "market_id": 32,
+      "mark_price": "2330"
+    },
+    {
+      "ts_ms": 1791241020000,
+      "market_id": 32,
+      "mark_price": "2360"
+    },
+    {
+      "ts_ms": 1791241050000,
+      "market_id": 32,
+      "mark_price": "2400"
+    },
+    {
+      "ts_ms": 1791241080000,
+      "market_id": 32,
+      "mark_price": "2450"
+    },
+    {
+      "ts_ms": 1791241110000,
+      "market_id": 32,
+      "mark_price": "2500"
+    },
+    {
+      "ts_ms": 1791241140000,
+      "market_id": 32,
+      "mark_price": "2550"
+    },
+    {
+      "ts_ms": 1791241170000,
+      "market_id": 32,
+      "mark_price": "2600"
+    }
+  ],
+  "events": [
+    {
+      "ts_ms": 1791240060000,
+      "kind": "feed_stale",
+      "until_ms": 1791240600000,
+      "note": "simulated market-data outage; reduces resume after the window"
+    }
+  ]
+}

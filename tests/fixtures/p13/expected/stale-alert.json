@@ -1,0 +1,19 @@
+{
+  "scenario": "stale-alert",
+  "oracle_cmd": "python3 oracle.py scenarios/stale-alert.json",
+  "hand_verified": true,
+  "note": "pinned by construction: Red inside a feed_stale window with stale_reduce=false alerts instead of reducing; no fills; totals equal the no-action values.",
+  "ticks": 2,
+  "baseline_loss_usd": "800",
+  "sentinel_loss_usd": "800",
+  "capital_saved_usd": "0",
+  "sim_fees_usd": "0",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 0,
+  "pin_sentinel": true,
+  "executed": [],
+  "skipped_ts": [
+    1700000060000
+  ]
+}

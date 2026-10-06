@@ -1,0 +1,25 @@
+{
+  "scenario": "o3-short-orange-red-blocked",
+  "oracle_cmd": "python3 oracle.py scenarios/o3-short-orange-red-blocked.json",
+  "hand_verified": true,
+  "note": "pinned by construction: short 25% reduce (buy fill 3143.14); Red/Orange retests inside cooldown blocked; baseline never liquidates.",
+  "ticks": 4,
+  "baseline_loss_usd": "100",
+  "sentinel_loss_usd": "110.8635785",
+  "capital_saved_usd": "-10.8635785",
+  "sim_fees_usd": "0.0785785",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 1,
+  "pin_sentinel": true,
+  "executed": [
+    {
+      "ts_ms": 1700000060000,
+      "kind": "reduce",
+      "size": "0.250",
+      "size_after": "-0.750",
+      "fill": "3143.140"
+    }
+  ],
+  "skipped_ts": []
+}

@@ -1,0 +1,55 @@
+{
+  "id": "recorded-session-20261005",
+  "label": "recorded",
+  "description": "recorded testnet session replay (tests/fixtures/perpl/session-20261005T222712Z.jsonl, market 32 ETH): price path = the recorded mark observations (duplicate venue timestamps collapsed); the recording carried no positions, so one representative 4x long is marked at the recorded price; quiet market - no actions",
+  "start_free_balance": "10000",
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "positions": [
+    {
+      "market_id": 32,
+      "symbol": "ETH",
+      "size": "0.5",
+      "entry_price": "2717.29",
+      "mark_price": "2717.29",
+      "liq_price": null,
+      "collateral": "339.66125",
+      "unrealized_pnl": "0",
+      "margin_ratio": null,
+      "leverage": "4",
+      "opened_at": null
+    }
+  ],
+  "price_path": [
+    {
+      "ts_ms": 1791239222000,
+      "market_id": 32,
+      "mark_price": "2717.29"
+    },
+    {
+      "ts_ms": 1791239235000,
+      "market_id": 32,
+      "mark_price": "2717.29"
+    },
+    {
+      "ts_ms": 1791239237000,
+      "market_id": 32,
+      "mark_price": "2717.29"
+    }
+  ]
+}

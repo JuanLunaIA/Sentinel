@@ -1,0 +1,25 @@
+{
+  "scenario": "cd1-cooldown-inside",
+  "oracle_cmd": "python3 oracle.py scenarios/cd1-cooldown-inside.json",
+  "hand_verified": true,
+  "note": "pinned by construction: single reduce; both retests strictly inside 600000ms cooldown stay silent.",
+  "ticks": 3,
+  "baseline_loss_usd": "270",
+  "sentinel_loss_usd": "279.0673575",
+  "capital_saved_usd": "-9.0673575",
+  "sim_fees_usd": "0.1423575",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 1,
+  "pin_sentinel": true,
+  "executed": [
+    {
+      "ts_ms": 1700000000000,
+      "kind": "reduce",
+      "size": "0.500",
+      "size_after": "1.500",
+      "fill": "2847.150"
+    }
+  ],
+  "skipped_ts": []
+}

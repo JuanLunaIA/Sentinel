@@ -1,0 +1,25 @@
+{
+  "scenario": "tamper-extra-tick",
+  "oracle_cmd": "python3 oracle.py scenarios/tamper-extra-tick.json",
+  "hand_verified": true,
+  "note": "BASELINE-ONLY pin: the extra tick crosses liq for the sentinel position, so the frozen \u00a75 sentinel formula and any engine-side liquidation model may legitimately differ; only baseline_* fields are pinned.",
+  "ticks": 2,
+  "baseline_loss_usd": "600",
+  "sentinel_loss_usd": "901.5673575",
+  "capital_saved_usd": "-301.5673575",
+  "sim_fees_usd": "0.1423575",
+  "baseline_liquidations": 1,
+  "liquidations_avoided": 1,
+  "false_positive_reduces": 0,
+  "pin_sentinel": false,
+  "executed": [
+    {
+      "ts_ms": 1700000000000,
+      "kind": "reduce",
+      "size": "0.500",
+      "size_after": "1.500",
+      "fill": "2847.150"
+    }
+  ],
+  "skipped_ts": []
+}

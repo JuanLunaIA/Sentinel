@@ -1,0 +1,19 @@
+{
+  "scenario": "dust-below-min-size",
+  "oracle_cmd": "python3 oracle.py scenarios/dust-below-min-size.json",
+  "hand_verified": true,
+  "note": "pinned by construction: 25% of 0.02 = 0.005 < min_size 0.05, no order, no fills; totals 0.",
+  "ticks": 3,
+  "baseline_loss_usd": "0",
+  "sentinel_loss_usd": "0",
+  "capital_saved_usd": "0",
+  "sim_fees_usd": "0",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 0,
+  "pin_sentinel": true,
+  "executed": [],
+  "skipped_ts": [
+    1700000060000
+  ]
+}

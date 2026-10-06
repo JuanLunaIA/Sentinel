@@ -1,0 +1,25 @@
+{
+  "scenario": "o2-close-before-crash",
+  "oracle_cmd": "python3 oracle.py scenarios/o2-close-before-crash.json",
+  "hand_verified": true,
+  "note": "pinned by construction: recorded CLOSE at Yellow entry fills 2.0 @ 2947.05 (profit-protecting close); baseline liquidates in the crash (600).",
+  "ticks": 3,
+  "baseline_loss_usd": "600",
+  "sentinel_loss_usd": "106.489410",
+  "capital_saved_usd": "493.510590",
+  "sim_fees_usd": "0.589410",
+  "baseline_liquidations": 1,
+  "liquidations_avoided": 1,
+  "false_positive_reduces": 0,
+  "pin_sentinel": true,
+  "executed": [
+    {
+      "ts_ms": 1700000060000,
+      "kind": "close",
+      "size": "2.000",
+      "size_after": "0.000",
+      "fill": "2947.050"
+    }
+  ],
+  "skipped_ts": []
+}

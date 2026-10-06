@@ -1,0 +1,47 @@
+{
+  "id": "o3-short-orange-red-blocked",
+  "label": "synthetic",
+  "description": "Oracle 3: SHORT position. One 25% buy-to-close reduce at Orange (fill above mark), then Red and Orange retests blocked by cooldown. Baseline never liquidates; expected honest negative saved.",
+  "start_free_balance": "10000",
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH Perp",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.1",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "10",
+      "min_size": "0.01",
+      "tick_size": "0.01",
+      "maker_fee_micros": 20,
+      "taker_fee_micros": 100,
+      "order_ttl_blocks": 100
+    }
+  ],
+  "positions": [
+    {
+      "market_id": 32,
+      "symbol": "ETH",
+      "size": "-1",
+      "entry_price": "3000",
+      "mark_price": null,
+      "liq_price": "3450",
+      "collateral": "500",
+      "unrealized_pnl": "0",
+      "margin_ratio": null,
+      "leverage": "10",
+      "opened_at": null
+    }
+  ],
+  "price_path": [
+    {"ts_ms": 1700000000000, "market_id": 32, "mark_price": "3000"},
+    {"ts_ms": 1700000060000, "market_id": 32, "mark_price": "3140"},
+    {"ts_ms": 1700000120000, "market_id": 32, "mark_price": "3300"},
+    {"ts_ms": 1700000180000, "market_id": 32, "mark_price": "3100"}
+  ],
+  "events": [],
+  "reflex": {"reduce_fraction": "0.5", "orange_fraction": "0.25", "cooldown_ms": 600000, "stale_reduce": false},
+  "policy": {"market_allowlist": [32], "max_order_size_usd": "100000", "max_daily_actions": 10, "require_approval_above_usd": "100000", "kill_switch": false}
+}

@@ -1,0 +1,25 @@
+{
+  "scenario": "o1-long-orange-recover",
+  "oracle_cmd": "python3 oracle.py scenarios/o1-long-orange-recover.json",
+  "hand_verified": true,
+  "note": "pinned by construction: one 25% reduce at 2850 (fill 2847.15), cooldown blocks the retest, recovery resets; baseline never liquidates (0).",
+  "ticks": 6,
+  "baseline_loss_usd": "0",
+  "sentinel_loss_usd": "76.5673575",
+  "capital_saved_usd": "-76.5673575",
+  "sim_fees_usd": "0.1423575",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 1,
+  "pin_sentinel": true,
+  "executed": [
+    {
+      "ts_ms": 1700000120000,
+      "kind": "reduce",
+      "size": "0.500",
+      "size_after": "1.500",
+      "fill": "2847.150"
+    }
+  ],
+  "skipped_ts": []
+}

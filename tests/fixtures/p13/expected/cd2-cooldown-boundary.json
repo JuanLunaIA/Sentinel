@@ -1,0 +1,32 @@
+{
+  "scenario": "cd2-cooldown-boundary",
+  "oracle_cmd": "python3 oracle.py scenarios/cd2-cooldown-boundary.json",
+  "hand_verified": true,
+  "note": "pinned by construction: second reduce fires exactly at +600000ms (equality elapses); a third retest at +60000ms into the new window stays blocked.",
+  "ticks": 3,
+  "baseline_loss_usd": "260",
+  "sentinel_loss_usd": "276.49700025",
+  "capital_saved_usd": "-16.49700025",
+  "sim_fees_usd": "0.24950025",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 2,
+  "pin_sentinel": true,
+  "executed": [
+    {
+      "ts_ms": 1700000000000,
+      "kind": "reduce",
+      "size": "0.500",
+      "size_after": "1.500",
+      "fill": "2847.150"
+    },
+    {
+      "ts_ms": 1700000600000,
+      "kind": "reduce",
+      "size": "0.375",
+      "size_after": "1.125",
+      "fill": "2857.140"
+    }
+  ],
+  "skipped_ts": []
+}

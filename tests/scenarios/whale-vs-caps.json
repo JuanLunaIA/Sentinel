@@ -1,0 +1,174 @@
+{
+  "id": "whale-vs-caps",
+  "label": "synthetic",
+  "description": "whale leg: $13.6k notional 5x long; the scenario raises the per-order cap and approval threshold to the whale regime (default caps would deny the trim); baseline liquidates, sentinel trims at Orange",
+  "start_free_balance": "50000",
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "positions": [
+    {
+      "market_id": 32,
+      "symbol": "ETH",
+      "size": "5",
+      "entry_price": "2720",
+      "mark_price": "2720",
+      "liq_price": null,
+      "collateral": "2720",
+      "unrealized_pnl": "0",
+      "margin_ratio": null,
+      "leverage": "5",
+      "opened_at": null
+    }
+  ],
+  "price_path": [
+    {
+      "ts_ms": 1791240000000,
+      "market_id": 32,
+      "mark_price": "2720"
+    },
+    {
+      "ts_ms": 1791240900000,
+      "market_id": 32,
+      "mark_price": "2690"
+    },
+    {
+      "ts_ms": 1791241800000,
+      "market_id": 32,
+      "mark_price": "2660"
+    },
+    {
+      "ts_ms": 1791242700000,
+      "market_id": 32,
+      "mark_price": "2630"
+    },
+    {
+      "ts_ms": 1791243600000,
+      "market_id": 32,
+      "mark_price": "2600"
+    },
+    {
+      "ts_ms": 1791244500000,
+      "market_id": 32,
+      "mark_price": "2570"
+    },
+    {
+      "ts_ms": 1791245400000,
+      "market_id": 32,
+      "mark_price": "2540"
+    },
+    {
+      "ts_ms": 1791246300000,
+      "market_id": 32,
+      "mark_price": "2510"
+    },
+    {
+      "ts_ms": 1791247200000,
+      "market_id": 32,
+      "mark_price": "2480"
+    },
+    {
+      "ts_ms": 1791248100000,
+      "market_id": 32,
+      "mark_price": "2450"
+    },
+    {
+      "ts_ms": 1791249000000,
+      "market_id": 32,
+      "mark_price": "2420"
+    },
+    {
+      "ts_ms": 1791249900000,
+      "market_id": 32,
+      "mark_price": "2390"
+    },
+    {
+      "ts_ms": 1791250800000,
+      "market_id": 32,
+      "mark_price": "2360"
+    },
+    {
+      "ts_ms": 1791251700000,
+      "market_id": 32,
+      "mark_price": "2330"
+    },
+    {
+      "ts_ms": 1791252600000,
+      "market_id": 32,
+      "mark_price": "2310"
+    },
+    {
+      "ts_ms": 1791253500000,
+      "market_id": 32,
+      "mark_price": "2290"
+    },
+    {
+      "ts_ms": 1791254400000,
+      "market_id": 32,
+      "mark_price": "2280"
+    },
+    {
+      "ts_ms": 1791255300000,
+      "market_id": 32,
+      "mark_price": "2290"
+    },
+    {
+      "ts_ms": 1791256200000,
+      "market_id": 32,
+      "mark_price": "2310"
+    },
+    {
+      "ts_ms": 1791257100000,
+      "market_id": 32,
+      "mark_price": "2340"
+    },
+    {
+      "ts_ms": 1791258000000,
+      "market_id": 32,
+      "mark_price": "2380"
+    },
+    {
+      "ts_ms": 1791258900000,
+      "market_id": 32,
+      "mark_price": "2420"
+    },
+    {
+      "ts_ms": 1791259800000,
+      "market_id": 32,
+      "mark_price": "2470"
+    },
+    {
+      "ts_ms": 1791260700000,
+      "market_id": 32,
+      "mark_price": "2520"
+    },
+    {
+      "ts_ms": 1791261600000,
+      "market_id": 32,
+      "mark_price": "2550"
+    }
+  ],
+  "policy": {
+    "market_allowlist": [
+      32
+    ],
+    "max_order_size_usd": "8000",
+    "max_daily_actions": 10,
+    "require_approval_above_usd": "5000",
+    "kill_switch": false
+  }
+}

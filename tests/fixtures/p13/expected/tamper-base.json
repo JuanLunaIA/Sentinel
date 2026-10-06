@@ -1,0 +1,25 @@
+{
+  "scenario": "tamper-base",
+  "oracle_cmd": "python3 oracle.py scenarios/tamper-base.json",
+  "hand_verified": true,
+  "note": "pinned by construction: one reduce @2850; baseline never liquidates; end mark 2850.",
+  "ticks": 1,
+  "baseline_loss_usd": "300",
+  "sentinel_loss_usd": "301.5673575",
+  "capital_saved_usd": "-1.5673575",
+  "sim_fees_usd": "0.1423575",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 1,
+  "pin_sentinel": true,
+  "executed": [
+    {
+      "ts_ms": 1700000000000,
+      "kind": "reduce",
+      "size": "0.500",
+      "size_after": "1.500",
+      "fill": "2847.150"
+    }
+  ],
+  "skipped_ts": []
+}

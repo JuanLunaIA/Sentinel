@@ -122,6 +122,31 @@ deterministic. All 14 scenarios must run in < 60 s total (acceptance).
 - Tests: conservation exact, cooldown respected, determinism (rerun byte-compare), label honesty,
   < 60 s (measured in the bin run inside the suite).
 
+## 8bis. Changelog / adjudications (parent, integration)
+
+- **v1.0.1:**
+  (a) Field name: §6 said `fill_detail`; frozen as `detail: String` (stub/verifier
+  compatibility; non-empty on every row). SimAction also carries `order`/`verdict`.
+  (b) `sentinel_liquidations` stays formula-only (realized + final unrealized + fees)
+  and is reported as 0; residual crossings are surfaced in notes — a stricter
+  liquidation model breaks the frozen tamper pin (§5 semantics unchanged).
+  (c) ADD_COLLATERAL has no OrderRequest representation (executor is reduce-only):
+  an allowed top-up is applied in-engine to the simulated position and recorded as
+  an executed action (documented; no corpus scenario exercises it yet).
+  (d) feed_stale window is closed [ts_ms, until_ms]; stale secs are whole elapsed
+  seconds ((tick_ms - window_start)/1000).
+  (e) `metrics.reflex_eval_eval` key kept verbatim (suspected typo for
+  `reflex_eval`); excluded from the determinism byte-compare per §6.
+  (f) SimReport carries the additive `notional_usd` (aggregate needs it from
+  reports alone). `--out` is a file STEM (writes `<out>.json` + `<out>.md`) — pinned.
+  (g) Scenario `flash-crash-30` overrides reflex.reduce_fraction to 0.75 (documented
+  in the scenario + README): at 0.5 the trimmed position's liq still sits inside the
+  crash depth and the sentinel liquidates anyway; 0.75 is verified against the exact
+  implied-liq math. Fee formula pinned: taker_fee_micros x (fill_price x filled_size)/1e6.
+  (h) `--mode live-brain` consult hook NOT wired (sync engine by design; STUB-22):
+  the bin fails honestly (exit 2 without key, exit 1 with key + explicit message).
+  Pending QWEN_API_KEY anyway; default replay mode is fully deterministic.
+
 ## 9. Standing rules (all agents)
 
 Latest versions via live registries (standing user rule); never run git; loud stubs

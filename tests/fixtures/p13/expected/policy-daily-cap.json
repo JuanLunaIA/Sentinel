@@ -1,0 +1,27 @@
+{
+  "scenario": "policy-daily-cap",
+  "oracle_cmd": "python3 oracle.py scenarios/policy-daily-cap.json",
+  "hand_verified": true,
+  "note": "pinned by construction: first Red reduce executes (fill 2597.4); the escalation Close at +600000ms is denied by the daily cap (1).",
+  "ticks": 2,
+  "baseline_loss_usd": "800",
+  "sentinel_loss_usd": "802.859740",
+  "capital_saved_usd": "-2.859740",
+  "sim_fees_usd": "0.259740",
+  "baseline_liquidations": 0,
+  "liquidations_avoided": 0,
+  "false_positive_reduces": 1,
+  "pin_sentinel": true,
+  "executed": [
+    {
+      "ts_ms": 1700000000000,
+      "kind": "reduce",
+      "size": "1.000",
+      "size_after": "1.000",
+      "fill": "2597.400"
+    }
+  ],
+  "skipped_ts": [
+    1700000600000
+  ]
+}

@@ -1,0 +1,12 @@
+# P13 integration — scoped validation (2026-10-06T02:57:43-03:00)
+# NOTE: full-workspace run deferred to P14 integration (task-5 demo holds the build lock); verifier certified workspace clippy rc=0 + fmt rc=0 at 02:48
+== p13_adversarial ==
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+== sim lib ==
+test result: ok. 38 passed; 0 failed; 0 ignored; 0 measured; 340 filtered out; finished in 0.05s
+== clippy (sentinel all targets) ==
+CLIPPY_RC=0
+== fmt ==
+FMT_OK
+== backtest aggregate (documented artifact) ==
+Across 14 scenarios representing $60163.365 notional, Sentinel preserved $5972.13546111693125 (9.93%); baseline liquidations: 11 -> with Sentinel: 0

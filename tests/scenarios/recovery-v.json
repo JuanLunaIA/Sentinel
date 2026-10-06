@@ -1,0 +1,119 @@
+{
+  "id": "recovery-v",
+  "label": "synthetic",
+  "description": "V-shaped recovery: dips to Orange then fully recovers; the baseline never liquidates, so both executed reduces (strategy trace + reflex) are false positives - the defense-cost showcase (negative saved)",
+  "start_free_balance": "10000",
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "positions": [
+    {
+      "market_id": 32,
+      "symbol": "ETH",
+      "size": "0.9",
+      "entry_price": "2700",
+      "mark_price": "2700",
+      "liq_price": null,
+      "collateral": "810",
+      "unrealized_pnl": "0",
+      "margin_ratio": null,
+      "leverage": "3",
+      "opened_at": null
+    }
+  ],
+  "price_path": [
+    {
+      "ts_ms": 1791240000000,
+      "market_id": 32,
+      "mark_price": "2700"
+    },
+    {
+      "ts_ms": 1791247200000,
+      "market_id": 32,
+      "mark_price": "2610"
+    },
+    {
+      "ts_ms": 1791254400000,
+      "market_id": 32,
+      "mark_price": "2540"
+    },
+    {
+      "ts_ms": 1791261600000,
+      "market_id": 32,
+      "mark_price": "2460"
+    },
+    {
+      "ts_ms": 1791268800000,
+      "market_id": 32,
+      "mark_price": "2380"
+    },
+    {
+      "ts_ms": 1791276000000,
+      "market_id": 32,
+      "mark_price": "2300"
+    },
+    {
+      "ts_ms": 1791283200000,
+      "market_id": 32,
+      "mark_price": "2220"
+    },
+    {
+      "ts_ms": 1791290400000,
+      "market_id": 32,
+      "mark_price": "2240"
+    },
+    {
+      "ts_ms": 1791297600000,
+      "market_id": 32,
+      "mark_price": "2320"
+    },
+    {
+      "ts_ms": 1791304800000,
+      "market_id": 32,
+      "mark_price": "2420"
+    },
+    {
+      "ts_ms": 1791312000000,
+      "market_id": 32,
+      "mark_price": "2520"
+    },
+    {
+      "ts_ms": 1791319200000,
+      "market_id": 32,
+      "mark_price": "2610"
+    },
+    {
+      "ts_ms": 1791326400000,
+      "market_id": 32,
+      "mark_price": "2725"
+    }
+  ],
+  "decision_trace": [
+    {
+      "at_ms": 1791254400000,
+      "market_id": 32,
+      "decision": {
+        "action": "REDUCE",
+        "market_id": 32,
+        "amount": "0.027",
+        "confidence": "0.71",
+        "urgency": "ROUTINE",
+        "reason": "Yellow entry: trim 3% ahead of the 24h dip per the recorded decision trace"
+      }
+    }
+  ]
+}

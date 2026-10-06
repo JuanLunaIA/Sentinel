@@ -1,0 +1,177 @@
+{
+  "id": "funding-squeeze",
+  "label": "synthetic",
+  "description": "funding squeeze: steady negative drift with funding-rate spikes; funding events are unmodeled in v1.0 (recorded in notes); 5x long trims twice at Orange",
+  "start_free_balance": "10000",
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "positions": [
+    {
+      "market_id": 32,
+      "symbol": "ETH",
+      "size": "0.7",
+      "entry_price": "2720",
+      "mark_price": "2720",
+      "liq_price": null,
+      "collateral": "380.8",
+      "unrealized_pnl": "0",
+      "margin_ratio": null,
+      "leverage": "5",
+      "opened_at": null
+    }
+  ],
+  "price_path": [
+    {
+      "ts_ms": 1791240000000,
+      "market_id": 32,
+      "mark_price": "2720"
+    },
+    {
+      "ts_ms": 1791241800000,
+      "market_id": 32,
+      "mark_price": "2701.67"
+    },
+    {
+      "ts_ms": 1791243600000,
+      "market_id": 32,
+      "mark_price": "2683.33"
+    },
+    {
+      "ts_ms": 1791245400000,
+      "market_id": 32,
+      "mark_price": "2665"
+    },
+    {
+      "ts_ms": 1791247200000,
+      "market_id": 32,
+      "mark_price": "2646.67"
+    },
+    {
+      "ts_ms": 1791249000000,
+      "market_id": 32,
+      "mark_price": "2628.33"
+    },
+    {
+      "ts_ms": 1791250800000,
+      "market_id": 32,
+      "mark_price": "2610"
+    },
+    {
+      "ts_ms": 1791252600000,
+      "market_id": 32,
+      "mark_price": "2591.67"
+    },
+    {
+      "ts_ms": 1791254400000,
+      "market_id": 32,
+      "mark_price": "2573.33"
+    },
+    {
+      "ts_ms": 1791256200000,
+      "market_id": 32,
+      "mark_price": "2555"
+    },
+    {
+      "ts_ms": 1791258000000,
+      "market_id": 32,
+      "mark_price": "2536.67"
+    },
+    {
+      "ts_ms": 1791259800000,
+      "market_id": 32,
+      "mark_price": "2518.33"
+    },
+    {
+      "ts_ms": 1791261600000,
+      "market_id": 32,
+      "mark_price": "2500"
+    },
+    {
+      "ts_ms": 1791263400000,
+      "market_id": 32,
+      "mark_price": "2481.67"
+    },
+    {
+      "ts_ms": 1791265200000,
+      "market_id": 32,
+      "mark_price": "2463.33"
+    },
+    {
+      "ts_ms": 1791267000000,
+      "market_id": 32,
+      "mark_price": "2445"
+    },
+    {
+      "ts_ms": 1791268800000,
+      "market_id": 32,
+      "mark_price": "2426.67"
+    },
+    {
+      "ts_ms": 1791270600000,
+      "market_id": 32,
+      "mark_price": "2408.33"
+    },
+    {
+      "ts_ms": 1791272400000,
+      "market_id": 32,
+      "mark_price": "2390"
+    },
+    {
+      "ts_ms": 1791274200000,
+      "market_id": 32,
+      "mark_price": "2371.67"
+    },
+    {
+      "ts_ms": 1791276000000,
+      "market_id": 32,
+      "mark_price": "2353.33"
+    },
+    {
+      "ts_ms": 1791277800000,
+      "market_id": 32,
+      "mark_price": "2335"
+    },
+    {
+      "ts_ms": 1791279600000,
+      "market_id": 32,
+      "mark_price": "2316.67"
+    },
+    {
+      "ts_ms": 1791281400000,
+      "market_id": 32,
+      "mark_price": "2298.33"
+    },
+    {
+      "ts_ms": 1791283200000,
+      "market_id": 32,
+      "mark_price": "2280"
+    }
+  ],
+  "events": [
+    {
+      "ts_ms": 1791243600000,
+      "kind": "funding",
+      "note": "funding rate spike: longs pay; funding is not modeled in v1.0 (ignored per SPEC-P13 \u00a73)"
+    },
+    {
+      "ts_ms": 1791250800000,
+      "kind": "funding",
+      "note": "second funding spike inside the squeeze; ignored"
+    }
+  ]
+}
