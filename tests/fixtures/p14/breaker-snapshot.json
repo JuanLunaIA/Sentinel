@@ -1,0 +1,28 @@
+[
+  {
+    "market_id": 32,
+    "symbol": "ETH",
+    "size": "10",
+    "entry_price": "2700",
+    "mark_price": "1573.4",
+    "liq_price": "1479",
+    "collateral": "13560",
+    "unrealized_pnl": "-11266",
+    "margin_ratio": null,
+    "leverage": "2",
+    "opened_at": "2026-10-05T22:06:40Z"
+  },
+  {
+    "market_id": 16,
+    "symbol": "BTC",
+    "size": "0.1",
+    "entry_price": "95000",
+    "mark_price": "95000",
+    "liq_price": "61750",
+    "collateral": "3800",
+    "unrealized_pnl": "0",
+    "margin_ratio": null,
+    "leverage": "10",
+    "opened_at": "2026-10-05T22:06:40Z"
+  }
+]

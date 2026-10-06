@@ -1,0 +1,5 @@
+# Build artifacts / dependencies (node_modules is also covered by the repo root)
+node_modules/
+binary.wasm
+.cre_build_tmp.js
+dist/

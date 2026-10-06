@@ -1,0 +1,22 @@
+{
+  "name": "sentinel-deadman-workflow",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Sentinel dead-man's-switch CRE workflow: cron -> breaker heartbeat-status -> signed trigger POST (SPEC-P14)",
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.tools.json --noEmit",
+    "runner": "node tools/local-runner.ts",
+    "emulate": "node tools/stale-breaker-emulator.ts"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@chainlink/cre-sdk": "1.23.0",
+    "@noble/hashes": "2.2.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "5.9.3"
+  }
+}

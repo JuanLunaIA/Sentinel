@@ -1,0 +1,22 @@
+# ==========================================================================
+# CRE PROJECT SETTINGS FILE — Sentinel dead-man's-switch (SPEC-P14 §6)
+# ==========================================================================
+# Targets referenced by `--target <name>` in `cre workflow` commands.
+#
+# NOTE on rpcs: this workflow deliberately never uses the EVM capability —
+# the chain-read leg is a plain JSON-RPC POST over the HTTP capability (see
+# sentinel-deadman/README.md "Why JSON-RPC instead of the EVM capability").
+# Therefore no `rpcs:` list is required here. If you later add EVM-capability
+# steps, add an `rpcs:` entry per target, e.g.:
+#   rpcs:
+#     - chain-name: ethereum-testnet-sepolia
+#       url: https://ethereum-sepolia-rpc.publicnode.com
+# ==========================================================================
+
+local-simulation:
+  cre-cli:
+    don-family: "zone-a"
+
+production-settings:
+  cre-cli:
+    don-family: "zone-a"

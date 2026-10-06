@@ -1,0 +1,118 @@
+# Sentinel P14 — adversarial validation transcript (Agent F / verifier)
+# Generated: 2026-10-06 02:48 (-03). Owner: Agent F (SPEC-P14 §1).
+# Scope: black-box verification of the breaker binary against SPEC-P14 only.
+# Candidate revision under test: crates/breaker/src/*.rs stable since 02:40:22
+# (-03) (trigger.rs newest); verified binary sha256 below.
+
+=============================================================================
+ARTIFACT HASHES (sha256)
+=============================================================================
+9a37c8a7769cf1f3646f4b4820fe4175ae7e4157aa55f313c01252471c057565  crates/breaker/tests/breaker_adversarial.rs
+f401bd1de8cde5f8a056e57399f474e4e4e6d10cf5b557920c2fa2e512a4d1cf  crates/breaker/tests/fixtures/hmac_oracle.py
+3de1835b1e62a0244f2bb1d2b01ee521a21a5e63c3771abbe668085c8669d54b  crates/breaker/tests/fixtures/staleness_oracle.py
+1ce6df1452a8a747ef3a8670549bf919d56fdc283f500f64463c01a7a622cc8d  scripts/breaker-demo.sh   (inspected revision)
+af7390a656a29b2883eb3dc9556efa4ca1284a366e97d70d7bd4f9df9deb452b  target/debug/breaker      (verified binary)
+
+=============================================================================
+GATES
+=============================================================================
+1) Suite:  cargo test -p breaker --test breaker_adversarial
+   => exit 0; "test result: ok. 21 passed; 0 failed; 0 ignored; ... finished in 50.44s"
+   (P14_TEST_TMPDIR scratch; full transcript: p14-suite-final2.txt in agent scratch)
+
+2) Clippy: cargo clippy --workspace --all-targets -- -D warnings
+   => exit 0 ("Finished dev profile"; 0 errors). Only a third-party
+      future-incompat note (proc-macro-error2), not a lint failure.
+
+3) Format: cargo fmt --all --check
+   => exit 0 (no diffs), and `rustfmt --edition 2024 --check breaker_adversarial.rs` clean.
+
+=============================================================================
+INDEPENDENT ORACLES (python3, written from the spec text)
+=============================================================================
+hmac_oracle.py vector:
+  body_bytes_utf8 = {"guardian":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","reason":"spec-vector","requested_at_ms":1791200000000}
+  hmac_sha256     = af9a4a973355861bf340577feca0cd2079325849014faaccc98b22d115d5da04
+  spec_expected   = af9a4a973355861bf340577feca0cd2079325849014faaccc98b22d115d5da04
+  MATCH           = True                       (exit 0)
+  Cross-check: in-test Rust HMAC (hmac 0.13/sha2 0.11) == python oracle on a second body.
+
+staleness_oracle.py check:
+  22/22 checks pass (age==3x NOT stale; 3x+1s stale; tier<2 never fires; epoch=floor formula).
+
+=============================================================================
+KEY OBSERVED BEHAVIOUR (verbatim excerpts from the suite transcript)
+=============================================================================
+[spec-vector] HTTP 202: {"accepted":true,"epoch":66124,"fired":true}
+   - the frozen §5 vector (secret spec-test-secret) accepted on a stale guardian;
+     journal got exactly one line; alert literal "BREAKER: Sentinel unresponsive" in the log.
+
+[boundary] elapsed_ms=3xxx age_secs=3 stale=false   (observed throughout 3000-3999ms)
+[boundary] elapsed_ms=4020 age_secs=4 stale=true    (transition at the 4.00s mark)
+   - 253 samples across the transition: 0 pairs violating stale <=> age_secs > 3.
+     age_secs = floor((now_ms - last_ts_ms)/1000); stale is the STRICT > rule.
+
+[status] entry: {"age_secs":0,"armed":false,"critical":true,"stale":false,"max_tier":3,...}
+   - §5 status contract: address/last_ts_ms/age_secs/max_tier/stale/critical/armed
+     with correct JSON types; armed flips per stale+critical.
+
+[dup]        second -> HTTP 202 {"epoch":5,"fired":false}   (one fire per epoch; 1 journal line)
+[restart]    after restart -> HTTP 202 {"epoch":5,"fired":false}  (persisted state; no re-fire)
+[refire]     second -> HTTP 202 fired=true     (new heartbeat resets; fire allowed again)
+
+[clamp]      journal size=20 notional_usd=1000   (clamped from unclamped 50 @ cap 1000)
+[min-size]   alert_only, size/notional 0, no order (quantize-to-zero below min; journaled)
+[degrade]    no snapshot source -> alert-only, no order (journaled)
+[riskiest]   market 32 (2.00% distance) selected from {5%,10%,2%}
+[tie]        equal 5% distances -> larger notional (market 32, 3000 > 1000) selected
+
+[yellow-order] Yellow -> HTTP 202 {"fired":false}; Green -> HTTP 202 {"fired":false};
+   no order journaled for either (strict §3 Fire = stale AND critical).
+[autofire]   autonomous fire observed: "...auto: heartbeat stale and risk critical..." epoch=3
+   (no POST was made by the test; §7 step-6 premise holds on this build).
+
+HTTP semantics observed: 423 fresh ({"error":"guardian is fresh"}); 401 bad/missing/malformed
+signature; 400 non-JSON / structurally invalid body (signed correctly); 400 unknown guardian
+("guardian is not in BREAKER_GUARDIANS").
+
+=============================================================================
+STATIC INSPECTION — scripts/breaker-demo.sh (revision 1ce6df14…)
+=============================================================================
+Unattended-safe: YES. Evidence:
+  * trap cleanup EXIT (line 100); cleanup kills DAEMON_PID and BREAKER_PID as process
+    groups (`kill -9 -- -$pid`) plus pids, ANVIL_PID, pkill -f patterns, rm -rf WORK.
+  * exit codes: set -euo pipefail; explicit `exit 1` on every fatal; transcript wrapper
+    captures rc via PIPESTATUS[0] and re-exits with it (rc propagated through tee);
+    EXIT trap re-emits the same code after cleanup.
+  * no interactive reads at all (no `read`/`select`/prompts; curl non-interactive; no sudo,
+    no docker).
+  * preflight: anvil/cast/jq/openssl presence, fixture + snapshot existence, port free.
+Notes (low severity):
+  * cleanup's `pkill -9 -f target/release/breaker` / replay-fixture patterns are
+    process-name-wide: a concurrent second copy of the demo (or another agent's identical
+    process) would be killed; same for the startup `pkill -f "anvil --silent --port 8547"`.
+  * preflight checks `anvil` but not `forge` (step (0) fails loudly via set -e if forge
+    is missing — message less specific).
+  * WORK dir under /tmp (acceptable; removed on exit).
+  * The current revision POSTs the signed CRE-hop trigger itself in step (6) and notes the
+    auto path; the earlier revision waited for the breaker's own 5s auto fire and FAILED at
+    02:36 (docs/evidence/p14-breaker-demo.txt) while the intermediate build lacked it.
+
+=============================================================================
+IMPLEMENTATION HISTORY OBSERVED DURING VERIFICATION (evidence of churn)
+=============================================================================
+* 02:19 build: auto-fire ticker (5s) fired stale+critical guardians; manual trigger also
+  executed reduce orders for stale NON-critical (Yellow/Green) guardians (spec §3 conflict).
+* 02:31–02:40 build: auto-fire absent (>80s no fire; agent E's demo failed at 02:36);
+  manual trigger for non-critical gated (202 fired=false, no order) — §3 fix landed.
+* 02:41+ build (verified here): both corrected; all 21 tests green.
+
+##### PARENT RE-RUN — final revisions (2026-10-06T02:59:21-03:00) #####
+== cargo test --workspace ==
+34 suites, 795 tests OK
+0
+== clippy -D warnings ==
+CLIPPY_RC=0
+0
+== fmt ==
+FMT_OK

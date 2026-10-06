@@ -1,0 +1,130 @@
+# P14 — CRE workflow simulate evidence: ATTEMPT + documented FALLBACK — 2026-10-06T02:11:31-03:00
+# workflow: workflow-cre/sentinel-deadman · CLI: cre v1.37.0 · host: Linux 7.2.8-artix1-2 x86_64
+#
+# RESULT SUMMARY
+#   * cre workflow build   -> EXIT 0 (compiles to WASM; structure accepted by the CLI)
+#   * cre workflow hash    -> EXIT 0 (workflow hash printed)
+#   * cre workflow simulate-> EXIT 1 'Authentication required' (no CRE account/login)
+#     => SPEC §6 documented fallback implemented and executed below:
+#        tools/local-runner.ts drives the SAME core.ts definition
+#        (steps, condition, trigger body bytes, HMAC signature) with a Node
+#        transport against an emulated stale-state breaker + a real local
+#        anvil chain carrying SentinelAuditAnchor Heartbeat events.
+#   * png: docs/evidence/p14-cre-simulate.png — a rendered summary card of this
+#     evidence (no TTY render exists: simulate stops at the auth gate before
+#     the simulator starts). Text below is authoritative.
+
+===================================================================
+## 1. ATTEMPT — cre workflow simulate (verbatim; see p14-cre-cli-probe.txt §4 for full context)
+===================================================================
+### command: cre workflow simulate . --non-interactive --trigger-index 0 --target local-simulation
+### cwd: /home/luna/.hermes/Sentinel/workflow-cre/sentinel-deadman
+### date: 2026-10-06T02:09:30-03:00
+Initializing...
+
+! You are not logged in
+
+✗ Authentication required: not logged in and no CRE_API_KEY set
+  → Run 'cre login' interactively, or
+  → Set CRE_API_KEY environment variable for non-interactive use
+✗ authentication required: no credentials found: you are not logged in, run cre login and try again
+### EXIT=1
+
+# Context (why this is a hard gate, not a config problem): the CLI reference
+# states for 'cre workflow simulate': 'NOTE: Authentication required. Running
+# this command requires you to be logged in with the CRE CLI.' There is no
+# CRE account on this host and no CRE_API_KEY — STUB-03 (PENDING-ACCOUNT).
+# 'cre login' is an interactive browser flow; 'cre workflow supported-chains'
+# (which would list Monad testnet enablement) is gated the same way.
+
+# For completeness, the compile side of the same folder DOES run headless:
+#   cre workflow build -> EXIT 0, 'Workflow compiled successfully',
+#   binary hash 904b5f689b541712ccf185ffa258a58dfe4e37bf636e51aefa2e8db72fcc49cc,
+#   binary.wasm written (2.4 MB). Verbatim: p14-cre-cli-probe.txt §4c.
+
+===================================================================
+## 2. FALLBACK SETUP — injected stale input + real chain (SPEC §6)
+===================================================================
+# The 'stale input' is an EMULATED breaker endpoint implementing exactly the
+# frozen SPEC §5 surface (GET /api/heartbeat-status stale=true critical=true;
+# POST /breaker/trigger with constant-time HMAC verification):
+#   node tools/stale-breaker-emulator.ts   (port 9091, guardian 0xf39F…2266,
+#                                           age 36s = 4.5 x interval, tier 2)
+# The chain-read leg targets a REAL local contract:
+#   anvil --silent --port 8547 + forge create SentinelAuditAnchor
+#   + two beat(...) transactions (maxTier=3) -> Heartbeat events.
+
+### anvil + deployment:
+No files changed, compilation skipped
+Deployer: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+Transaction hash: 0x4f8c7bac410ed03c34ea652e5f84b09d417f9d0712fe6ca1f103f29f0dd13c1a
+deployed address: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+### Heartbeat events on-chain (cast logs) — topic0 0xa068fbc1b92cb8ea8005e568b0b15b538691078d8437eb83346db7791c7bc6ee
+  	param0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  	param1: 0x1111111111111111111111111111111111111111111111111111111111111111
+  	param2: 0
+  	param3: 3
+  	param0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  	param1: 0x2222222222222222222222222222222222222222222222222222222222222222
+  	param2: 0
+  	param3: 3
+
+===================================================================
+## 3. FALLBACK EXECUTION — full local-runner transcript (exit 0)
+===================================================================
+$ BREAKER_ARM_SECRET=demo-secret node tools/local-runner.ts --config config.local.json --expect fire --now-ms 1791240000000
+════════════════════════════════════════════════════════════════════
+ LOCAL SIMULATION (fallback) — NOT the CRE runtime
+ `cre workflow simulate` requires a logged-in CRE account (STUB-03);
+ this runner executes the same core.ts definition with a Node transport.
+════════════════════════════════════════════════════════════════════
+[runner] config=/home/luna/.hermes/Sentinel/workflow-cre/sentinel-deadman/config.local.json
+[runner] mode=observe breaker=http://127.0.0.1:9091 secret-id=BREAKER_ARM_SECRET
+[runner] TRIGGER (emulated cron tick): schedule=0 */2 * * * * now_ms=1791240000000
+[runner] [step 1/4] GET http://127.0.0.1:9091/api/heartbeat-status
+[runner] [step 1/4] status @1791263429858: 1 guardian(s), 1 stale && critical -> fire
+[runner] [fire] guardian=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 age=36s tier=2 armed=false
+[runner] [step 2/4] chain-read leg (observe) via http://127.0.0.1:8547
+[runner] [onchain] anchor=0x5FbDB2315678afecb367f032d93F642f64180aa3 head=3 window=[0..latest] beats-for-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266=2
+[runner] [onchain] last Heartbeat block=3 age=0s
+[runner] [step 3/4] POST http://127.0.0.1:9091/breaker/trigger (X-Breaker-Signature sha256=8819b6234294bc…)
+[runner] [step 3/4] body: {"guardian":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","reason":"sentinel-unresponsive-heartbeat-stale-critical","requested_at_ms":1791240000000}
+[runner] [step 3/4] breaker answered HTTP 202: {"accepted":true,"epoch":1,"fired":true}
+[runner] [step 4/4] telegram disabled
+[runner] RUNNER_SUMMARY {"fired":[{"guardian":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","age_secs":36,"max_tier":2,"onchain_age_secs":0,"fire":true,"action":"trigger-posted","trigger_status":202,"trigger_body":"{\"guardian\":\"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266\",\"reason\":\"sentinel-unresponsive-heartbeat-stale-critical\",\"requested_at_ms\":1791240000000}","signature":"sha256=8819b6234294bc6cbe02ce4ca6a05b8c5257f88cd3ab3c1c71e5510fd28d56f9","telegram":"disabled"}],"healthy_guardians":0,"total_guardians":1,"status_generated_at_ms":1791263429858,"onchain":{"heartbeat_count":2,"last_heartbeat_block":3,"onchain_age_secs":0,"mode":"observe"}}
+[runner] outcome=fire fired=1 healthy=0
+runner exit: 0
+
+### emulated breaker's view of the same run (HMAC verified by node:crypto —
+### an independent implementation from the runner's @noble/hashes):
+[emulator] listening on http://127.0.0.1:9091 (emulated breaker; stale=true guardian=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+[emulator] GET /api/heartbeat-status -> 200 stale=true age=36s tier=2
+[emulator] POST /breaker/trigger -> 202 signature OK guardian=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 reason=sentinel-unresponsive-heartbeat-stale-critical requested_at_ms=1791240000000 fired=true
+[emulator] received SIGTERM, shutting down
+
+===================================================================
+## 4. SELF-TEST — frozen SPEC §5 HMAC test vector (drift guard)
+===================================================================
+$ node tools/local-runner.ts --self-test
+[self-test] frozen SPEC-P14 §5 HMAC vector
+[self-test] body      match=true
+[self-test] signature match=true (sha256=af9a4a973355861bf340577feca0cd2079325849014faaccc98b22d115d5da04)
+self-test exit=0
+
+===================================================================
+## 5. RECONCILIATION / how to run the real thing
+===================================================================
+# * Once a CRE account exists (or CRE_API_KEY is exported):
+#     cd workflow-cre && cre login
+#     node sentinel-deadman/tools/stale-breaker-emulator.ts &   # injected stale input
+#     cre workflow simulate sentinel-deadman --non-interactive --trigger-index 0 --target local-simulation
+#   or against the real breaker in a stale state (see docs/evidence/p14-breaker-demo.txt):
+#     BREAKER_PORT=9090 … cargo run -p breaker --release &
+#     node tools/local-runner.ts --config config.local.json --expect fire
+# * The emulated endpoint and the runner share NO code with the CRE WASM
+#   runtime; what they DO share with src/workflow.ts is src/core.ts — the
+#   exact module holding the condition, the body bytes and the HMAC.
+# * Known hard dependencies for the CRE side: bun on PATH (compile) and
+#   typescript 5.x (the CRE compiler's validate step breaks on TS 7).

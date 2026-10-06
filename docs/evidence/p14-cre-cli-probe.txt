@@ -1,0 +1,207 @@
+# P14 — CRE CLI probe (SPEC-P14 §6) — 2026-10-06T02:10:55-03:00
+# host: Linux 7.2.8-artix1-2 x86_64 · LC_ALL=C · user: luna · repo: /home/luna/.hermes/Sentinel
+#
+# Purpose: record exactly what the installed CRE CLI v1.37.0 can do on this
+# host BEFORE/while building workflow-cre/sentinel-deadman: tenant/login
+# state, template access, and which workflow commands run headless.
+
+===================================================================
+## 1. Toolchain
+===================================================================
+$ cre version
+CRE CLI version v1.37.0
+EXIT=0
+
+$ node --version; npm --version; bun --version
+v26.7.0
+11.19.0
+1.4.2
+typescript in the workflow folder: 5.9.3
+
+# docs consulted (verbatim retrievals during the build):
+#   https://docs.chain.link/cre  (overview: build+simulate available; deploy needs access)
+#   https://docs.chain.link/cre/reference/cli/workflow  ('cre workflow simulate — Authentication required')
+#   https://docs.chain.link/cre/guides/operations/simulating-workflows
+#   https://docs.chain.link/cre/guides/workflow/secrets/using-secrets-simulation(-ts)
+#   https://docs.chain.link/cre/reference/project-configuration(-ts)
+#   https://docs.chain.link/cre/reference/sdk/core-ts · http-client · triggers/cron-trigger-ts
+
+===================================================================
+## 2. Tenant / login state (STUB-03 = PENDING-ACCOUNT)
+===================================================================
+$ cre whoami
+Initializing...
+
+! You are not logged in
+
+✗ Authentication required: not logged in and no CRE_API_KEY set
+  → Run 'cre login' interactively, or
+  → Set CRE_API_KEY environment variable for non-interactive use
+✗ authentication required: no credentials found: you are not logged in, run cre login and try again
+EXIT=1
+
+$ cre workflow supported-chains
+Initializing...
+
+! You are not logged in
+
+✗ Authentication required: not logged in and no CRE_API_KEY set
+  → Run 'cre login' interactively, or
+  → Set CRE_API_KEY environment variable for non-interactive use
+✗ authentication required: no credentials found: you are not logged in, run cre login and try again
+EXIT=1
+
+# Interpretation: every command that needs the CRE account (login session or
+# CRE_API_KEY) fails the same way: 'Authentication required: not logged in and
+# no CRE_API_KEY set'. Per-tenant chain enablement (Monad testnet) therefore
+# remains PENDING-ACCOUNT; nothing here contradicts FACTS.md §5.
+
+===================================================================
+## 3. Templates are readable WITHOUT login (used to scaffold the structure)
+===================================================================
+$ cre templates list
+Fetching templates...
+
+Available Templates
+
+  Hello World (Go)
+      ID: hello-world-go  |  Language: go
+      A minimal cron-triggered workflow to get started from scratch
+      Capabilities: cron
+      Tags: cron, starter, minimal
+
+  Hello World (TypeScript)
+      ID: hello-world-ts  |  Language: typescript
+      A minimal cron-triggered workflow to get started from scratch
+      Capabilities: cron
+      Tags: cron, starter, minimal
+
+  Block Trigger (Go)
+      ID: block-trigger-go  |  Language: go
+      Process new blocks and transactions using block-triggered webhooks with watched address matching.
+      Solutions: defi-vault-operations
+      Capabilities: http
+      Tags: indexer, webhook, event-monitoring
+      Networks: ethereum-testnet-sepolia, ethereum-mainnet
+
+  Block Trigger (TypeScript)
+      ID: block-trigger-ts  |  Language: typescript
+      Process new blocks and transactions using block-triggered webhooks with watched address matching.
+      Solutions: defi-vault-operations
+      Capabilities: http
+      Tags: indexer, webhook, event-monitoring
+      Networks: ethereum-testnet-sepolia
+
+  Indexer Data Fetch (Go)
+      ID: indexer-fetch-go  |  Language: go
+      Pull data from The Graph indexer on a cron schedule using GraphQL queries.
+      Solutions: custom-oracles-data-feeds
+      Capabilities: cron, http
+      Tags: indexer, data-fetch
+      Networks: ethereum-testnet-sepolia, ethereum-mainnet
+
+  Indexer Data Fetch (TypeScript)
+      ID: indexer-fetch-ts  |  Language: typescript
+      Pull data from The Graph indexer on a cron schedule using GraphQL queries.
+      Solutions: custom-oracles-data-feeds
+      Capabilities: cron, http
+      Tags: indexer, data-fetch
+      Networks: ethereum-testnet-sepolia, ethereum-mainnet
+
+  KV Store (Go)
+      ID: kv-store-go  |  Language: go
+      Read, increment, and write a counter in AWS S3 using SigV4-signed HTTP requests.
+      Solutions: defi-vault-operations
+      Capabilities: cron, http, secrets
+      Tags: storage, key-value
+      Networks: ethereum-testnet-sepolia, ethereum-mainnet
+
+  KV Store (TypeScript)
+      ID: kv-store-ts  |  Language: typescript
+      Read, increment, and write a counter in AWS S3 using SigV4-signed HTTP requests.
+      Solutions: defi-vault-operations
+EXIT=0
+
+$ cre init -p probe-sentinel -w deadman-probe -t hello-world-ts --non-interactive   (in a scratch dir)
+
+! You are not logged in
+
+✗ Authentication required: not logged in and no CRE_API_KEY set
+  → Run 'cre login' interactively, or
+  → Set CRE_API_KEY environment variable for non-interactive use
+✗ authentication required: no credentials found: you are not logged in, run cre login and try again
+EXIT=1
+
+# And so the project/workflow layout was studied directly from the official
+# template repo instead: smartcontractkit/cre-templates@main
+#   (curl -sSL https://github.com/smartcontractkit/cre-templates/archive/refs/heads/main.tar.gz)
+# Reference templates consulted: starter-templates/circuit-breaker/circuit-breaker-ts
+#   (cron + condition + write), building-blocks/kv-store/kv-store-ts (HTTP + secrets + HMAC via @noble/hashes),
+#   starter-templates/stablecoin-ace-ccip (local-simulation target + secrets.yaml layout).
+
+===================================================================
+## 4. Workflow commands against workflow-cre/sentinel-deadman
+===================================================================
+### 4a. $ cre workflow build sentinel-deadman --target local-simulation   (first attempt; bun missing)
+### cmd: cre workflow build sentinel-deadman --target local-simulation
+  Compiling workflow...
+✗ Build failed:
+✗ failed to compile workflow: bun is required for TypeScript workflows but was not found in PATH; install from https://bun.com/docs/installation
+EXIT=1
+
+### 4b. same, with bun 1.4.2 on PATH but typescript@7 (npm 'latest') — CRE compiler validate breaks
+### cmd: (bun 1.4.2 on PATH) cre workflow build sentinel-deadman --target local-simulation
+  Compiling workflow...
+✗ Build failed:
+✗ failed to compile workflow: failed to compile workflow: exit status 1                                                                
+build output:                                                                                                                          
+34 | export const defaultValidationCompilerOptions: ts.CompilerOptions = {                                                             
+35 |     allowJs: true,                                                                                                                
+36 |     checkJs: true,                                                                                                                
+37 |     noEmit: true,                                                                                                                 
+38 |     skipLibCheck: true,                                                                                                           
+39 |     target: ts.ScriptTarget.ESNext,                                                                                               
+                 ^                                                                                                                     
+TypeError: undefined is not an object (evaluating 'ts.ScriptTarget.ESNext')                                                            
+      at /home/luna/.hermes/Sentinel/workflow-cre/sentinel-deadman/node_modules/@chainlink/cre-sdk/scripts/src/validate-shared.ts:39:13
+                                                                                                                                       
+Bun v1.4.2 (Linux x64)                                                                                                                 
+error: "cre-compile" exited with code 1                                                                                                
+EXIT=1
+
+### 4c. same, with typescript pinned to 5.9.3 — BUILD OK
+### cmd: cre workflow build sentinel-deadman --target local-simulation   [bun 1.4.2 on PATH, typescript 5.9.3]
+  Compiling workflow...
+✓ Workflow compiled successfully
+  Binary hash: 904b5f689b541712ccf185ffa258a58dfe4e37bf636e51aefa2e8db72fcc49cc
+✓ Build output written to /home/luna/.hermes/Sentinel/workflow-cre/sentinel-deadman/binary.wasm
+EXIT=0
+
+### 4d. $ cre workflow hash sentinel-deadman --target local-simulation --public_key 0xf39F…2266 — OK
+### cmd: cre workflow hash sentinel-deadman --target local-simulation --public_key 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Compiling workflow...
+✓ Workflow compiled
+  Binary hash:   08e983756cc9acbabbe32aaa7853677cf14d10d9a4f2ce72fb75c21c18a8a533
+  Config hash:   870f8eb4edeb09d71f7d646230cc80bb72a658982dc246a469f8a3d2da362024
+  Workflow hash: 00cb333e5138507c234f329add783079c5f6fc21ce377b568bc4212c05f99cfb
+EXIT=0
+
+### 4e. $ cre workflow simulate sentinel-deadman --non-interactive --trigger-index 0 --target local-simulation
+### command: cre workflow simulate . --non-interactive --trigger-index 0 --target local-simulation
+### cwd: /home/luna/.hermes/Sentinel/workflow-cre/sentinel-deadman
+### date: 2026-10-06T02:09:30-03:00
+Initializing...
+
+! You are not logged in
+
+✗ Authentication required: not logged in and no CRE_API_KEY set
+  → Run 'cre login' interactively, or
+  → Set CRE_API_KEY environment variable for non-interactive use
+✗ authentication required: no credentials found: you are not logged in, run cre login and try again
+### EXIT=1
+
+# Conclusion: the folder is a structure the installed CLI accepts and
+# COMPILES to WASM (4c) and HASHES (4d). Simulation itself is blocked at the
+# authentication gate (4e) — STUB-03 (PENDING-ACCOUNT); the SPEC §6 fallback
+# (same definition via core.ts + a Node transport) is exercised in
+# docs/evidence/p14-cre-simulate.txt.

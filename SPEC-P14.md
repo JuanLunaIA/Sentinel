@@ -93,6 +93,35 @@ docs/evidence/p14-breaker-demo.txt.
 - Gates: clippy `-D warnings` (tests included) + rustfmt; evidence-shaped reports; no git from
   children; latest versions via live registries; loud stubs; LC_ALL=C determinism.
 
+## 8bis. Changelog / adjudications (parent, integration) — v1.0.1
+
+- (a) Refire semantics: fires once per NEW epoch while staleness persists (the §3
+  formula literally; a fresh heartbeat starts a new generation). Accepted as frozen;
+  the demo captures the first fire.
+- (b) Auto-fire loop (5 s tick, first check delayed one interval) is the §7 demo path,
+  wired in main.rs; the armed POST shares the same persisted epoch gate.
+- (c) BREAKER_ARM_SECRET is required at config load (POST surface always mounted);
+  testnet mode additionally needs PERPL_API_KEY_SECRET (PerplExecutor signing).
+- (d) BREAKER_SNAPSHOT_FILE accepts the spec-literal Position[] AND the extended
+  {"positions":[...],"markets":[...]} object; without market metadata, sizing uses the
+  documented Perpl fallback (size_decimals=3, min_size=0, FACTS §1.5/§1.7) recorded in
+  journal details. Journal decimals serialize as JSON numbers; alert-only lines carry 0.0.
+- (e) Watcher staleness detection can lag up to the 15 s poll interval.
+- (f) §7 reconciliation: the daemon's anchor leg reads `PERPL_RPC_URL` (anchor.rs),
+  not `ANCHOR_RPC_URL` — the demo exports PERPL_RPC_URL + BREAKER_RPC_URL; wording fixed here.
+- (g) breaker-demo.sh launches the binaries built in step (0) (unattended runs must not
+  block on the shared cargo build lock); `P14_CARGO_RUN=1` restores the literal
+  `cargo run` form.
+- (h) CRE simulate is tenant-gated: `cre workflow simulate`/`supported-chains` exit 1
+  with 'Authentication required' headless (STUB-03, PENDING-ACCOUNT). Offline proof
+  executed per the §6 fallback: `cre workflow build` exit 0 (binary hash
+  904b5f68…), `cre workflow hash` workflow hash 00cb333e…, and tools/local-runner.ts
+  over the same src/core.ts definition drove the SPEC §5 HMAC vector + a full
+  stale-emulator→chain-read→signed-POST→202 sweep. Prereqs pinned: bun on PATH;
+  typescript 5.9.3 (npm latest 7.0.2 breaks cre-compile validate).
+- (i) `crates/breaker/src/lib.rs` added as crate root (integration tests import the
+  breaker API); main.rs depends on the lib target.
+
 ## 9. Parent prep (already in prep commit)
 
 Workspace member `crates/breaker` + skeleton; `main.rs` replay-anchor spawn; `.env.example`

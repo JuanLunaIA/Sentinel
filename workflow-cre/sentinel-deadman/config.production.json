@@ -1,0 +1,23 @@
+{
+  "schedule": "0 */2 * * * *",
+  "breaker": {
+    "baseUrl": "https://breaker.sentinel.invalid",
+    "statusPath": "/api/heartbeat-status",
+    "triggerPath": "/breaker/trigger",
+    "armSecretId": "BREAKER_ARM_SECRET",
+    "reason": "sentinel-unresponsive-heartbeat-stale-critical"
+  },
+  "guardianAllowlist": [],
+  "onchain": {
+    "mode": "require",
+    "rpcUrl": "https://testnet-rpc.monad.xyz",
+    "anchorAddress": "0x0000000000000000000000000000000000000000",
+    "lookbackBlocks": 7200,
+    "maxAgeSecs": 180
+  },
+  "telegram": {
+    "enabled": true,
+    "botTokenSecretId": "TELEGRAM_BOT_TOKEN",
+    "chatId": ""
+  }
+}

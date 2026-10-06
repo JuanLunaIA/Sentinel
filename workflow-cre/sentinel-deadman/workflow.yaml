@@ -1,0 +1,23 @@
+# ==========================================================================
+# CRE WORKFLOW SETTINGS FILE — sentinel-deadman (SPEC-P14 §6)
+# ==========================================================================
+# Targets used by `cre workflow simulate|deploy --target <name>`.
+# `local-simulation` is the target for local runs; `production-settings`
+# carries the Monad-side values for the eventual deployed workflow.
+# ==========================================================================
+
+local-simulation:
+  user-workflow:
+    workflow-name: "sentinel-deadman-local"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.local.json"
+    secrets-path: "../secrets.yaml"
+
+production-settings:
+  user-workflow:
+    workflow-name: "sentinel-deadman-production"
+  workflow-artifacts:
+    workflow-path: "./main.ts"
+    config-path: "./config.production.json"
+    secrets-path: "../secrets.yaml"
