@@ -179,6 +179,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 /// Route to the concrete pipeline for (replay | dry-run | testnet).
+#[allow(clippy::too_many_arguments)] // daemon entry points thread the shared handles
 async fn dispatch<S>(
     cfg: Config,
     cli: Cli,
@@ -219,6 +220,7 @@ where
 /// Deterministic replay: `MockPerpl` fixture + unguarded DRY_RUN executor
 /// (nothing hits a venue, and the guard's post-verify cannot confirm fills in
 /// a fixture — `SPEC-P06.md` §4).
+#[allow(clippy::too_many_arguments)]
 async fn run_replay<S>(
     cfg: Config,
     path: &Path,
@@ -250,6 +252,7 @@ where
 }
 
 /// Live DRY_RUN: live feed, simulated guarded fills, health surface on.
+#[allow(clippy::too_many_arguments)]
 async fn run_live_dry<S>(
     cfg: Config,
     state: Arc<Mutex<LiveState>>,
@@ -296,6 +299,7 @@ where
 /// Live TESTNET: real reduce-only orders through the guarded gateway executor.
 ///
 /// Requires the API key + exchange account (SETUP-MANUAL; STUB-09).
+#[allow(clippy::too_many_arguments)]
 async fn run_live_testnet<S>(
     cfg: Config,
     state: Arc<Mutex<LiveState>>,
