@@ -77,6 +77,39 @@ RUNBOOK.md: start/stop, mode switching, key rotation, journal recovery, breaker 
 what-to-do-if table, Railway deploy steps (volume + env). Deploy = PENDING-ACCOUNT (STUB-24).
 `docs/evidence/p16-deployed.png` deferred (blocked) — document.
 
+## 4bis. Changelog / adjudications (parent, integration) — v1.0.1
+
+- (a) Supervisor signature: frozen brief said `spawn(name, make_fut)`; implemented
+  `spawn(name, shutdown, make_fut)` — the watch is required for the frozen
+  'no restart after shutdown' semantics and its test. All main.rs sites converted;
+  zero `tokio::spawn` remains.
+- (b) Pipeline run stays awaited (its feed/executor/sink are non-Clone: a restart
+  cannot rebuild them); a pipeline panic remains fatal (pre-existing), the four
+  auxiliary servers are supervised.
+- (c) Supervision deltas: health server retries bind failures (1s..30s backoff);
+  bot rebuilds context per attempt with the ApprovalQueue hoisted (survives restarts);
+  `TelegramSink::send` now queues and returns Ok always (breaker included).
+- (d) Docker builder `rust:1.98-bookworm` (latest-rule over the prompt's 1.85);
+  builds need `--network=host` on this host (nftables forward-drop) and the legacy
+  builder has no layer caching (SENTINEL_SKIP_BUILD=1 for cycle-only re-runs).
+- (e) One writer per journal: concurrent compose cycles over one `./data` fork the
+  hash chain — incident observed during verification (two writers, broken at seq 41),
+  repaired to the longest valid prefix, disclosed, re-run clean; RUNBOOK §5 carries
+  the warning.
+- (f) `data/heartbeat.json` `{"ts_ms","tx_hash"|null,"seq"}` written atomically after
+  each successful beat (seq = journal head) and batch anchor (seq = last seq covered);
+  `HEARTBEAT_PATH` env overrides the path; failed beats retry with 1s..30s backoff.
+- (g) Telegram 5xx wall-clock: teloxide delays ~10 s per attempt on server errors
+  (~45 s to abandon); connection-level failures use the 0.5 s base. Documented in RUNBOOK.
+- (h) Railway deploy remains PENDING-ACCOUNT (STUB-24); docker build + compose cycle +
+  seq continuity + in-image dashboard/audit-verify are the standing proofs.
+- (i) x402 low-balance (< $1) alert DEFERRED until a live payer wallet exists (STUB-25);
+  budget warnings already log at the guard's thresholds.
+- (j) Secret scan is non-vacuous via negative controls but currently enforces zero real
+  values (all placeholders); it strengthens automatically when real keys land.
+- (k) `perpl/ws.rs` needed no change: the 10-kill storm test is the evidence for the
+  existing reconnect+backoff logic.
+
 ## 5. Standing rules
 
 Latest versions via live registries; loud stubs; no secrets in any artifact; LC_ALL=C;

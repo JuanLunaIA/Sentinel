@@ -4,16 +4,21 @@
 //! until the tier changes; a persistent `Red` re-alerts every 15 minutes.
 //! All timestamps come from `Alert::at_ms` (logical in replay → deterministic).
 //! Suppressed alerts return `Ok(())` without touching the inner sink; sink
-//! errors propagate to the caller (the pipeline logs them, never fatal).
+//! errors propagate to the caller (the pipeline logs them, never fatal) —
+//! except [`TelegramSink`], whose deliveries are queued and retried in the
+//! background and never surface to the pipeline (SPEC-P16 §2).
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex, MutexGuard};
+use std::collections::{HashMap, VecDeque};
+use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use std::time::Duration;
 
 use sentinel_core::types::{MarketId, RiskTier};
 use serde::Serialize;
 use teloxide::requests::Requester;
 
-use crate::error::{Result, SentinelError};
+use crate::error::Result;
 
 /// Persistent-Red re-alert interval, ms (SPEC-P06 §3).
 pub const RED_REALERT_MS: u64 = 15 * 60 * 1000;
@@ -118,35 +123,179 @@ impl AlertSink for RecordingSink {
 }
 
 /// Telegram delivery via `teloxide::Bot::sendMessage` (plain text v1).
-#[derive(Debug)]
+///
+/// P16: delivery is queued. [`TelegramSink::send`] enqueues into a bounded
+/// queue (32) serviced by a background worker that retries up to 3 times with
+/// exponential backoff (500 ms base); on overflow the **oldest** alert is
+/// dropped and a warning is logged. `send` always returns `Ok(())` — Telegram
+/// failures never propagate into the pipeline.
 pub struct TelegramSink {
     /// Bot client.
     pub bot: teloxide::Bot,
     /// Target chat id.
     pub chat_id: teloxide::types::ChatId,
+    /// Bounded outbound queue shared with the background worker.
+    queue: Arc<AlertQueue>,
+    /// Set exactly once, when the queue's worker task is spawned.
+    worker_started: OnceLock<()>,
 }
 
 impl TelegramSink {
     /// Build from a token and a chat id.
     pub fn new(token: &str, chat_id: i64) -> Self {
+        Self::with_bot(teloxide::Bot::new(token.to_string()), chat_id)
+    }
+
+    /// Build around an existing bot client (tests point it at a mock server).
+    pub fn with_bot(bot: teloxide::Bot, chat_id: i64) -> Self {
         Self {
-            bot: teloxide::Bot::new(token.to_string()),
+            bot,
             chat_id: teloxide::types::ChatId(chat_id),
+            queue: AlertQueue::new(),
+            worker_started: OnceLock::new(),
         }
+    }
+
+    /// Spawn the delivery worker on first use (single spawn per sink).
+    fn ensure_worker(&self) {
+        if self.worker_started.set(()).is_ok() {
+            tokio::spawn(run_worker(
+                Arc::clone(&self.queue),
+                self.bot.clone(),
+                self.chat_id,
+            ));
+        }
+    }
+}
+
+// Hand-written (never derived): teloxide's `Bot` renders its token field in
+// its derived `Debug`, so a derived `TelegramSink` `Debug` would leak the
+// token into logs (P00 invariant #5).
+impl fmt::Debug for TelegramSink {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TelegramSink")
+            .field("bot", &"REDACTED")
+            .field("chat_id", &self.chat_id)
+            .finish_non_exhaustive()
     }
 }
 
 impl AlertSink for TelegramSink {
     async fn send(&self, alert: &Alert) -> Result<()> {
-        self.bot
-            .send_message(self.chat_id, alert.text.clone())
-            .await
-            .map_err(|err| {
-                // `RequestError` never carries the bot token (teloxide redacts
-                // it from network errors), so this is safe to log.
-                SentinelError::Internal(format!("telegram delivery failed: {err}"))
-            })?;
+        self.ensure_worker();
+        self.queue.push(alert.clone());
         Ok(())
+    }
+}
+
+/// Outbound queue capacity (frozen: 32, SPEC-P16 §2).
+const QUEUE_CAPACITY: usize = 32;
+/// Retries after the initial delivery attempt (frozen: 3).
+const MAX_RETRIES: u32 = 3;
+/// Base delay between delivery retries (doubles per retry: 500ms/1s/2s).
+const RETRY_BASE: Duration = Duration::from_millis(500);
+
+/// Bounded FIFO alert queue with a worker wake signal.
+struct AlertQueue {
+    items: Mutex<VecDeque<Alert>>,
+    wake: tokio::sync::Semaphore,
+    dropped: AtomicU64,
+}
+
+impl AlertQueue {
+    /// Empty queue.
+    fn new() -> Arc<Self> {
+        Arc::new(Self {
+            items: Mutex::new(VecDeque::new()),
+            wake: tokio::sync::Semaphore::new(0),
+            dropped: AtomicU64::new(0),
+        })
+    }
+
+    /// Lock the buffer, recovering from a poisoned mutex: a panicked consumer
+    /// must not silence every later alert.
+    fn lock_items(&self) -> MutexGuard<'_, VecDeque<Alert>> {
+        self.items
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// Enqueue one alert; when full, drop the oldest and warn. Never fails.
+    fn push(&self, alert: Alert) {
+        {
+            let mut items = self.lock_items();
+            if items.len() >= QUEUE_CAPACITY
+                && let Some(dropped) = items.pop_front()
+            {
+                let total = self.dropped.fetch_add(1, Ordering::Relaxed) + 1;
+                tracing::warn!(
+                    kind = kind_label(&dropped.kind),
+                    capacity = QUEUE_CAPACITY,
+                    dropped_total = total,
+                    "telegram alert queue full; dropping oldest alert"
+                );
+            }
+            items.push_back(alert);
+        }
+        self.wake.add_permits(1);
+    }
+
+    /// Take the oldest queued alert, if any.
+    fn pop(&self) -> Option<Alert> {
+        self.lock_items().pop_front()
+    }
+
+    /// Current queue depth (test observability).
+    #[cfg(test)]
+    fn queued_len(&self) -> usize {
+        self.lock_items().len()
+    }
+}
+
+/// Background worker: drains the queue forever, delivering with retries.
+async fn run_worker(queue: Arc<AlertQueue>, bot: teloxide::Bot, chat_id: teloxide::types::ChatId) {
+    loop {
+        // A permit means "at least one alert was enqueued": drain everything
+        // currently queued before waiting again.
+        let Ok(_wake) = queue.wake.acquire().await else {
+            return; // semaphore closed: no further wakeups can arrive
+        };
+        while let Some(alert) = queue.pop() {
+            deliver(&bot, chat_id, &alert).await;
+        }
+    }
+}
+
+/// Deliver one alert: initial attempt plus up to [`MAX_RETRIES`] retries with
+/// exponential backoff. Called only from the worker; failures are logged and
+/// swallowed, never propagated.
+async fn deliver(bot: &teloxide::Bot, chat_id: teloxide::types::ChatId, alert: &Alert) {
+    let mut retries = 0u32;
+    loop {
+        match bot.send_message(chat_id, alert.text.clone()).await {
+            Ok(_) => return,
+            Err(err) => {
+                // `RequestError` never carries the bot token (teloxide
+                // redacts it from network errors), so this is safe to log.
+                if retries >= MAX_RETRIES {
+                    tracing::error!(
+                        error = %err,
+                        retries,
+                        "telegram delivery failed; alert dropped after retries"
+                    );
+                    return;
+                }
+                retries += 1;
+                let delay = RETRY_BASE * 2u32.pow(retries - 1);
+                tracing::warn!(
+                    error = %err,
+                    retry = retries,
+                    retry_in_ms = delay.as_millis() as u64,
+                    "telegram delivery failed; retrying"
+                );
+                tokio::time::sleep(delay).await;
+            }
+        }
     }
 }
 
@@ -509,6 +658,123 @@ mod tests {
             sink.send(&tier_alert(None, RiskTier::Red, T0))
                 .await
                 .is_err()
+        );
+    }
+
+    /// `io::Write` sink collecting formatted log lines for assertions.
+    #[derive(Clone, Default)]
+    struct LogBuffer(Arc<Mutex<Vec<u8>>>);
+
+    impl std::io::Write for LogBuffer {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner())
+                .extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    /// Thread-local TRACE+ capture (the guard must stay alive while asserting).
+    fn capture_logs() -> (LogBuffer, tracing::subscriber::DefaultGuard) {
+        let buffer = LogBuffer::default();
+        let writer = buffer.clone();
+        let subscriber = tracing_subscriber::fmt()
+            .with_writer(move || writer.clone())
+            .with_ansi(false)
+            .with_max_level(tracing::Level::TRACE)
+            .finish();
+        let guard = tracing::subscriber::set_default(subscriber);
+        (buffer, guard)
+    }
+
+    /// Everything captured so far, as lossy UTF-8.
+    fn captured_text(buffer: &LogBuffer) -> String {
+        String::from_utf8_lossy(
+            &buffer
+                .0
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner()),
+        )
+        .into_owned()
+    }
+
+    /// Feed-stale alert with a distinct marker text for the queue tests.
+    fn queue_alert(marker: u64) -> Alert {
+        Alert {
+            kind: AlertKind::FeedStale { secs: 1 },
+            market_id: None,
+            text: format!("queue-alert-{marker}"),
+            at_ms: marker,
+        }
+    }
+
+    #[test]
+    fn alert_queue_drops_oldest_and_warns_on_overflow() {
+        let (logs, _guard) = capture_logs();
+        let queue = AlertQueue::new();
+        for marker in 0..QUEUE_CAPACITY as u64 {
+            queue.push(queue_alert(marker));
+        }
+        assert_eq!(queue.queued_len(), QUEUE_CAPACITY);
+
+        queue.push(queue_alert(99));
+        assert_eq!(
+            queue.queued_len(),
+            QUEUE_CAPACITY,
+            "capacity holds under overflow"
+        );
+        // The oldest alert (marker 0) was dropped; the head is now marker 1.
+        assert_eq!(
+            queue.pop().expect("queue holds alerts").text,
+            "queue-alert-1"
+        );
+        // The overflow is loud (SPEC-P16 §2: drop oldest + warn).
+        let text = captured_text(&logs);
+        assert!(
+            text.contains("dropping oldest alert"),
+            "missing overflow warn: {text}"
+        );
+        assert!(
+            text.contains("capacity=32"),
+            "missing capacity field: {text}"
+        );
+    }
+
+    #[test]
+    fn alert_queue_is_fifo_until_capacity() {
+        let queue = AlertQueue::new();
+        for marker in 0..5 {
+            queue.push(queue_alert(marker));
+        }
+        for marker in 0..5 {
+            assert_eq!(
+                queue.pop().expect("queued alert").text,
+                format!("queue-alert-{marker}")
+            );
+        }
+        assert!(queue.pop().is_none(), "queue drains to empty");
+    }
+
+    #[tokio::test]
+    async fn telegram_sink_debug_redacts_bot_token() {
+        let sink = TelegramSink::new("123456:P16-INLINE-TOKEN", 42);
+        let rendered = format!("{sink:?}");
+        assert!(
+            !rendered.contains("P16-INLINE-TOKEN"),
+            "token leaked: {rendered}"
+        );
+        assert!(
+            rendered.contains("REDACTED"),
+            "redaction marker: {rendered}"
+        );
+        assert!(
+            rendered.contains("TelegramSink"),
+            "type name kept: {rendered}"
         );
     }
 }

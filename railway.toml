@@ -1,0 +1,27 @@
+# Railway config-as-code (SPEC-P16 §1).
+#
+# Deploy status: PENDING-ACCOUNT (STUB-24) — no Railway session is available
+# headless, so this file is the deploy contract; the exact dashboard/CLI
+# steps live in docs/RUNBOOK.md §Railway.
+#
+# REQUIRED before the first deploy: create a Railway volume and mount it at
+# /app/data, or the audit journal + breaker state reset on every redeploy.
+#   CLI:       railway volume add --mount-path /app/data
+#   Dashboard: service -> Data/Volumes -> Add Volume -> mount path /app/data
+#
+# Build: the repository Dockerfile (multi-stage release build of the Rust
+# workspace; see Dockerfile for the toolchain-parity note).
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# The daemon answers GET /healthz on the service's PORT (Railway injects
+# PORT; the image default is 8080).
+healthcheckPath = "/healthz"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+# start command: intentionally not set — the image CMD
+# (/usr/local/bin/sentinel) starts the daemon with the service variables.
+# Set service variables from .env.example (never commit real secrets).

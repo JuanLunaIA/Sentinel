@@ -9,8 +9,20 @@
 //! `std::fs` is used here deliberately (journal persistence); the crate
 //! still has **zero network dependencies** (P00 invariant #4).
 //!
+//! # Degrade mode (`SPEC-P16` §2)
+//!
+//! Persistence failures (disk full, read-only directory) never block the
+//! decision flow: [`AuditJournal`] keeps the entry in memory, sets
+//! [`AuditJournal::degraded`], and raises exactly one `tracing::error!` per
+//! degradation transition. The **next append retries persistence**, flushing
+//! the queued entries in seq order before the new one, so once a later
+//! write succeeds both the degraded entries and the new one are on disk in
+//! order. Reads through the journal handle see the in-memory tail
+//! ([`AuditJournal::read_entries`]); the on-disk format and
+//! [`verify_chain`] are unchanged.
+//!
 //! **Status (P10):** implemented by agent `journal-core`; format frozen in
-//! `SPEC-P10.md` §2/§3.
+//! `SPEC-P10.md` §2/§3. Degrade mode added by agent L (P16).
 
 use std::fs;
 use std::fs::OpenOptions;
@@ -367,12 +379,19 @@ pub struct OutcomeRecord {
     pub execution: Value,
 }
 
-/// Stateful append-only journal with crash-safe resume (`SPEC-P10` §3).
+/// Stateful append-only journal with crash-safe resume (`SPEC-P10` §3) and
+/// in-memory degrade mode on persistence failure (`SPEC-P16` §2).
 #[derive(Debug)]
 pub struct AuditJournal {
     dir: PathBuf,
     seq: u64,
     last_hash: String,
+    /// Entries accepted while persistence was failing, in seq order — they
+    /// live only in memory until a later append flushes them (`SPEC-P16` §2).
+    pending: Vec<AuditEntry>,
+    /// True while `pending` holds unpersisted entries (degraded); one
+    /// `tracing::error!` is raised per false→true transition.
+    degraded: bool,
 }
 
 impl AuditJournal {
@@ -400,6 +419,8 @@ impl AuditJournal {
             dir,
             seq,
             last_hash,
+            pending: Vec::new(),
+            degraded: false,
         })
     }
 
@@ -408,13 +429,22 @@ impl AuditJournal {
         self.seq
     }
 
+    /// True while persistence is failing and entries are queued in memory
+    /// only (`SPEC-P16` §2). Cleared by the next fully successful append.
+    pub fn degraded(&self) -> bool {
+        self.degraded
+    }
+
     /// Journal an intent (`execution = {"status":"pending"}`) at `ts`.
     ///
-    /// The entry lands in the day file named by `ts` (UTC) and the in-memory
-    /// head only advances after a successful append.
+    /// The entry lands in the day file named by `ts` (UTC). On a persistence
+    /// failure the journal degrades instead of failing the caller
+    /// (`SPEC-P16` §2): the entry is kept in memory, [`Self::degraded`] is
+    /// set, and the next append retries the write — see [`Self::commit_entry`].
     ///
     /// # Errors
-    /// `JournalError::Io` on I/O failure.
+    /// `JournalError::Format` only when the sequence space is exhausted;
+    /// persistence failures degrade instead of erroring.
     pub fn record_intent(
         &mut self,
         record: &IntentRecord,
@@ -432,13 +462,17 @@ impl AuditJournal {
             serde_json::json!({ "status": "pending" }),
             self.last_hash.clone(),
         );
-        self.commit_entry(entry, ts)
+        self.commit_entry(entry)
     }
 
     /// Journal the outcome of a previously recorded intent.
     ///
+    /// Degrades like [`Self::record_intent`] on persistence failure
+    /// (`SPEC-P16` §2).
+    ///
     /// # Errors
-    /// `JournalError::Io` on I/O failure.
+    /// `JournalError::Format` only when the sequence space is exhausted;
+    /// persistence failures degrade instead of erroring.
     pub fn record_outcome(
         &mut self,
         record: &OutcomeRecord,
@@ -456,13 +490,16 @@ impl AuditJournal {
             record.execution.clone(),
             self.last_hash.clone(),
         );
-        self.commit_entry(entry, ts)
+        self.commit_entry(entry)
     }
 
     /// Entries with `seq >= from_seq`, at most `limit`.
     ///
     /// Reads the journal's current day file (the latest `journal-*.jsonl`)
-    /// and only it; blank/unparseable lines are skipped.
+    /// and only it; blank/unparseable lines are skipped. When the journal is
+    /// degraded (`SPEC-P16` §2), the in-memory tail that has not reached
+    /// disk yet is appended after the persisted entries, so readers always
+    /// see the complete journal.
     ///
     /// # Errors
     /// `JournalError::Io` on I/O failure.
@@ -470,23 +507,32 @@ impl AuditJournal {
         if limit == 0 {
             return Ok(Vec::new());
         }
-        let Some(path) = latest_journal_path(&self.dir)? else {
-            return Ok(Vec::new());
-        };
-        let content = fs::read_to_string(&path)
-            .map_err(|err| JournalError::Io(format!("read {}: {err}", path.display())))?;
         let mut entries = Vec::new();
-        for line in content.lines() {
+        if let Some(path) = latest_journal_path(&self.dir)? {
+            let content = fs::read_to_string(&path)
+                .map_err(|err| JournalError::Io(format!("read {}: {err}", path.display())))?;
+            for line in content.lines() {
+                if entries.len() >= limit {
+                    break;
+                }
+                if line.trim().is_empty() {
+                    continue;
+                }
+                if let Ok(entry) = serde_json::from_str::<AuditEntry>(line)
+                    && entry.seq >= from_seq
+                {
+                    entries.push(entry);
+                }
+            }
+        }
+        // Degrade mode: unpersisted entries (the seq tail) live only in
+        // memory; expose them so the handle's view stays complete.
+        for queued in &self.pending {
             if entries.len() >= limit {
                 break;
             }
-            if line.trim().is_empty() {
-                continue;
-            }
-            if let Ok(entry) = serde_json::from_str::<AuditEntry>(line)
-                && entry.seq >= from_seq
-            {
-                entries.push(entry);
+            if queued.seq >= from_seq && entries.last().is_none_or(|last| last.seq < queued.seq) {
+                entries.push(queued.clone());
             }
         }
         Ok(entries)
@@ -494,16 +540,58 @@ impl AuditJournal {
 
     /// Append `entry` to the day file for `ts` and advance the head.
     ///
-    /// The in-memory head only moves after a successful append, so a failed
-    /// write can be retried with the same seq/prev (no gaps, no phantom
-    /// entries).
-    fn commit_entry(&mut self, entry: AuditEntry, ts: DateTime<Utc>) -> Result<AuditEntry> {
+    /// Persistence failures **degrade** the journal instead of failing the
+    /// caller (`SPEC-P16` §2): the entry is queued in memory (with one
+    /// `tracing::error!` on the transition), the in-memory head still
+    /// advances, and the next append retries persisting the queued entries
+    /// first — in seq order — before the new one. A later fully successful
+    /// append therefore puts the degraded entries and the new one on disk
+    /// in order and clears [`Self::degraded`].
+    fn commit_entry(&mut self, entry: AuditEntry) -> Result<AuditEntry> {
         let Some(next_seq) = self.seq.checked_add(1) else {
             return Err(JournalError::Format(
                 "journal sequence space exhausted at u64::MAX".to_string(),
             ));
         };
-        append_line(&self.day_path(ts), &entry)?;
+
+        // Retry-on-next-append: flush whatever was queued (degrade mode),
+        // then this entry — strictly in seq order. On the first failure,
+        // that item and everything after it stay queued in memory.
+        let mut queue: Vec<AuditEntry> = std::mem::take(&mut self.pending);
+        queue.push(entry.clone());
+        let mut persisted = 0_usize;
+        let mut failure: Option<JournalError> = None;
+        for queued in &queue {
+            match append_line(&self.day_path(queued.ts), queued) {
+                Ok(()) => persisted += 1,
+                Err(err) => {
+                    failure = Some(err);
+                    break;
+                }
+            }
+        }
+        match failure {
+            None => {
+                if self.degraded {
+                    self.degraded = false;
+                    tracing::info!(
+                        flushed = persisted,
+                        "audit journal persistence recovered; in-memory entries flushed"
+                    );
+                }
+            }
+            Some(err) => {
+                if !self.degraded {
+                    self.degraded = true;
+                    tracing::error!(
+                        error = %err,
+                        "audit journal persistence failed; degrading to in-memory \
+                         (retry on next append; reads stay complete)"
+                    );
+                }
+                self.pending = queue.split_off(persisted);
+            }
+        }
         self.seq = next_seq;
         self.last_hash = entry.entry_hash.clone();
         Ok(entry)
@@ -1201,5 +1289,146 @@ mod tests {
         let dir = tmp_dir("missing");
         let err = verify_chain(&dir.join("journal-20261006.jsonl"));
         assert!(matches!(err, Err(JournalError::Io(_))), "{err:?}");
+    }
+
+    // ---- degrade mode (SPEC-P16 §2) --------------------------------------
+
+    /// chmod `dir` to `mode` (unix-only; the degrade tests need EACCES).
+    #[cfg(unix)]
+    fn set_dir_mode(dir: &Path, mode: u32) {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(dir, fs::Permissions::from_mode(mode)).expect("chmod test dir");
+    }
+
+    /// Make `dir` read-only and confirm writes now fail. `false` means the
+    /// process can still write (root, or a mode-ignoring filesystem), so the
+    /// caller must skip instead of asserting the impossible; the directory
+    /// is restored to 0o755 before returning `false`.
+    #[cfg(unix)]
+    fn lock_dir_readonly(dir: &Path) -> bool {
+        set_dir_mode(dir, 0o555);
+        let probe = dir.join(".write-probe");
+        match fs::write(&probe, b"probe") {
+            Ok(()) => {
+                let _ = fs::remove_file(&probe);
+                set_dir_mode(dir, 0o755);
+                false
+            }
+            Err(_) => true,
+        }
+    }
+
+    #[cfg(unix)]
+    fn unlock_dir(dir: &Path) {
+        set_dir_mode(dir, 0o755);
+    }
+
+    /// Persistence failure degrades to memory (flag set, flow unblocked,
+    /// reads complete); the next append retries and both the degraded
+    /// entries and the new one land on disk, in order (`SPEC-P16` §2).
+    ///
+    /// The read-only directory only blocks *creating* a day file (appending
+    /// to an existing one needs no directory write bit — POSIX), so the
+    /// degraded entries target a day file that does not exist yet; the
+    /// second episode rotates into a brand-new day file for the same reason.
+    #[cfg(unix)]
+    #[test]
+    fn degrade_mode_queues_in_memory_then_flushes_in_order() {
+        let dir = tmp_dir("degrade");
+        let day1 = dir.join("journal-20261006.jsonl");
+        let day2 = dir.join("journal-20261007.jsonl");
+        let mut journal = AuditJournal::open(&dir).expect("open");
+        assert!(!journal.degraded(), "healthy journal is not degraded");
+
+        if !lock_dir_readonly(&dir) {
+            eprintln!(
+                "SKIP degrade_mode_queues_in_memory_then_flushes_in_order: \
+                 cannot simulate EACCES (running as root?)"
+            );
+            return;
+        }
+
+        // Persistence fails (no day file can be created): records still
+        // succeed, in memory only.
+        let e0 = journal
+            .record_intent(&intent_record(), ts(2026, 10, 6, 2, 0, 0))
+            .expect("degraded record must not error");
+        assert!(journal.degraded(), "degraded flag set after the failure");
+        let e1 = journal
+            .record_intent(&intent_record(), ts(2026, 10, 6, 2, 0, 1))
+            .expect("second degraded record");
+        assert!(journal.degraded(), "still degraded on repeated failure");
+        assert_eq!(journal.seq(), 2, "in-memory head advances");
+
+        // Reads through the handle see the in-memory tail, in order.
+        let window: Vec<u64> = journal
+            .read_entries(0, 10)
+            .expect("degraded read")
+            .iter()
+            .map(|entry| entry.seq)
+            .collect();
+        assert_eq!(window, vec![0, 1]);
+        assert_eq!(
+            journal.read_entries(0, 1).expect("limited read").len(),
+            1,
+            "limit still honored over the in-memory view"
+        );
+
+        // Nothing reached the disk while degraded.
+        assert!(!day1.exists(), "no journal file yet");
+
+        // Unlock: the NEXT append retries the queued entries first.
+        unlock_dir(&dir);
+        let e2 = journal
+            .record_intent(&intent_record(), ts(2026, 10, 6, 2, 0, 2))
+            .expect("recovering append");
+        assert!(!journal.degraded(), "recovered after a successful flush");
+        assert_eq!(e2.prev_hash, e1.entry_hash, "in-memory chain preserved");
+        assert_eq!(e2.seq, 2);
+
+        let raw = fs::read_to_string(&day1).expect("read recovered file");
+        let parsed: Vec<AuditEntry> = raw
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("line parses"))
+            .collect();
+        let seqs: Vec<u64> = parsed.iter().map(|entry| entry.seq).collect();
+        assert_eq!(seqs, vec![0, 1, 2], "degraded entries then the new one");
+        for pair in parsed.windows(2) {
+            assert_eq!(pair[1].prev_hash, pair[0].entry_hash, "chain links");
+        }
+        assert_eq!(parsed[0], e0, "the exact degraded entry reached the disk");
+        assert_eq!(parsed[1], e1, "the exact degraded entry reached the disk");
+        let report = verify_chain(&day1).expect("verify recovered");
+        assert!(report.broken_at.is_none(), "{report:?}");
+        assert_eq!(report.entries, 3);
+        assert_eq!(report.valid_up_to_seq, Some(2));
+
+        // The handle and the disk agree again (no duplicates, no phantoms).
+        let merged: Vec<u64> = journal
+            .read_entries(0, 10)
+            .expect("post-recovery read")
+            .iter()
+            .map(|entry| entry.seq)
+            .collect();
+        assert_eq!(merged, vec![0, 1, 2]);
+
+        // A second episode (new day file -> creation blocked again) degrades
+        // and recovers the same way.
+        if lock_dir_readonly(&dir) {
+            journal
+                .record_intent(&intent_record(), ts(2026, 10, 7, 0, 0, 3))
+                .expect("second degraded record");
+            assert!(journal.degraded());
+            unlock_dir(&dir);
+            journal
+                .record_intent(&intent_record(), ts(2026, 10, 7, 0, 0, 5))
+                .expect("second recovering append");
+            assert!(!journal.degraded());
+            assert_eq!(journal.seq(), 5, "one degraded + one recovering append");
+            let report = verify_chain(&day2).expect("verify second day file");
+            assert!(report.broken_at.is_none(), "{report:?}");
+            assert_eq!(report.first_seq, Some(3));
+            assert_eq!(report.valid_up_to_seq, Some(4));
+        }
     }
 }

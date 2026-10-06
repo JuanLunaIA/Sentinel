@@ -27,4 +27,5 @@ pub mod perpl;
 pub mod pipeline;
 pub mod reflex;
 pub mod sim;
+pub mod supervisor;
 pub mod telemetry;

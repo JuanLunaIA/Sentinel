@@ -1,0 +1,296 @@
+==================================================================
+  SENTINEL P16 — INDEPENDENT VERIFIER (agent M) EVIDENCE
+  docs/evidence/p16-verify.txt
+==================================================================
+Date: 2026-10-06 (03:10–.. -03). Host: artix linux, 4 cores.
+Scope (SPEC-P16 §0, agent M): crates/sentinel/tests/p16_adversarial.rs,
+tests/fixtures/p16/**, independent re-runs (docker build + compose cycle,
+secret scan), adversarial re-verification of the resilience claims, and the
+P15 regression gate (429/401/503). Method: black-box against public APIs;
+SPEC text only — writer internals (supervisor.rs / notify.rs / audit.rs
+degrade bodies) were NOT read. Children never run git (none run here).
+
+Artifacts owned by this agent
+-----------------------------
+- crates/sentinel/tests/p16_adversarial.rs   (13 tests — suite below)
+- tests/fixtures/p16/redaction-sample.log    (redaction vocabulary fixture)
+- tests/fixtures/p16/README.md
+- docs/evidence/p16-verify.txt               (this file)
+
+==================================================================
+1. VERIFIER SUITE — crates/sentinel/tests/p16_adversarial.rs
+==================================================================
+Final frozen-tree run (scratch/p16_final2.log, after all writers stopped):
+  $ cargo test -p sentinel --test p16_adversarial -- --nocapture
+  test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured;
+               finished in 26.49s   [RC=0]
+  (the same suite was also green in the intermediate gate2 run — 27.08 s,
+   RC=0 — taken right after the clippy fix loop)
+
+Test inventory (SPEC-P16 §2/§3 + SPEC-P15 §2/§4):
+  secret_scan_evidence_logs_and_fixture_are_clean
+  secret_scan_generated_sample_log_is_clean_and_dirty_twin_is_caught
+  secret_scanner_negative_control_flags_each_category_and_spares_hashes
+  anvil_dev_key_exemption_only_covers_the_public_dev_key
+  audit_degrade_readonly_dir_keeps_inflight_entry_and_persists_on_next_append
+  audit_degrade_tmpfs_disk_full_persists_both_entries_after_recovery
+  supervisor_restarts_a_task_that_panics_once_and_the_daemon_survives
+  supervisor_shutdown_stops_restarts_no_zombie_loop
+  telegram_sink_absorbs_500s_and_bounded_retries_are_observed
+  telegram_queue_overflow_drops_oldest_not_newest
+  p15_kill_switch_admin_key_503_401_200_and_resume
+  p15_rate_limit_returns_429_and_spares_healthz
+  p15_frozen_endpoint_shapes_and_cors
+
+Key observed lines (final frozen-tree run, p16_final2.log):
+  secret scan: 73 files clean; 0 non-placeholder secret values enforced
+    (70 files in the first run; the corpus grew as other agents' evidence
+     landed — every new file also scanned by the final run)
+  degrade(ro-dir): recovered_flag=false on_disk=2
+  degrade(tmpfs-64k): degraded_after_a=true recovered_flag=false on_disk=2
+  rate limit probe: ok=120 limited=90
+  telegram retry probe: attempts=3 (SPEC: retry 3x, 500ms base)
+  queue overflow probe: delivered=32 missing=[0, 1, 2, 3, 4, 5, 6, 7]
+    -> 40 alerts into the 32-slot queue: the eight OLDEST were dropped,
+       the newest (idx-39) was delivered — drop-oldest, not drop-newest.
+
+==================================================================
+2. RESILIENCE RE-RUNS (K + L suites) AND ADVERSARIAL PROBES
+==================================================================
+  $ cargo test -p sentinel --test p16_resilience_supervisor -- --nocapture
+  test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 4.19s
+  $ cargo test -p sentinel --test p16_resilience_storage -- --nocapture
+  test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 8.82s
+
+The storage suite's ws storm case was reviewed adversarially before the
+re-run: it kills the first 10 market-data sessions on a local
+tokio-tungstenite server (drop without close handshake), asserts every
+reconnect gap >= 480 ms (500 ms floor) and <= 3 s (no runaway), counts one
+`Reconnected` per kill, requires the mark-price event from the recovered
+session, and a clean shutdown join. It passed on re-run.
+
+M's independent probes (in my suite) — the two claims the task singled out:
+  * audit degrade: read-only DIRECTORY 0555 -> record succeeds in memory,
+    degraded()==true, the in-flight entry is kept, and the next append after
+    recovery persists BOTH entries (verify_chain over the file: 2 entries,
+    chain intact, degraded() back to false). ALSO the 64 KiB tmpfs disk-full
+    path (mount -t tmpfs -o size=64k, filler written to ENOSPC, then freed):
+    same two-entry persistence claim holds. Both paths GREEN.
+  * supervisor: panicking task restarted (runs>=2) with the supervising loop
+    alive; after shutdown restarts stop (count frozen over a 2 s window) and
+    the supervisor task joins (no zombie loop). GREEN.
+  * telegram queue: `send()` never returns Err against a 500 mock; retries
+    observed and bounded; overflow drops OLDEST (see §1 observed lines).
+
+==================================================================
+3. P15 REGRESSION GATE
+==================================================================
+  $ cargo test -p sentinel --test p15_adversarial -- --nocapture
+  test result: ok. 32 passed; 0 failed; 1 ignored; 0 measured; 3.79s
+  (the ignored test is the #[ignore]d fixture generator
+   `generate_static_fixtures` — benign; fixtures are committed.)
+
+M's own 429/401/503 re-verification (part of my suite, black-box over a real
+listener):
+  * POST /api/pause with DASHBOARD_ADMIN_KEY unset -> 503
+    {"error":"admin key not configured"}; wrong ?key= -> 401
+    {"error":"unauthorized"} (kill flag untouched); right key -> 200
+    {"paused":true}, kill AtomicBool engaged, /api/state paused=true;
+    POST /api/resume -> 200 {"paused":false}. GREEN.
+  * rate limit: 210 rapid GET /api/decisions -> ok=120, limited=90,
+    429 body {"error":"rate limited"}; /healthz exempt (40/40 answer 200).
+    Matches SPEC (60/min, burst 120). GREEN.
+  * frozen shapes: /api/state keys+types, /api/decisions array,
+    /api/backtest 404 {"error":"backtest report not found"},
+    /api/nansen/spend zeros, /api/breaker-status available=false,
+    GET / serves HTML <= 204800 B, CORS `*` on /api/*. GREEN.
+
+==================================================================
+4. GATES — clippy + fmt
+==================================================================
+  $ cargo clippy --workspace --all-targets -- -D warnings
+  Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.28s
+  exit 0                                                    [gate2 log]
+  $ cargo fmt --check
+  exit 0 (clean whole workspace)
+
+Final frozen-tree re-run (scratch/p16_final2.log): all six gates green —
+  [1] p16_adversarial 13/13 RC=0 | [2] p16_resilience_supervisor 8/8 RC=0 |
+  [3] p16_resilience_storage 3/3 RC=0 | [4] p15_adversarial 32/33+1ign RC=0 |
+  [5] clippy RC=0 | [6] fmt RC=0.
+
+Fix loop (transparency): the FIRST clippy run flagged 4 lints in this
+agent's test file (extend_with_drain, 2x collapsible_if, manual_range_contains)
+and 1 lint in L's p16_resilience_storage.rs (int_plus_one). M fixed its own 4;
+L fixed theirs (mtime 04:47, `accepts.len() > KILL_CYCLES`); the final
+workspace clippy is clean.
+
+==================================================================
+5. SECRET SCAN (SPEC-P16 §3)
+==================================================================
+Scanner (in the suite, no regex crate, redacted output only):
+  1) verbatim non-placeholder secretish .env values (name filter:
+     KEY|SECRET|TOKEN|PAYER|MNEMONIC|PRIVATE|PASSWORD|WEBHOOK|SIGNER and
+     length >= 10; placeholders skipped: replace-me / 1234567890… / all-zero
+     hex). Current .env: ALL secretish values are placeholders -> 0 enforced
+     (recorded in the test output). The scanner code path is proven by the
+     negative control (below) so the clean result is not vacuous.
+  2) `Bearer <token>` >= 12 chars unless a redaction form.
+  3) `sk-` style tokens (word-boundary checked; `task-list`/`risk-based` are
+     not flagged).
+  4) 64-hex runs on key-context lines (private key / signer key / payer key /
+     mnemonic / secret / api_key), exempting all-zero and the two documented
+     public Foundry dev keys; hash/tx digests are not key context.
+
+Surfaces scanned: docs/evidence/*.txt (all), data/*.log, logs/sentinel*.log,
+plus tests/fixtures/p16/redaction-sample.log. 70 files, 0 violations.
+Calibration (scratch probe before pinning thresholds): 83 bare/0x 64-hex hits
+across surfaces — ALL in hash/tx contexts; 0 non-trivial Bearer tokens;
+0 sk- tokens; 0 verbatim secret values.
+Negative controls (must flag): verbatim value, Bearer token, sk- key,
+64-hex in `--private-key` context (non-public key), while bare sha256 and
+0x tx hashes stay unflagged and the public anvil dev key stays exempt.
+
+==================================================================
+6. DOCKER — INDEPENDENT RE-RUN + CLAIM INSPECTION
+==================================================================
+6.1 M's independent build + compose cycle (log: scratch/p16-m-docker.log;
+    driver: scratch/p16-m-docker.sh, overlay pinned to replay, host :18081)
+  * `sudo -n docker build --network=host --build-arg SENTINEL_UID=1000
+     --build-arg SENTINEL_GID=982 -t sentinel:p16 .`
+    -> "Successfully built bdfa6a107a11 / Successfully tagged sentinel:p16",
+       BUILD_EXIT=0. Layers reported "Using cache" — the identical source
+       tree had just been built by J's in-flight run; result is the SAME
+       image digest (reproducible build), sha256:bdfa6a107a117e26... .
+  * image inspect: user=sentinel | healthcheck=CMD-SHELL curl -f
+    http://localhost:8080/healthz (30s/5s/20s/3) | cmd=[/usr/local/bin/sentinel]
+    | size=188907435 B.
+  * `docker compose -p p16-verify-m ... up -d` -> UP_EXIT=0 (sentinel+breaker).
+  * GET /healthz (first poll): {"feed_age_s":35182,"mode":"DRY_RUN",
+    "uptime_s":0,"version":"0.1.0"}  HEALTHZ_EXIT=0.
+  * non-root check: `compose exec -T sentinel id` ->
+    uid=1000(sentinel) gid=982(sentinel) groups=982(sentinel).
+  * replay journaled to the mounted ./data: 41 -> 43 entries; sentinel log:
+    "audit journal open next_seq=41 dir=\"data/audit\"", "health + audit API
+    on /healthz, /api/audit port=8080".
+  * down -> up (cycle 2) -> SEQ CONTINUITY: "first entry after cycle 2:
+    file=data/audit/journal-20261006.jsonl seq=43 (expected 43)";
+    SEQ_CONTINUITY_EXIT=0 [PASS]; DOWN1_EXIT=0, DOWN2_EXIT=0; no leftover
+    containers.
+
+6.2 J's scripts/docker-verify.sh — claim inspection
+  * J run 1 (excerpts captured by M before J's re-run overwrote the
+    transcript): build exit 0; "stable read: file=data/audit/journal-
+    20261006.jsonl entries=36 last_seq=35"; "first entry after cycle 2:
+    ... seq=36 (expected 36)"; "PASS: journal resumed across the compose
+    down/up cycle (new seq = old + 1)"; image sha256:bdfa6a107a117e26...
+    (identical digest to M's rebuild). Claim = VERIFIED.
+  * J run 2 (re-run, exit 1) FAILED at [6/6]: "❌ broken at seq 41:
+    prev_hash mismatch at seq 41: prev_hash 3cc7e6ae8f... does not match
+    previous entry_hash".
+  * Root cause (M): J's run 2 and M's run overlapped in wall-clock; both
+    compose stacks mount the SAME ./data volume, so TWO replay daemons
+    appended to one journal -> two forks from seq 40's hash; observed
+    duplicate seqs 41,42,43,44, first divergence at line 44, timestamps
+    08:27:14/08:28:14 UTC. Harness race (journal is single-writer by design
+    — SPEC-P16 §1 mounts ./data for the one daemon), not a daemon defect.
+    Each side's PASS was single-writer at its time; run 2 was the overlap.
+  * Mitigation applied by M (disclosed): racy suffix preserved verbatim to
+    docs/evidence/p16-journal-race-tail.jsonl (sha256 f6420a2b...); journal
+    repaired to the last consistent prefix: 43 entries seq 0..42;
+    `audit-verify --journal ... --no-chain` -> "✅ journal consistent; 43
+    entries; 0 anchored" rc=0; python linkage PASS (sha256 e692a112...).
+    Full 49-line race capture kept in scratch
+    (p16-journal-race-full.jsonl, sha256 e0385dc8...).
+  * Recommendation: never run two compose cycles against one ./data volume
+    concurrently (serialize runs, or give each run its own volume copy).
+    The script's [5/6] python assertion carries the real continuity numbers;
+    its [1]-[4]/[6] steps are re-verified independently in 6.1.
+  * J run 3 (post-repair, single-writer; scratch/p16-verify-console3.log):
+    SCRIPT_EXIT=0. Excerpts: "stable read: ... entries=45 last_seq=44";
+    "first entry after cycle 2: ... seq=45 (expected 45)";
+    "✅ journal consistent; 47 entries; 0 anchored". This re-run both
+    re-validates the repair and re-proves the continuity claim end-to-end
+    on the current ./data state.
+
+==================================================================
+7. FINDINGS SUMMARY (defects vs accepted-spec behavior)
+==================================================================
+D1 [medium — harness/ops, RESOLVED] Concurrent compose cycles fork the
+   shared journal (two replay writers on one ./data volume). Root cause,
+   evidence and repair in §6.2; afterwards J's run-3 (single writer on the
+   repaired state) completed exit 0 with "✅ journal consistent; 47
+   entries". Recommendation for future runs: serialize, or per-run volumes.
+   No daemon change required (single-writer design).
+
+D2 [low — test-quality, K's suite] Telegram mocks match
+   `.*/sendMessage` case-sensitively, but teloxide pushes the payload
+   NAME verbatim (`SendMessage`, teloxide-core `Payload::NAME =
+   stringify!(SendMessage)`), so those wiremock mocks never match — the
+   suite's counts/assertions still hold (wiremock 404s still exercise
+   retry/abandon), but "retries until delivered" never actually receives
+   its 200. M's suite covers the real success path (case-insensitive
+   match, valid `{"ok":true,"result":...}` body: delivered=32) and
+   reproduces the observed request path `POST /bot<token>/SendMessage`.
+
+D3 [info — runtime nuance] teloxide sleeps DELAY_ON_SERVER_ERROR=10 s
+   inside process_response for every 5xx before surfacing the error;
+   against matched-500 mocks the sink's retries land ~10.5 s apart
+   (3 attempts in a 26 s window); a fully-5xx endpoint abandons after
+   ≈45 s vs ≈3.5 s for connection-level failures (404s in tests). The
+   sink-side schedule itself (0.5 s base, 3 retries) is as specced;
+   document the 5xx wall-clock in RUNBOOK if alert latency matters.
+
+D4 [cosmetic — J's script] docker-verify.sh summary line echoes `$(S1)`
+   (command substitution) instead of `${S1}`: prints "last=" empty and
+   logs "S1: orden no encontrada" (observed in the run-1 transcript).
+   Exit code and all assertions unaffected ([5/6] python carries numbers).
+
+D5 [info/resolved] First workspace clippy run flagged 4 lints in M's
+   test file (extend_with_drain, collapsible_if×2, manual_range_contains)
+   plus 1 in L's p16_resilience_storage.rs (int_plus_one). M and L each
+   fixed their own; final `cargo clippy --workspace --all-targets --
+   -D warnings` exits 0 (§4).
+
+D6 [info] The current .env holds only placeholder secrets (replace-me /
+   1234567890 / all-zero hex), so the verbatim-value leg of the secret
+   scan enforces 0 values today; non-vacuity of every scan category is
+   proven by dirty-twin negative controls; it strengthens automatically
+   when real keys land.
+
+D7 [info] p15_adversarial carries 1 intentionally-ignored test
+   (`generate_static_fixtures`, a fixture generator; fixtures committed).
+
+D8 [positive — claims re-verified] P16 §2 resilience: audit degrade
+   (read-only dir AND 64 KiB tmpfs ENOSPC; in-flight entry kept, both
+   entries persisted, chain intact, degraded() clears), supervisor
+   (panic => restart, loop survives; shutdown stops restarts, task joins),
+   telegram (non-propagation, bounded retries, drop-OLDEST), ws storm
+   (10 kill cycles, 500 ms backoff floor, <=3 s cap, recovery event,
+   graceful stop) — all green in re-runs + M's adversarial probes.
+
+==================================================================
+8. HASHES & ARTIFACTS
+==================================================================
+sha256 crates/sentinel/tests/p16_adversarial.rs (1307 lines) =
+  8a5202179206ce4bed7a30fe856bc2541c7f11ee96c6d56c286c5d1dacf02f96
+sha256 tests/fixtures/p16/redaction-sample.log =
+  793167da7db630868388860a2fa142bdadc13c35bbf51af0841e72069597bcc4
+sha256 tests/fixtures/p16/README.md =
+  0dd3af2c778c3853e1a7c9c910d3e5a9836d654e46a8c91074e5f63554879a19
+sha256 docs/evidence/p16-journal-race-tail.jsonl =
+  f6420a2b1854fa8d52a9324e172a95b1a7937140e838b4f4be11fdc03dec8bcc
+sha256 data/audit/journal-20261006.jsonl (immediately post-repair, 43
+entries, audit-verify ✅) =
+  e692a1126c57111edd30b77987f2d66beb03c596bea98262065cb2dbd6ccf2e4
+data/audit/journal-20261006.jsonl after J's clean run-3 (47 entries seq
+0..46, audit-verify ✅ consistent) =
+  e571d622fdc8722c63bba74ec06bcd4e6f8197873f32f07824d3cc4cbd282ab2
+(scratch) p16-journal-race-full.jsonl =
+  e0385dc8c088b1b4fa3a4a2d40e12695e4607ed221920338e91f1c2a07f2a051
+
+Raw logs kept in scratch (not committed): p16_run1.log, p16_run3.log,
+p16_final_suites.log, p16_gate2.log, p16-m-docker.log,
+p16-verify-console.log (J run 1), p16-verify-console2.log (J run 2),
+p16_journal_check.py, p16_journal_stats.py, p16_seq_continuity.py,
+p16-m-docker.sh, p16-verify-override.yml.

@@ -23,14 +23,29 @@
 //!   supplies the real breaker inputs;
 //! - batch: immediately, then every 60 s, **plus** a 500 ms poll that anchors
 //!   as soon as any un-anchored entry has `trigger = REFLEX`;
-//! - failures: exponential backoff 1 s → 30 s keeping the same `from_seq`;
-//!   nothing is dropped (the journal stays the source of truth).
+//! - failures: exponential backoff 1 s → 30 s for both batch retries
+//!   (keeping the same `from_seq`) and heartbeat retries; nothing is dropped
+//!   (the journal stays the source of truth).
+//!
+//! # Heartbeat status file (`SPEC-P16` §2)
+//!
+//! After every successful beat **and** batch anchor the service writes
+//! `data/heartbeat.json` (`HEARTBEAT_PATH` overrides the location) —
+//! atomically, via a sibling `*.tmp` file renamed over the target — with
+//! `{"ts_ms":u64,"tx_hash":str|null,"seq":u64}`. `ts_ms` is the write time
+//! (unix ms), `tx_hash` the confirmed transaction hash, and `seq` the
+//! journal cursor that success confirms: the last journal seq covered by a
+//! batch anchor, or the journal head (`AuditJournal::seq()`) read for a
+//! heartbeat summary. Writing is best-effort: failures are logged and never
+//! disturb anchoring, and an RPC outage (nothing written) leaves the file
+//! untouched.
 //!
 //! `AlloyAnchorSink::new` returns a PENDING-WALLET error while
 //! `ANCHOR_CONTRACT_ADDRESS` / `RPC_SIGNER_KEY` are missing or placeholder
 //! values (STUB-17).
 
 use std::fmt;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -322,7 +337,9 @@ pub fn risk_state_hash(canonical_summary: &str, max_tier: u8) -> String {
 /// [`AnchorSink::last_anchored_seq`] when available, else `ANCHOR_FROM_SEQ`,
 /// else 0. Journal read errors are logged and retried on the next tick;
 /// in-flight sink calls are awaited to completion (never abandoned), so
-/// shutdown never loses a possibly-landed transaction.
+/// shutdown never loses a possibly-landed transaction. Successful beats and
+/// batch anchors update the heartbeat status file (`SPEC-P16` §2) at
+/// `HEARTBEAT_PATH` (default `data/heartbeat.json`).
 ///
 /// # Errors
 /// `SentinelError::Internal` for startup-level problems only.
@@ -330,7 +347,20 @@ pub async fn run<S: AnchorSink>(
     cfg: &Config,
     journal: Arc<Mutex<AuditJournal>>,
     sink: S,
+    shutdown: watch::Receiver<bool>,
+) -> Result<AnchorRunReport> {
+    let status_path = heartbeat_status_path();
+    run_with_status_path(cfg, journal, sink, shutdown, &status_path).await
+}
+
+/// [`run`] with an explicit heartbeat status file path (the daemon resolves
+/// `HEARTBEAT_PATH` / `data/heartbeat.json`; tests use a scratch path).
+async fn run_with_status_path<S: AnchorSink>(
+    cfg: &Config,
+    journal: Arc<Mutex<AuditJournal>>,
+    sink: S,
     mut shutdown: watch::Receiver<bool>,
+    status_path: &Path,
 ) -> Result<AnchorRunReport> {
     let mut report = AnchorRunReport::default();
 
@@ -356,6 +386,13 @@ pub async fn run<S: AnchorSink>(
     let mut backoff = BACKOFF_MIN;
     let mut pending: Option<PendingBatch> = None;
     let mut want_pass = false;
+    // Heartbeat scheduler: the first interval tick arms the first beat
+    // immediately (tokio fires it right away), then on the cadence; a failed
+    // beat is retried with the shared 1 s → 30 s backoff schedule
+    // (`SPEC-P16` §2).
+    let mut beat_due = false;
+    let mut beat_attempt_at = Instant::now();
+    let mut beat_backoff = BACKOFF_MIN;
 
     loop {
         if *shutdown.borrow_and_update() {
@@ -395,6 +432,8 @@ pub async fn run<S: AnchorSink>(
                     backoff = BACKOFF_MIN;
                     pending = None;
                     want_pass = true; // drain any remaining tail immediately
+                    // Status file (P16 §2): `seq` = last journal seq covered.
+                    write_heartbeat_status(status_path, next_seq.saturating_sub(1), Some(&tx));
                 }
                 Err(err) => {
                     report.failures += 1;
@@ -412,23 +451,53 @@ pub async fn run<S: AnchorSink>(
             continue;
         }
 
-        let retry_at = pending.as_ref().map(|batch| batch.attempt_at);
+        // Attempt a due heartbeat: the first beat fires immediately, then on
+        // the cadence; a failed beat retries with backoff (`SPEC-P16` §2).
+        if beat_due && Instant::now() >= beat_attempt_at {
+            let last_seq = journal.lock().await.seq();
+            let summary = format!(
+                "{{\"batches\":{},\"entries_anchored\":{},\"last_seq\":{last_seq}}}",
+                report.batches, report.entries_anchored
+            );
+            let hash = risk_state_hash(&summary, HEARTBEAT_MAX_TIER);
+            match sink.beat(&hash, 0, HEARTBEAT_MAX_TIER).await {
+                Ok(tx) => {
+                    info!(tx = %tx, seq = last_seq, "anchor: heartbeat posted");
+                    report.heartbeats += 1;
+                    beat_backoff = BACKOFF_MIN;
+                    beat_due = false;
+                    // Status file (P16 §2): `seq` = the journal head read for
+                    // this beat's summary (matches the summary's `last_seq`).
+                    write_heartbeat_status(status_path, last_seq, Some(&tx));
+                }
+                Err(err) => {
+                    report.failures += 1;
+                    let delay = beat_backoff;
+                    beat_backoff = (beat_backoff * 2).min(BACKOFF_MAX);
+                    beat_attempt_at = Instant::now() + delay;
+                    warn!(
+                        retry_in_ms = delay.as_millis() as u64,
+                        error = %err,
+                        "anchor: heartbeat failed; backing off"
+                    );
+                }
+            }
+            continue;
+        }
+
+        let retry_at = [
+            pending.as_ref().map(|batch| batch.attempt_at),
+            beat_due.then_some(beat_attempt_at),
+        ]
+        .into_iter()
+        .flatten()
+        .min();
         tokio::select! {
             _ = shutdown.changed() => {}
             _ = heartbeat.tick() => {
-                let last_seq = journal.lock().await.seq();
-                let summary = format!(
-                    "{{\"batches\":{},\"entries_anchored\":{},\"last_seq\":{last_seq}}}",
-                    report.batches, report.entries_anchored
-                );
-                let hash = risk_state_hash(&summary, HEARTBEAT_MAX_TIER);
-                match sink.beat(&hash, 0, HEARTBEAT_MAX_TIER).await {
-                    Ok(_tx) => report.heartbeats += 1,
-                    Err(err) => {
-                        report.failures += 1;
-                        warn!(error = %err, "anchor: heartbeat failed");
-                    }
-                }
+                // Arm the next cadence beat; a scheduled retry keeps its
+                // deadline (the attempt block above runs before the select).
+                beat_due = true;
             }
             _ = batch_tick.tick() => {
                 want_pass = true;
@@ -522,6 +591,69 @@ async fn sleep_until(deadline: Option<Instant>) {
         Some(at) => tokio::time::sleep_until(tokio::time::Instant::from_std(at)).await,
         None => std::future::pending::<()>().await,
     }
+}
+
+/// Default heartbeat status file (`SPEC-P16` §2).
+const HEARTBEAT_STATUS_DEFAULT: &str = "data/heartbeat.json";
+
+/// Status file path: `HEARTBEAT_PATH` when set (non-empty), else the default.
+fn heartbeat_status_path() -> PathBuf {
+    std::env::var("HEARTBEAT_PATH")
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(HEARTBEAT_STATUS_DEFAULT))
+}
+
+/// Write the heartbeat status file after a successful beat/batch anchor:
+/// `{"ts_ms":u64,"tx_hash":str|null,"seq":u64}` (`SPEC-P16` §2). `seq` is the
+/// journal cursor that success confirms (see the module docs). Failures are
+/// logged and never disturb anchoring.
+fn write_heartbeat_status(path: &Path, seq: u64, tx_hash: Option<&str>) {
+    match write_status_file(path, seq, tx_hash) {
+        Ok(()) => tracing::debug!(path = %path.display(), seq, "anchor: heartbeat status written"),
+        Err(err) => {
+            warn!(path = %path.display(), error = %err, "anchor: heartbeat status not written")
+        }
+    }
+}
+
+/// Serialize and atomically replace `path` (write a sibling `*.tmp` file,
+/// then rename it over the target). Missing parent directories are created.
+fn write_status_file(path: &Path, seq: u64, tx_hash: Option<&str>) -> std::io::Result<()> {
+    use std::io::Write as _;
+
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent)?;
+    }
+    let payload = serde_json::json!({
+        "ts_ms": unix_ms(),
+        "tx_hash": tx_hash,
+        "seq": seq,
+    });
+    let mut line = serde_json::to_string(&payload).map_err(std::io::Error::other)?;
+    line.push('\n');
+
+    let mut tmp_name = path.as_os_str().to_os_string();
+    tmp_name.push(".tmp");
+    let tmp = PathBuf::from(tmp_name);
+    {
+        let mut file = std::fs::File::create(&tmp)?;
+        file.write_all(line.as_bytes())?;
+        file.sync_all()?;
+    }
+    std::fs::rename(&tmp, path)
+}
+
+/// Milliseconds since the Unix epoch (the status file's `ts_ms`).
+fn unix_ms() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| u64::try_from(elapsed.as_millis()).unwrap_or(u64::MAX))
+        .unwrap_or_default()
 }
 
 /// PENDING-WALLET error for missing/placeholder anchor configuration.
@@ -739,6 +871,7 @@ mod tests {
         batches: Vec<BatchCall>,
         beats: Vec<(String, u32, u8, Instant)>,
         fail_anchor_attempts: usize,
+        fail_beat_attempts: usize,
     }
 
     #[derive(Clone)]
@@ -758,6 +891,12 @@ mod tests {
         fn failing(hint: Option<u64>, failures: usize) -> Self {
             let sink = Self::new(hint);
             sink.state.lock().expect("mock lock").fail_anchor_attempts = failures;
+            sink
+        }
+
+        fn failing_beats(hint: Option<u64>, failures: usize) -> Self {
+            let sink = Self::new(hint);
+            sink.state.lock().expect("mock lock").fail_beat_attempts = failures;
             sink
         }
 
@@ -797,12 +936,17 @@ mod tests {
             open_positions: u32,
             max_tier: u8,
         ) -> Result<String> {
-            self.state.lock().expect("mock lock").beats.push((
+            let mut state = self.state.lock().expect("mock lock");
+            state.beats.push((
                 risk_state_hash.to_owned(),
                 open_positions,
                 max_tier,
                 Instant::now(),
             ));
+            if state.fail_beat_attempts > 0 {
+                state.fail_beat_attempts -= 1;
+                return Err(SentinelError::Internal("mock beat failure".to_string()));
+            }
             Ok(format!("0x{}", "cd".repeat(32)))
         }
 
@@ -870,25 +1014,41 @@ mod tests {
         }
     }
 
-    /// Start `run` on a journal, returning (handle, sink, journal, shutdown).
+    /// Start [`run_with_status_path`] on a journal, returning (handle,
+    /// shutdown). `status_path` is a scratch heartbeat-status file — never
+    /// the real `data/heartbeat.json` (tests must not touch the repo tree).
     fn spawn_run(
         cfg: Config,
         journal: Arc<Mutex<AuditJournal>>,
         sink: MockSink,
+        status_path: PathBuf,
     ) -> (
         tokio::task::JoinHandle<Result<AnchorRunReport>>,
         watch::Sender<bool>,
     ) {
         let (tx, rx) = watch::channel(false);
-        let handle = tokio::spawn(async move { run(&cfg, journal, sink, rx).await });
+        let handle = tokio::spawn(async move {
+            run_with_status_path(&cfg, journal, sink, rx, &status_path).await
+        });
         (handle, tx)
+    }
+
+    /// A scratch heartbeat-status path inside `dir`.
+    fn status_file(dir: &tempfile::TempDir) -> PathBuf {
+        dir.path().join("heartbeat.json")
     }
 
     #[tokio::test]
     async fn run_anchors_the_existing_tail_immediately() {
         let (_dir, journal, recorded) = test_journal(3);
         let sink = MockSink::new(Some(0));
-        let (handle, shutdown) = spawn_run(test_cfg(1), Arc::clone(&journal), sink.clone());
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let (handle, shutdown) = spawn_run(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status_file(&status_dir),
+        );
 
         let calls = wait_for_batches(&sink, 1, Duration::from_secs(5)).await;
         let _ = shutdown.send(true);
@@ -918,7 +1078,13 @@ mod tests {
         let (_dir, journal, recorded) = test_journal(5);
         // Contract already holds seqs 1..=2 (journal 0..=1) ⇒ resume at 2.
         let sink = MockSink::new(Some(2));
-        let (handle, shutdown) = spawn_run(test_cfg(1), Arc::clone(&journal), sink.clone());
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let (handle, shutdown) = spawn_run(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status_file(&status_dir),
+        );
 
         let calls = wait_for_batches(&sink, 1, Duration::from_secs(5)).await;
         let _ = shutdown.send(true);
@@ -944,7 +1110,13 @@ mod tests {
         let (_dir, journal, _) = test_journal(2);
         // Resume past the head: no batch work, only heartbeats.
         let sink = MockSink::new(Some(2));
-        let (handle, shutdown) = spawn_run(test_cfg(1), Arc::clone(&journal), sink.clone());
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let (handle, shutdown) = spawn_run(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status_file(&status_dir),
+        );
 
         let deadline = Instant::now() + Duration::from_secs(4);
         while sink.beats().len() < 2 {
@@ -986,7 +1158,13 @@ mod tests {
     async fn run_anchors_reflex_entries_immediately_but_waits_for_others() {
         let (_dir, journal, _) = test_journal(0);
         let sink = MockSink::new(Some(0));
-        let (handle, shutdown) = spawn_run(test_cfg(1), Arc::clone(&journal), sink.clone());
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let (handle, shutdown) = spawn_run(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status_file(&status_dir),
+        );
 
         // Let the initial (empty-tail) pass and a few reflex polls settle.
         tokio::time::sleep(Duration::from_millis(600)).await;
@@ -1062,7 +1240,13 @@ mod tests {
     async fn run_retries_with_exponential_backoff_keeping_from_seq() {
         let (_dir, journal, _) = test_journal(2);
         let sink = MockSink::failing(Some(0), 2);
-        let (handle, shutdown) = spawn_run(test_cfg(1), Arc::clone(&journal), sink.clone());
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let (handle, shutdown) = spawn_run(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status_file(&status_dir),
+        );
 
         // Attempt 1 at once, attempt 2 after 1 s, attempt 3 after 2 more.
         let calls = wait_for_batches(&sink, 3, Duration::from_secs(10)).await;
@@ -1095,11 +1279,18 @@ mod tests {
     async fn run_stops_cleanly_when_shutdown_is_already_flipped() {
         let (_dir, journal, _) = test_journal(0);
         let sink = MockSink::new(Some(0));
+        let status_dir = tempfile::tempdir().expect("status dir");
         let (_tx, rx) = watch::channel(true);
 
         let report = tokio::time::timeout(
             Duration::from_secs(1),
-            run(&test_cfg(1), Arc::clone(&journal), sink.clone(), rx),
+            run_with_status_path(
+                &test_cfg(1),
+                Arc::clone(&journal),
+                sink.clone(),
+                rx,
+                &status_file(&status_dir),
+            ),
         )
         .await
         .expect("immediate shutdown")
@@ -1107,6 +1298,182 @@ mod tests {
 
         assert_eq!(report, AnchorRunReport::default());
         assert!(sink.calls().is_empty() && sink.beats().is_empty());
+    }
+
+    #[tokio::test]
+    async fn run_retries_failed_beats_with_exponential_backoff() {
+        let (_dir, journal, _) = test_journal(0);
+        // Two beat failures in a row (the journal is empty: no batch work).
+        let sink = MockSink::failing_beats(Some(0), 2);
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let (handle, shutdown) = spawn_run(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status_file(&status_dir),
+        );
+
+        // Attempt 1 at once, attempt 2 after 1 s, attempt 3 after 2 more.
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while sink.beats().len() < 3 {
+            assert!(
+                Instant::now() < deadline,
+                "expected three beat attempts within 10 s; saw {}",
+                sink.beats().len()
+            );
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+        let _ = shutdown.send(true);
+        let report = tokio::time::timeout(Duration::from_secs(2), handle)
+            .await
+            .expect("shutdown is prompt")
+            .expect("task joins")
+            .expect("run is Ok");
+
+        let beats = sink.beats();
+        assert!(
+            beats[1].3.duration_since(beats[0].3) >= Duration::from_millis(800),
+            "first heartbeat retry ~1 s backoff: {beats:?}"
+        );
+        assert!(
+            beats[2].3.duration_since(beats[1].3) >= Duration::from_millis(1600),
+            "second heartbeat retry ~2 s backoff: {beats:?}"
+        );
+        assert_eq!(report.failures, 2, "two failed beats, then success");
+        assert_eq!(
+            report.heartbeats as usize,
+            beats.len() - 2,
+            "every success after the failures is counted: {beats:?}"
+        );
+        assert!(
+            sink.calls().is_empty(),
+            "no batch work with an empty journal"
+        );
+    }
+
+    #[tokio::test]
+    async fn run_writes_heartbeat_status_after_a_successful_batch_anchor() {
+        let (_dir, journal, recorded) = test_journal(2);
+        // Beats fail forever: the file then holds the batch write only,
+        // which pins "written after every successful batch anchor" exactly.
+        let sink = MockSink::failing_beats(Some(0), usize::MAX);
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let status = status_file(&status_dir);
+        let (handle, shutdown) = spawn_run(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status.clone(),
+        );
+
+        let _ = wait_for_batches(&sink, 1, Duration::from_secs(5)).await;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !status.exists() {
+            assert!(
+                Instant::now() < deadline,
+                "heartbeat status file not written after the batch anchor"
+            );
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+        let _ = shutdown.send(true);
+        let _ = tokio::time::timeout(Duration::from_secs(2), handle)
+            .await
+            .expect("shutdown is prompt")
+            .expect("task joins")
+            .expect("run is Ok");
+
+        let value: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&status).expect("status file"))
+                .expect("status file is JSON");
+        assert_eq!(value["seq"], serde_json::json!(recorded.len() as u64 - 1));
+        assert_eq!(
+            value["tx_hash"],
+            serde_json::json!(format!("0x{}", "ab".repeat(32))),
+            "the mock batch tx hash"
+        );
+        assert!(value["ts_ms"].as_u64().is_some(), "ts_ms present");
+        // Atomic write: no *.tmp remnant.
+        assert!(!status.with_extension("json.tmp").exists());
+    }
+
+    #[tokio::test]
+    async fn run_writes_heartbeat_status_after_a_successful_beat() {
+        let (_dir, journal, _) = test_journal(2);
+        // Resume past the head: no batch work; every beat succeeds and the
+        // file must track the journal head (`seq` = 2) and the beat tx hash.
+        let sink = MockSink::new(Some(2));
+        let status_dir = tempfile::tempdir().expect("status dir");
+        let status = status_file(&status_dir);
+        let (handle, shutdown) = spawn_run(
+            test_cfg(1),
+            Arc::clone(&journal),
+            sink.clone(),
+            status.clone(),
+        );
+
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            if let Ok(raw) = std::fs::read_to_string(&status)
+                && let Ok(value) = serde_json::from_str::<serde_json::Value>(&raw)
+                && value["seq"] == serde_json::json!(2)
+            {
+                assert_eq!(
+                    value["tx_hash"],
+                    serde_json::json!(format!("0x{}", "cd".repeat(32))),
+                    "the mock beat tx hash"
+                );
+                assert!(value["ts_ms"].as_u64().is_some());
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "heartbeat status file not written after a successful beat"
+            );
+            tokio::time::sleep(Duration::from_millis(25)).await;
+        }
+        let _ = shutdown.send(true);
+        let _ = tokio::time::timeout(Duration::from_secs(2), handle)
+            .await
+            .expect("shutdown is prompt")
+            .expect("task joins")
+            .expect("run is Ok");
+    }
+
+    #[test]
+    fn write_status_file_replaces_atomically_with_the_frozen_shape() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let path = dir.path().join("nested/deep/heartbeat.json");
+        write_status_file(&path, 7, Some("0xabc")).expect("write");
+        let value: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).expect("read")).expect("json");
+        assert_eq!(value["seq"], serde_json::json!(7));
+        assert_eq!(value["tx_hash"], serde_json::json!("0xabc"));
+        assert!(value["ts_ms"].as_u64().is_some());
+
+        // `tx_hash` may be null (shape allows str|null), and the previous
+        // contents are replaced, not appended.
+        write_status_file(&path, 8, None).expect("write null");
+        let value: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&path).expect("read")).expect("json");
+        assert_eq!(value["seq"], serde_json::json!(8));
+        assert!(value["tx_hash"].is_null());
+        assert!(value["ts_ms"].as_u64().is_some());
+        assert_eq!(
+            std::fs::read_to_string(&path)
+                .expect("read")
+                .lines()
+                .count(),
+            1,
+            "exactly one line (replaced, not appended)"
+        );
+
+        // No temp remnant is left behind.
+        let names: Vec<String> = std::fs::read_dir(path.parent().expect("parent"))
+            .expect("read_dir")
+            .flatten()
+            .map(|entry| entry.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(names, vec!["heartbeat.json".to_string()]);
     }
 
     #[test]

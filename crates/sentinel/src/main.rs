@@ -89,52 +89,76 @@ async fn main() -> anyhow::Result<()> {
         && !token.contains("replace")
         && !cfg.telegram.allowed_user_ids.is_empty();
     if bot_enabled {
-        let engine = if cfg.features.enable_strategy {
-            Some(
-                StrategyEngine::new(
-                    QwenProvider::new(&cfg.qwen),
-                    cfg.strategy.min_interval_secs,
-                    cfg.strategy.confidence_floor,
-                )
-                .with_fallback(KimiProvider::new(&cfg.kimi))
-                .with_budget(
-                    cfg.strategy.max_consults_per_hour,
-                    cfg.strategy.max_tokens_per_day,
-                ),
-            )
-        } else {
-            None
-        };
-        let human_executor = match build_human_executor(&cfg, &state).await {
-            Ok(executor) => Some(executor),
-            Err(err) => {
-                tracing::warn!(error = %err, "human executor unavailable (bot orders disabled)");
-                None
-            }
-        };
-        let bot_ctx = BotContext {
-            cfg: cfg.clone(),
-            state: Arc::clone(&state),
-            health: Arc::clone(&health),
-            journal: journal.clone(),
-            policy: Arc::clone(&policy),
-            approvals: Arc::new(ApprovalQueue::new()),
-            engine,
-            executor: human_executor,
-            spend_ledger: Some(SpendLedger::new(SPEND_LEDGER_PATH)),
-            kill: Arc::clone(&kill),
-            pause_pending: AtomicBool::new(false),
-        };
-        let bot_run = sentinel::bot::BotRunConfig {
-            token: token.clone(),
-            allowed_user_ids: cfg.telegram.allowed_user_ids.clone(),
-            approval_chat_id: cfg.telegram.approval_chat_id,
-            cfg: cfg.clone(),
-        };
-        let bot_shutdown = shutdown_tx.subscribe();
-        tokio::spawn(async move {
-            if let Err(err) = sentinel::bot::run(bot_run, bot_ctx, bot_shutdown).await {
-                tracing::warn!(error = %err, "telegram bot stopped");
+        // The approval queue survives bot restarts: created once, shared with
+        // every attempt (P16 supervision rebuilds the rest per attempt).
+        let bot_approvals = Arc::new(ApprovalQueue::new());
+        let bot_watch = shutdown_tx.subscribe();
+        let bot_cfg = cfg.clone();
+        let bot_state = Arc::clone(&state);
+        let bot_health = Arc::clone(&health);
+        let bot_journal = journal.clone();
+        let bot_policy = Arc::clone(&policy);
+        let bot_kill = Arc::clone(&kill);
+        let bot_token = token.clone();
+        // Supervised (SPEC-P16 §2): a bot panic/exit is caught, logged with the
+        // task name + restart counter, and retried with backoff; the context is
+        // rebuilt per attempt because the executors/engines are not `Clone`.
+        sentinel::supervisor::spawn("telegram-bot", bot_watch.clone(), move || {
+            let cfg = bot_cfg.clone();
+            let state = Arc::clone(&bot_state);
+            let health = Arc::clone(&bot_health);
+            let journal = bot_journal.clone();
+            let policy = Arc::clone(&bot_policy);
+            let kill = Arc::clone(&bot_kill);
+            let approvals = Arc::clone(&bot_approvals);
+            let token = bot_token.clone();
+            let bot_shutdown = bot_watch.clone();
+            async move {
+                let engine = if cfg.features.enable_strategy {
+                    Some(
+                        StrategyEngine::new(
+                            QwenProvider::new(&cfg.qwen),
+                            cfg.strategy.min_interval_secs,
+                            cfg.strategy.confidence_floor,
+                        )
+                        .with_fallback(KimiProvider::new(&cfg.kimi))
+                        .with_budget(
+                            cfg.strategy.max_consults_per_hour,
+                            cfg.strategy.max_tokens_per_day,
+                        ),
+                    )
+                } else {
+                    None
+                };
+                let human_executor = match build_human_executor(&cfg, &state).await {
+                    Ok(executor) => Some(executor),
+                    Err(err) => {
+                        tracing::warn!(error = %err, "human executor unavailable (bot orders disabled)");
+                        None
+                    }
+                };
+                let bot_ctx = BotContext {
+                    cfg: cfg.clone(),
+                    state: Arc::clone(&state),
+                    health: Arc::clone(&health),
+                    journal: journal.clone(),
+                    policy: Arc::clone(&policy),
+                    approvals,
+                    engine,
+                    executor: human_executor,
+                    spend_ledger: Some(SpendLedger::new(SPEND_LEDGER_PATH)),
+                    kill: Arc::clone(&kill),
+                    pause_pending: AtomicBool::new(false),
+                };
+                let bot_run = sentinel::bot::BotRunConfig {
+                    token,
+                    allowed_user_ids: cfg.telegram.allowed_user_ids.clone(),
+                    approval_chat_id: cfg.telegram.approval_chat_id,
+                    cfg: cfg.clone(),
+                };
+                if let Err(err) = sentinel::bot::run(bot_run, bot_ctx, bot_shutdown).await {
+                    tracing::warn!(error = %err, "telegram bot stopped");
+                }
             }
         });
         tracing::info!("telegram bot spawned");
@@ -398,22 +422,27 @@ fn finish(outcome: PipelineOutcome) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// SIGINT/SIGTERM → shutdown watch.
+/// SIGINT/SIGTERM → shutdown watch (supervised: signal-handler registration is
+/// retried if it ever fails; once the flag is raised the forwarder stops).
 fn spawn_signal_forwarder(shutdown_tx: watch::Sender<bool>) {
-    tokio::spawn(async move {
-        use tokio::signal::unix::{SignalKind, signal};
-        let Ok(mut sigint) = signal(SignalKind::interrupt()) else {
-            return;
-        };
-        let Ok(mut sigterm) = signal(SignalKind::terminate()) else {
-            return;
-        };
-        tokio::select! {
-            _ = sigint.recv() => {},
-            _ = sigterm.recv() => {},
+    let watch = shutdown_tx.subscribe();
+    sentinel::supervisor::spawn("signal-forwarder", watch, move || {
+        let shutdown_tx = shutdown_tx.clone();
+        async move {
+            use tokio::signal::unix::{SignalKind, signal};
+            let Ok(mut sigint) = signal(SignalKind::interrupt()) else {
+                return;
+            };
+            let Ok(mut sigterm) = signal(SignalKind::terminate()) else {
+                return;
+            };
+            tokio::select! {
+                _ = sigint.recv() => {},
+                _ = sigterm.recv() => {},
+            }
+            tracing::info!("shutdown signal received; draining");
+            let _ = shutdown_tx.send(true);
         }
-        tracing::info!("shutdown signal received; draining");
-        let _ = shutdown_tx.send(true);
     });
 }
 
@@ -490,23 +519,34 @@ fn spawn_health(
         paths: sentinel::api::DashboardPaths::default(),
     };
     let app = sentinel::health::router(health).merge(sentinel::api::dashboard_router(dashboard));
-    tokio::spawn(async move {
-        let listener = match tokio::net::TcpListener::bind(("0.0.0.0", port)).await {
-            Ok(listener) => listener,
-            Err(err) => {
-                tracing::warn!(error = %err, "health server bind failed");
-                return;
-            }
-        };
-        tracing::info!(port, "health + audit API on /healthz, /api/audit");
-        if let Err(err) = axum::serve(listener, app)
+    // Supervised (SPEC-P16 §2): an early exit (e.g. a transient bind failure)
+    // is retried with backoff; the graceful drain on shutdown stops the loop.
+    sentinel::supervisor::spawn("health-api", shutdown.clone(), move || {
+        let app = app.clone();
+        let serve_shutdown = shutdown.clone();
+        async move {
+            let listener = match tokio::net::TcpListener::bind(("0.0.0.0", port)).await {
+                Ok(listener) => listener,
+                Err(err) => {
+                    tracing::warn!(error = %err, "health server bind failed");
+                    return;
+                }
+            };
+            tracing::info!(port, "health + audit API on /healthz, /api/audit");
+            if let Err(err) = axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+            )
             .with_graceful_shutdown(async move {
-                let mut shutdown = shutdown;
-                let _ = shutdown.changed().await;
+                let mut serve_shutdown = serve_shutdown;
+                if !*serve_shutdown.borrow_and_update() {
+                    let _ = serve_shutdown.changed().await;
+                }
             })
             .await
-        {
-            tracing::warn!(error = %err, "health server stopped");
+            {
+                tracing::warn!(error = %err, "health server stopped");
+            }
         }
     });
 }
@@ -533,16 +573,31 @@ fn spawn_anchor(
         );
         return;
     }
-    match sentinel::anchor::AlloyAnchorSink::new(cfg) {
-        Ok(sink) => {
-            let cfg = cfg.clone();
-            tokio::spawn(async move {
-                match sentinel::anchor::run(&cfg, journal, sink, shutdown).await {
-                    Ok(report) => tracing::info!(?report, "anchor service finished"),
-                    Err(err) => tracing::warn!(error = %err, "anchor service stopped"),
-                }
-            });
-        }
-        Err(err) => tracing::warn!(error = %err, "anchor service unavailable"),
+    // Pre-flight construction: a bad configuration is skipped loudly (as
+    // before P16); the sink itself is rebuilt per attempt below because it is
+    // consumed by `anchor::run` and is not `Clone`.
+    if let Err(err) = sentinel::anchor::AlloyAnchorSink::new(cfg) {
+        tracing::warn!(error = %err, "anchor service unavailable");
+        return;
     }
+    let cfg = cfg.clone();
+    let watch = shutdown.clone();
+    // Supervised (SPEC-P16 §2): an anchor stop/error is caught, logged and
+    // retried with backoff; the shutdown drain stops the loop.
+    sentinel::supervisor::spawn("anchor", watch, move || {
+        let cfg = cfg.clone();
+        let journal = Arc::clone(&journal);
+        let run_shutdown = shutdown.clone();
+        async move {
+            match sentinel::anchor::AlloyAnchorSink::new(&cfg) {
+                Ok(sink) => match sentinel::anchor::run(&cfg, journal, sink, run_shutdown).await {
+                    Ok(report) => tracing::info!(?report, "anchor service finished"),
+                    Err(err) => {
+                        tracing::warn!(error = %err, "anchor service stopped");
+                    }
+                },
+                Err(err) => tracing::warn!(error = %err, "anchor service unavailable"),
+            }
+        }
+    });
 }

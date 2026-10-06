@@ -1,0 +1,36 @@
+# Sentinel build context filter (SPEC-P16 §1).
+#
+# Keep the docker build context small and secret-free. The image must never
+# contain `.env` or runtime state; `docs/backtest-report.json` DOES stay in
+# context (the runtime image ships it for the dashboard's backtest panel) —
+# only `docs/evidence` is excluded.
+
+# --- Rust build artifacts & VCS -------------------------------------------
+target/
+.git/
+
+# --- Runtime state (host-side journal / breaker state / logs) -------------
+data/
+logs/
+
+# --- Node trees (indexer + CRE workflow are not part of the docker image) --
+**/node_modules/
+indexer/
+workflow-cre/node_modules/
+workflow-cre/target/
+workflow-cre/dist/
+
+# --- Vendored reference repos (re-clone via scripts/verify-facts.sh) ------
+vendor/
+
+# --- Foundry build output (not needed by the Rust workspace) --------------
+contracts/out/
+contracts/cache/
+
+# --- Evidence dumps (keep docs/backtest-report.json) ----------------------
+docs/evidence/
+
+# --- Secrets: never send `.env` to the daemon (placeholders exempt) -------
+.env
+.env.*
+!.env.example

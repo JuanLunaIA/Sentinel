@@ -1,0 +1,35 @@
+# Sentinel — docker compose (SPEC-P16 §1).
+#
+# Build the image first (see docs/RUNBOOK.md §Docker):
+#   docker build \
+#     --build-arg SENTINEL_UID=$(id -u) --build-arg SENTINEL_GID=$(id -g) \
+#     -t sentinel:p16 .
+# Then bring the stack up:
+#   docker compose up -d
+#
+# - sentinel: the daemon; serves /healthz (+ /api/*) on host :8080.
+# - breaker:  the dead-man's switch (P14); its armed HTTP surface stays on the
+#   internal network — uncomment the BREAKER_PORT mapping to expose it.
+# Both share ./data:/app/data so the audit journal and breaker state survive
+# restarts (and `docker compose down`/`up` cycles).
+services:
+  sentinel:
+    image: sentinel:p16
+    ports:
+      - "8080:8080"
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  breaker:
+    image: sentinel:p16
+    command: ["/usr/local/bin/breaker"]
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    # BREAKER_PORT (default 9090) stays internal; map it if you want the
+    # armed surface reachable from the host:
+    # ports:
+    #   - "9090:9090"
