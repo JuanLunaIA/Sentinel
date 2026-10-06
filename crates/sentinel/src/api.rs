@@ -287,3 +287,64 @@ mod tests {
         server.abort();
     }
 }
+/// Aggregated handles for the dashboard + public API surface (SPEC-P15 §3).
+#[derive(Clone)]
+pub struct DashboardState {
+    /// Health surface (mode, uptime, feed freshness, version).
+    pub health: Arc<crate::health::HealthState>,
+    /// Audit journal handle (`None`: audit endpoints degrade to 404s).
+    pub journal: Option<Arc<Mutex<AuditJournal>>>,
+    /// Kill switch shared with the pipeline (pause/resume mutations).
+    pub kill: Arc<std::sync::atomic::AtomicBool>,
+    /// Live market/account state (`None` until wired; replay wires it too).
+    pub live_state: Option<Arc<Mutex<crate::pipeline::LiveState>>>,
+    /// Filesystem-backed panels (P13/P14/nansen/heartbeat).
+    pub paths: DashboardPaths,
+}
+
+/// Filesystem paths backing dashboard panels (SPEC-P15 §2).
+#[derive(Debug, Clone)]
+pub struct DashboardPaths {
+    /// Journal directory (`AUDIT_DIR` env honored by [`Default`]).
+    pub audit_dir: PathBuf,
+    /// Nansen spend ledger JSONL.
+    pub spend_ledger: PathBuf,
+    /// P13 backtest report JSON (`BACKTEST_REPORT_PATH` env honored).
+    pub backtest_report: PathBuf,
+    /// Breaker state JSON.
+    pub breaker_state: PathBuf,
+    /// Breaker journal JSONL.
+    pub breaker_journal: PathBuf,
+    /// Anchor heartbeat status JSON (written by the anchor task).
+    pub heartbeat: PathBuf,
+}
+
+impl Default for DashboardPaths {
+    fn default() -> Self {
+        Self {
+            audit_dir: std::env::var("AUDIT_DIR")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| PathBuf::from(DEFAULT_AUDIT_DIR)),
+            spend_ledger: PathBuf::from("data/nansen-spend.jsonl"),
+            backtest_report: std::env::var("BACKTEST_REPORT_PATH")
+                .map(PathBuf::from)
+                .unwrap_or_else(|_| PathBuf::from("docs/backtest-report.json")),
+            breaker_state: PathBuf::from("data/breaker-state.json"),
+            breaker_journal: PathBuf::from("data/breaker-journal.jsonl"),
+            heartbeat: PathBuf::from("data/heartbeat.json"),
+        }
+    }
+}
+
+/// Full dashboard + API router (SPEC-P15 §2) — implemented by the P15 wave.
+///
+/// Until then this serves the audit endpoints (P10 behavior preserved) plus a
+/// placeholder `/`. The P15 wave replaces the placeholder with the embedded
+/// `dashboard/index.html` and adds the `/api/*` panels.
+pub fn dashboard_router(state: DashboardState) -> Router {
+    let base = match &state.journal {
+        Some(journal) => audit_router(Arc::clone(journal)),
+        None => Router::new(),
+    };
+    base.route("/", get(|| async { "STUB: dashboard pending (P15 wave)" }))
+}

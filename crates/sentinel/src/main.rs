@@ -239,6 +239,13 @@ where
     // P14: replay demos keep heartbeats live for the dead-man's switch
     // (self-gated: no-op unless ENABLE_ANCHOR + address + signer key exist).
     spawn_anchor(&cfg, journal.clone(), shutdown.clone());
+    spawn_health(
+        Arc::clone(&health),
+        journal.clone(),
+        Arc::clone(&kill),
+        Arc::clone(&state),
+        shutdown.clone(),
+    );
     let executor = DryRunExecutor::new(
         StateProbe::new(Arc::clone(&state)),
         10,
@@ -288,7 +295,13 @@ where
         StateProbe::new(Arc::clone(&state)),
         Duration::from_secs(3),
     );
-    spawn_health(Arc::clone(&health), journal.clone(), shutdown.clone());
+    spawn_health(
+        Arc::clone(&health),
+        journal.clone(),
+        Arc::clone(&kill),
+        Arc::clone(&state),
+        shutdown.clone(),
+    );
     spawn_anchor(&cfg, journal.clone(), shutdown.clone());
     let pipeline = Pipeline::new(cfg, feed, executor, sink, state, health, RunMode::Live);
     let pipeline = match journal {
@@ -345,7 +358,13 @@ where
         StateProbe::new(Arc::clone(&state)),
         Duration::from_secs(5),
     );
-    spawn_health(Arc::clone(&health), journal.clone(), shutdown.clone());
+    spawn_health(
+        Arc::clone(&health),
+        journal.clone(),
+        Arc::clone(&kill),
+        Arc::clone(&state),
+        shutdown.clone(),
+    );
     spawn_anchor(&cfg, journal.clone(), shutdown.clone());
     let pipeline = Pipeline::new(cfg, feed, executor, sink, state, health, RunMode::Live);
     let pipeline = match journal {
@@ -455,17 +474,22 @@ async fn build_human_executor(
 fn spawn_health(
     health: Arc<HealthState>,
     journal: Option<Arc<Mutex<AuditJournal>>>,
+    kill: Arc<AtomicBool>,
+    state: Arc<Mutex<LiveState>>,
     shutdown: watch::Receiver<bool>,
 ) {
     let port = std::env::var("PORT")
         .ok()
         .and_then(|value| value.parse::<u16>().ok())
         .unwrap_or(8080);
-    let app = match journal {
-        Some(journal) => sentinel::health::router(Arc::clone(&health))
-            .merge(sentinel::api::audit_router(journal)),
-        None => sentinel::health::router(health),
+    let dashboard = sentinel::api::DashboardState {
+        health: Arc::clone(&health),
+        journal: journal.clone(),
+        kill,
+        live_state: Some(state),
+        paths: sentinel::api::DashboardPaths::default(),
     };
+    let app = sentinel::health::router(health).merge(sentinel::api::dashboard_router(dashboard));
     tokio::spawn(async move {
         let listener = match tokio::net::TcpListener::bind(("0.0.0.0", port)).await {
             Ok(listener) => listener,
