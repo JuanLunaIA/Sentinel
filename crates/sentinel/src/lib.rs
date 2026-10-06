@@ -14,6 +14,7 @@
 pub mod anchor;
 pub mod api;
 pub mod args;
+pub mod bot;
 pub mod brain;
 pub mod config;
 pub mod error;

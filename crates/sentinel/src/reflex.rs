@@ -61,10 +61,8 @@ fn reflex_params(cfg: &Config) -> ReflexConfig {
     }
 }
 
-/// Policy limits from the app configuration.
-///
-/// The kill switch is wired in P11 (Telegram); until then it is always off.
-fn policy_params(cfg: &Config) -> PolicyConfig {
+/// Policy limits from the app configuration (kill switch via the bot, P11).
+fn policy_params(cfg: &Config, kill_switch: bool) -> PolicyConfig {
     PolicyConfig {
         market_allowlist: cfg
             .risk
@@ -76,7 +74,7 @@ fn policy_params(cfg: &Config) -> PolicyConfig {
         max_order_size_usd: cfg.risk.max_order_size_usd,
         max_daily_actions: cfg.risk.max_daily_actions,
         require_approval_above_usd: cfg.risk.require_approval_above_usd,
-        kill_switch: false,
+        kill_switch,
     }
 }
 
@@ -105,10 +103,11 @@ pub fn decide(
     seq: &mut u64,
     now_ms: u64,
     quality: DataQuality,
+    kill_switch: bool,
 ) -> Vec<PlannedAction> {
     let thresholds = thresholds_from(cfg);
     let reflex_cfg = reflex_params(cfg);
-    let policy_cfg = policy_params(cfg);
+    let policy_cfg = policy_params(cfg, kill_switch);
     let mut planned = Vec::new();
 
     for pos in &state.positions {

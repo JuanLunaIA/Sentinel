@@ -357,6 +357,14 @@ pub struct Pipeline<F, E, S> {
     /// Optional audit journal (SPEC-P10 §8): intents before execution,
     /// outcomes after; `None` keeps the pipeline journal-free (P06 tests).
     journal: Option<Arc<Mutex<sentinel_core::audit::AuditJournal>>>,
+    /// Base configuration (policy overlay applies on top).
+    base_cfg: Config,
+    /// Shared policy overlay (SPEC-P11 §6); `None` keeps the static config.
+    policy: Option<Arc<crate::bot::policy_admin::SharedPolicy>>,
+    /// Kill switch shared with the bot.
+    kill: Arc<std::sync::atomic::AtomicBool>,
+    /// Last applied overlay version.
+    last_policy_version: u64,
 }
 
 impl<F, E, S> Pipeline<F, E, S> {
@@ -370,6 +378,7 @@ impl<F, E, S> Pipeline<F, E, S> {
         health: Arc<HealthState>,
         run_mode: RunMode,
     ) -> Self {
+        let base_cfg = cfg.clone();
         Self {
             cfg,
             feed,
@@ -383,6 +392,10 @@ impl<F, E, S> Pipeline<F, E, S> {
             seq: 0,
             last_tier: std::collections::HashMap::new(),
             journal: None,
+            base_cfg,
+            policy: None,
+            kill: Arc::new(std::sync::atomic::AtomicBool::new(false)),
+            last_policy_version: 0,
         }
     }
 
@@ -391,6 +404,32 @@ impl<F, E, S> Pipeline<F, E, S> {
     pub fn with_journal(mut self, journal: Arc<Mutex<sentinel_core::audit::AuditJournal>>) -> Self {
         self.journal = Some(journal);
         self
+    }
+
+    /// Attach the shared policy overlay (SPEC-P11 §6): `/policy set` edits
+    /// are picked up on the next evaluation via the version counter.
+    pub fn with_policy(mut self, policy: Arc<crate::bot::policy_admin::SharedPolicy>) -> Self {
+        self.policy = Some(policy);
+        self
+    }
+
+    /// Attach the kill switch shared with the bot (SPEC-P11 §6).
+    pub fn with_kill_switch(mut self, kill: Arc<std::sync::atomic::AtomicBool>) -> Self {
+        self.kill = kill;
+        self
+    }
+
+    /// Refresh the effective config from the overlay when its version moved.
+    fn refresh_policy(&mut self) {
+        let Some(policy) = &self.policy else {
+            return;
+        };
+        let version = policy.version();
+        if version != self.last_policy_version {
+            self.cfg =
+                crate::bot::policy_admin::apply_to_config(&self.base_cfg, &policy.snapshot());
+            self.last_policy_version = version;
+        }
     }
 
     /// Journal one intent (no-op when no journal is attached). Failures log
@@ -639,6 +678,12 @@ where
             return emitted;
         };
 
+        self.refresh_policy();
+        let kill = self.kill.load(std::sync::atomic::Ordering::Relaxed)
+            || self
+                .policy
+                .as_ref()
+                .is_some_and(|policy| policy.kill_switch());
         let planned = reflex::decide(
             &account,
             &markets,
@@ -648,6 +693,7 @@ where
             &mut self.seq,
             now_ms,
             quality,
+            kill,
         );
 
         for action in planned {
