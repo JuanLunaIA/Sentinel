@@ -1,11 +1,21 @@
 //! `brain_eval` — score the strategy brain over golden scenarios.
 //!
-//! Usage (`SPEC-P07.md` §7):
+//! Usage (`SPEC-P07.md` §7; provider chain per `SPEC-P08.md` §5):
 //!   `cargo run --bin brain_eval -- [--scenarios tests/golden] [--mock]
-//!    [--provider qwen|kimi] [--out docs/evidence/p07-brain-eval.txt]`
+//!    [--provider qwen|kimi] [--out docs/evidence/p08-brain-eval.txt]`
 //!
 //! `--mock` replays each scenario's canned `mock_completion` through the real
-//! engine (no network); live mode builds the configured Qwen/Kimi provider.
+//! engine (no network). Live mode builds the configured provider chain — Qwen
+//! primary, Kimi fallback, consult/token budget armed — or a single provider
+//! when `--provider qwen|kimi` is passed explicitly.
+//!
+//! `FORCE_PROVIDER_FAIL=<name>` (environment, optional) force-fails the named
+//! provider without a call (`with_forced_failure`); a name matching no provider
+//! is a no-op. In `--mock` mode a set value builds an equivalent mock chain —
+//! a force-failed primary plus the scenario's canned completion on the `kimi`
+//! fallback — so the failover machinery is demoed offline and every row
+//! reports `provider=kimi`.
+//!
 //! Every scenario produces a row (errors are rendered, never panics), the
 //! per-scenario `now_ms` advances by `(min_interval + 1) s` so the rate
 //! limiter cannot interfere, and an all-errored run still exits 0 with the
@@ -28,22 +38,39 @@ use sentinel_core::types::{DecisionAction, MarketId};
 const USAGE: &str =
     "usage: brain_eval [--scenarios DIR] [--mock] [--provider qwen|kimi] [--out PATH]";
 
+/// Environment variable naming a provider to force-fail (no network call).
+const FORCE_PROVIDER_FAIL_ENV: &str = "FORCE_PROVIDER_FAIL";
+
 /// Minimum consult interval assumed in `--mock` runs, seconds; mirrors the
 /// `STRATEGY_MIN_INTERVAL_SECS` default. A fresh engine per scenario means the
 /// rate limiter cannot interfere anyway; the same `now_ms` formula as live
 /// mode is kept.
 const MOCK_MIN_INTERVAL_SECS: u64 = 120;
 
-/// Provider label rendered on mock-mode error rows.
+/// Fallback provider name of the mock chain (`SPEC-P08.md` §5).
+const MOCK_FALLBACK_NAME: &str = "kimi";
+
+/// Provider label rendered on single-provider mock rows that carry no outcome
+/// (the P07 `MockProvider::canned` identity).
 const MOCK_PROVIDER: &str = "mock";
 
 /// Which live provider to build.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ProviderChoice {
-    /// Qwen (primary).
+    /// Qwen (chain primary).
     Qwen,
-    /// Kimi (fallback; pulled forward for P07).
+    /// Kimi (chain fallback; pulled forward for P07).
     Kimi,
+}
+
+impl ProviderChoice {
+    /// Provider name as the provider implementations themselves report it.
+    fn name(self) -> &'static str {
+        match self {
+            ProviderChoice::Qwen => "qwen",
+            ProviderChoice::Kimi => "kimi",
+        }
+    }
 }
 
 /// Parsed command-line options.
@@ -56,8 +83,12 @@ struct Options {
     scenarios_explicit: bool,
     /// Replay `mock_completion`s instead of calling a live provider.
     mock: bool,
-    /// Live provider to build (ignored with `--mock`).
+    /// Live provider to build (ignored with `--mock` unless explicit; the
+    /// implicit default is the full Qwen→Kimi chain).
     provider: ProviderChoice,
+    /// Whether `--provider` was passed explicitly: selects that single
+    /// provider with no chain (live and mock mode alike).
+    provider_explicit: bool,
     /// Where to write a copy of the scoreboard.
     out: Option<PathBuf>,
 }
@@ -70,6 +101,7 @@ impl Options {
             scenarios_explicit: false,
             mock: false,
             provider: ProviderChoice::Qwen,
+            provider_explicit: false,
             out: None,
         };
         let mut args = args;
@@ -90,6 +122,7 @@ impl Options {
                         "kimi" => ProviderChoice::Kimi,
                         other => bail!("unknown provider {other:?} (expected qwen or kimi)"),
                     };
+                    options.provider_explicit = true;
                 }
                 "--out" => {
                     let value = args.next().context("--out needs a path argument")?;
@@ -187,6 +220,31 @@ fn load_scenarios(dir: &Path) -> anyhow::Result<Vec<Scenario>> {
     Ok(scenarios)
 }
 
+/// `FORCE_PROVIDER_FAIL` (environment), when set to a non-empty value.
+///
+/// The mock chain needs the name as a `&'static str` (`MockProvider::named`,
+/// `SPEC-P08.md` §4) while the env value is runtime data; the harness is a
+/// short-lived process, so leaking the one small name per run is the honest
+/// bridge. The name is compared by equality against each provider slot, so a
+/// value matching no provider is a no-op.
+fn forced_failure_from_env() -> Option<&'static str> {
+    std::env::var(FORCE_PROVIDER_FAIL_ENV)
+        .ok()
+        .filter(|name| !name.is_empty())
+        .map(|name| &*Box::leak(name.into_boxed_str()))
+}
+
+/// Apply a forced failure, when configured, to a freshly built engine.
+fn apply_forced_failure<P: Provider, F: Provider>(
+    engine: StrategyEngine<P, F>,
+    forced_failure: Option<&str>,
+) -> StrategyEngine<P, F> {
+    match forced_failure {
+        Some(name) => engine.with_forced_failure(name),
+        None => engine,
+    }
+}
+
 /// Run one consult per scenario, capturing every failure as a rendered error.
 async fn run_scenarios(
     options: &Options,
@@ -198,6 +256,7 @@ async fn run_scenarios(
     } else {
         Some(Config::load().context("load configuration for the live provider")?)
     };
+    let forced_failure = forced_failure_from_env();
 
     let mut results = Vec::with_capacity(scenarios.len());
     for (index, scenario) in scenarios.iter().enumerate() {
@@ -208,13 +267,13 @@ async fn run_scenarios(
                 let now_ms = now_ms_for(index, min_interval_secs);
                 match scenario.mock_completion.as_deref() {
                     Some(completion) => {
-                        let provider = MockProvider::canned(vec![completion.to_string()]);
-                        run_consult(
+                        run_mock_scenario(
                             scenario,
                             &input,
-                            provider,
-                            min_interval_secs,
-                            mock_confidence_floor(),
+                            completion,
+                            options.provider,
+                            options.provider_explicit,
+                            forced_failure,
                             now_ms,
                         )
                         .await
@@ -223,40 +282,114 @@ async fn run_scenarios(
                 }
             }
             Some(config) => {
-                let min_interval_secs = config.strategy.min_interval_secs;
-                let confidence_floor = config.strategy.confidence_floor;
-                let now_ms = now_ms_for(index, min_interval_secs);
-                match options.provider {
-                    ProviderChoice::Qwen => {
-                        let provider = QwenProvider::new(&config.qwen);
-                        run_consult(
-                            scenario,
-                            &input,
-                            provider,
-                            min_interval_secs,
-                            confidence_floor,
-                            now_ms,
-                        )
-                        .await
-                    }
-                    ProviderChoice::Kimi => {
-                        let provider = KimiProvider::new(&config.kimi);
-                        run_consult(
-                            scenario,
-                            &input,
-                            provider,
-                            min_interval_secs,
-                            confidence_floor,
-                            now_ms,
-                        )
-                        .await
-                    }
-                }
+                let now_ms = now_ms_for(index, config.strategy.min_interval_secs);
+                run_live_scenario(
+                    scenario,
+                    &input,
+                    config,
+                    options.provider,
+                    options.provider_explicit,
+                    forced_failure,
+                    now_ms,
+                )
+                .await
             }
         };
         results.push(result);
     }
     Ok(results)
+}
+
+/// Run one `--mock` scenario through the right mock engine shape.
+///
+/// Without `FORCE_PROVIDER_FAIL` this is the P07 single canned provider
+/// (named `mock`, or the explicitly chosen provider's name). With it, the
+/// mock chain mirrors the live shape: a force-failed primary (empty queue —
+/// the forced failure short-circuits, so it is never called) plus the
+/// scenario's canned completion on the `kimi` fallback, so every row reports
+/// `provider=kimi` (`SPEC-P08.md` §5). A fresh engine is built per scenario
+/// because a consult consumes its single canned completion.
+async fn run_mock_scenario(
+    scenario: &Scenario,
+    input: &ConsultInput,
+    completion: &str,
+    choice: ProviderChoice,
+    choice_explicit: bool,
+    forced_failure: Option<&'static str>,
+    now_ms: u64,
+) -> ScenarioResult {
+    match forced_failure {
+        Some(name) => {
+            let primary = MockProvider::named(name);
+            let fallback =
+                MockProvider::canned_named(MOCK_FALLBACK_NAME, vec![completion.to_string()]);
+            let engine =
+                StrategyEngine::new(primary, MOCK_MIN_INTERVAL_SECS, mock_confidence_floor())
+                    .with_fallback(fallback)
+                    .with_forced_failure(name);
+            run_consult(scenario, input, engine, name, now_ms).await
+        }
+        None if choice_explicit => {
+            let provider = MockProvider::canned_named(choice.name(), vec![completion.to_string()]);
+            let engine =
+                StrategyEngine::new(provider, MOCK_MIN_INTERVAL_SECS, mock_confidence_floor());
+            run_consult(scenario, input, engine, choice.name(), now_ms).await
+        }
+        None => {
+            let provider = MockProvider::canned(vec![completion.to_string()]);
+            let engine =
+                StrategyEngine::new(provider, MOCK_MIN_INTERVAL_SECS, mock_confidence_floor());
+            run_consult(scenario, input, engine, MOCK_PROVIDER, now_ms).await
+        }
+    }
+}
+
+/// Run one live scenario against the configured provider chain — Qwen primary
+/// with the Kimi fallback, consult/token budget armed — or, when `--provider`
+/// was passed explicitly, that single provider (no chain, same budget).
+///
+/// The engine is built fresh per scenario (as in P07); each scenario consults
+/// a different market at a later `now_ms`, so breakers never span scenarios.
+async fn run_live_scenario(
+    scenario: &Scenario,
+    input: &ConsultInput,
+    config: &Config,
+    choice: ProviderChoice,
+    choice_explicit: bool,
+    forced_failure: Option<&'static str>,
+    now_ms: u64,
+) -> ScenarioResult {
+    let min_interval_secs = config.strategy.min_interval_secs;
+    let confidence_floor = config.strategy.confidence_floor;
+    let max_consults = config.strategy.max_consults_per_hour;
+    let max_tokens = config.strategy.max_tokens_per_day;
+
+    if choice_explicit {
+        match choice {
+            ProviderChoice::Qwen => {
+                let provider = QwenProvider::new(&config.qwen);
+                let engine = StrategyEngine::new(provider, min_interval_secs, confidence_floor)
+                    .with_budget(max_consults, max_tokens);
+                let engine = apply_forced_failure(engine, forced_failure);
+                run_consult(scenario, input, engine, choice.name(), now_ms).await
+            }
+            ProviderChoice::Kimi => {
+                let provider = KimiProvider::new(&config.kimi);
+                let engine = StrategyEngine::new(provider, min_interval_secs, confidence_floor)
+                    .with_budget(max_consults, max_tokens);
+                let engine = apply_forced_failure(engine, forced_failure);
+                run_consult(scenario, input, engine, choice.name(), now_ms).await
+            }
+        }
+    } else {
+        let primary = QwenProvider::new(&config.qwen);
+        let fallback = KimiProvider::new(&config.kimi);
+        let engine = StrategyEngine::new(primary, min_interval_secs, confidence_floor)
+            .with_fallback(fallback)
+            .with_budget(max_consults, max_tokens);
+        let engine = apply_forced_failure(engine, forced_failure);
+        run_consult(scenario, input, engine, ProviderChoice::Qwen.name(), now_ms).await
+    }
 }
 
 /// Assemble the engine input for one scenario.
@@ -284,15 +417,17 @@ fn mock_confidence_floor() -> Decimal {
 }
 
 /// Run one consult and map its outcome (or its error) to a [`ScenarioResult`].
-async fn run_consult<P: Provider>(
+///
+/// `provider_label` is what the row's `provider` field reads when the consult
+/// fails without an outcome (chains report their primary); successful rows
+/// report the provider that produced the winning decision (`provider_used`).
+async fn run_consult<P: Provider, F: Provider>(
     scenario: &Scenario,
     input: &ConsultInput,
-    provider: P,
-    min_interval_secs: u64,
-    confidence_floor: Decimal,
+    engine: StrategyEngine<P, F>,
+    provider_label: &str,
     now_ms: u64,
 ) -> ScenarioResult {
-    let provider_label = provider.name();
     let Some(focus) = input
         .account
         .positions
@@ -309,7 +444,6 @@ async fn run_consult<P: Provider>(
         );
     };
 
-    let engine = StrategyEngine::new(provider, min_interval_secs, confidence_floor);
     match engine.consult(input, now_ms).await {
         Err(error) => error_result(scenario, provider_label, error.to_string()),
         Ok(outcome) => {
@@ -367,5 +501,104 @@ fn action_name(action: DecisionAction) -> &'static str {
         DecisionAction::Close => "CLOSE",
         DecisionAction::AddCollateral => "ADD_COLLATERAL",
         DecisionAction::Escalate => "ESCALATE",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Golden directory (repo root `tests/golden`), the same resolution as the
+    /// other brain suites.
+    fn golden_dir() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden")
+    }
+
+    /// Every golden scenario driven through the mock failover chain (the
+    /// `FORCE_PROVIDER_FAIL=qwen` shape: force-failed primary, canned `kimi`
+    /// fallback) must produce a successful row reporting `provider=kimi` —
+    /// the data-level form of the offline failover demo (`SPEC-P08.md` §5).
+    #[tokio::test]
+    async fn mock_chain_forced_primary_reports_kimi_on_every_golden_row() {
+        let scenarios = load_scenarios(&golden_dir()).expect("golden scenarios load");
+        assert_eq!(scenarios.len(), 14, "14 golden scenarios");
+        for (index, scenario) in scenarios.iter().enumerate() {
+            let completion = scenario
+                .mock_completion
+                .as_deref()
+                .expect("golden scenario carries a mock_completion");
+            let input = consult_input(scenario);
+            let now_ms = now_ms_for(index, MOCK_MIN_INTERVAL_SECS);
+            let result = run_mock_scenario(
+                scenario,
+                &input,
+                completion,
+                ProviderChoice::Qwen,
+                false,
+                Some("qwen"),
+                now_ms,
+            )
+            .await;
+            assert!(
+                result.error.is_none(),
+                "{}: failover chain must succeed, got {:?}",
+                scenario.name,
+                result.error
+            );
+            assert_eq!(
+                result.provider, "kimi",
+                "{}: every failover row reports the kimi fallback",
+                scenario.name
+            );
+        }
+    }
+
+    /// Without `FORCE_PROVIDER_FAIL` the plain mock run keeps the P07
+    /// `provider=mock` identity, and an explicit `--provider kimi` selects the
+    /// single named provider (no chain) — both on every golden row.
+    #[tokio::test]
+    async fn mock_single_provider_rows_report_mock_or_the_chosen_name() {
+        let scenarios = load_scenarios(&golden_dir()).expect("golden scenarios load");
+        assert_eq!(scenarios.len(), 14, "14 golden scenarios");
+        for (index, scenario) in scenarios.iter().enumerate() {
+            let completion = scenario
+                .mock_completion
+                .as_deref()
+                .expect("golden scenario carries a mock_completion");
+            let input = consult_input(scenario);
+            let now_ms = now_ms_for(index, MOCK_MIN_INTERVAL_SECS);
+
+            let plain = run_mock_scenario(
+                scenario,
+                &input,
+                completion,
+                ProviderChoice::Qwen,
+                false,
+                None,
+                now_ms,
+            )
+            .await;
+            assert_eq!(
+                plain.provider, "mock",
+                "{}: plain mock rows keep provider=mock",
+                scenario.name
+            );
+
+            let explicit = run_mock_scenario(
+                scenario,
+                &input,
+                completion,
+                ProviderChoice::Kimi,
+                true,
+                None,
+                now_ms,
+            )
+            .await;
+            assert_eq!(
+                explicit.provider, "kimi",
+                "{}: explicit --provider kimi rows report kimi",
+                scenario.name
+            );
+        }
     }
 }

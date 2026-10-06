@@ -217,26 +217,44 @@ impl Provider for KimiProvider {
 }
 
 /// Deterministic provider for tests and the offline eval harness.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct MockProvider {
+    /// Provider name reported by [`Provider::name`] (`"mock"` by default).
+    pub name: &'static str,
     /// Queued responses (popped front-to-back).
     pub responses: Mutex<VecDeque<std::result::Result<RawCompletion, String>>>,
     /// Every `(system, user)` pair seen, in call order.
     pub calls: Mutex<Vec<(String, String)>>,
 }
 
+impl Default for MockProvider {
+    /// An empty queue reporting the name `"mock"`.
+    fn default() -> Self {
+        Self::named("mock")
+    }
+}
+
 impl MockProvider {
-    /// All-`Ok` canned texts.
+    /// An empty queue reporting `name` as its [`Provider::name`].
+    pub fn named(name: &'static str) -> Self {
+        Self {
+            name,
+            responses: Mutex::new(VecDeque::new()),
+            calls: Mutex::new(Vec::new()),
+        }
+    }
+
+    /// All-`Ok` canned texts attributed to `name`.
     ///
-    /// Queued completions carry `provider`/`model` `"mock"`, no usage metadata
-    /// and zero latency (nothing was measured).
-    pub fn canned(texts: Vec<String>) -> Self {
+    /// Like [`Self::canned`], but [`Provider::name`] reports `name` and each
+    /// queued completion carries `provider: name` (`model` stays `"mock"`).
+    pub fn canned_named(name: &'static str, texts: Vec<String>) -> Self {
         let responses = texts
             .into_iter()
             .map(|text| {
                 Ok(RawCompletion {
                     text,
-                    provider: "mock".to_string(),
+                    provider: name.to_string(),
                     model: "mock".to_string(),
                     prompt_tokens: None,
                     completion_tokens: None,
@@ -245,9 +263,18 @@ impl MockProvider {
             })
             .collect();
         Self {
+            name,
             responses: Mutex::new(responses),
             calls: Mutex::new(Vec::new()),
         }
+    }
+
+    /// All-`Ok` canned texts.
+    ///
+    /// Queued completions carry `provider`/`model` `"mock"`, no usage metadata
+    /// and zero latency (nothing was measured).
+    pub fn canned(texts: Vec<String>) -> Self {
+        Self::canned_named("mock", texts)
     }
 
     /// Call log (`(system, user)` pairs).
@@ -270,7 +297,7 @@ impl Provider for MockProvider {
     }
 
     fn name(&self) -> &'static str {
-        "mock"
+        self.name
     }
 }
 
@@ -969,6 +996,7 @@ mod tests {
             latency_ms: 0,
         }));
         let mock = MockProvider {
+            name: "mock",
             responses: Mutex::new(responses),
             calls: Mutex::new(Vec::new()),
         };
@@ -990,5 +1018,62 @@ mod tests {
             .expect("the queue continues after the error");
         assert_eq!(completion.text, "after");
         assert_eq!(mock.calls().len(), 2);
+    }
+
+    #[tokio::test]
+    async fn mock_provider_named_sets_the_reported_name() {
+        let mock = MockProvider::named("qwen");
+
+        assert_eq!(mock.name(), "qwen");
+
+        let error = mock
+            .complete("s", "u")
+            .await
+            .expect_err("named starts with an empty queue");
+        match error {
+            SentinelError::Brain(BrainError::AllProvidersFailed { last }) => {
+                assert_eq!(last, "mock queue exhausted");
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn mock_provider_canned_named_sets_name_and_preserves_order() {
+        let mock =
+            MockProvider::canned_named("kimi", vec!["first".to_string(), "second".to_string()]);
+
+        assert_eq!(mock.name(), "kimi");
+
+        let first = mock.complete("sys-1", "user-1").await.expect("first pops");
+        let second = mock.complete("sys-2", "user-2").await.expect("second pops");
+
+        assert_eq!(first.text, "first");
+        assert_eq!(second.text, "second");
+        assert_eq!(first.provider, "kimi");
+        assert_eq!(second.provider, "kimi");
+        assert_eq!(first.model, "mock");
+        assert_eq!(
+            mock.calls(),
+            vec![
+                ("sys-1".to_string(), "user-1".to_string()),
+                ("sys-2".to_string(), "user-2".to_string()),
+            ],
+            "calls are logged in order"
+        );
+    }
+
+    #[test]
+    fn mock_provider_canned_reports_mock() {
+        let mock = MockProvider::canned(vec!["x".to_string()]);
+
+        assert_eq!(mock.name(), "mock");
+    }
+
+    #[test]
+    fn mock_provider_default_reports_mock() {
+        let mock = MockProvider::default();
+
+        assert_eq!(mock.name(), "mock");
     }
 }

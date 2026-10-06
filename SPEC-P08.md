@@ -182,3 +182,19 @@ retry once, else PENDING with the exact error.
 ## 10 Report format
 
 JSON `{files_created, tests[{cmd,exit,observed}], open_issues}`.
+
+## 11 Changelog (integration-time changes only)
+
+- **v1.0.1 (parent, integration):**
+  (a) §5 premise corrected: the P07 row format had NO provider column
+  (verifier finding, reproduced: the three harness variants were
+  byte-identical). `render_row` now appends ` provider={name}` between
+  `grounding=` and the latency parens; row-format tests updated; the §8
+  harness demonstrations are now externally distinguishable
+  (`provider=mock` / `provider=kimi`).
+  (b) Half-open probe adjudication (§3.3 vs §8): a probe consult performs ONE
+  uniform attempt — the original call plus the mandated repair nudge on
+  unparseable output — then, on failure, runs the fallback with no re-probe
+  of the primary and re-opens a fresh full window. "No retry within the
+  consult" means no primary re-probe; exact call counts pinned by the
+  verifier.

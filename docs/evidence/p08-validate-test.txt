@@ -1,0 +1,539 @@
+   Compiling sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 32s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (target/debug/deps/sentinel-ef23378669fab1dc)
+
+running 209 tests
+test args::tests::empty_args_yield_default ... ok
+test args::tests::parses_mode_and_replay ... ok
+test args::tests::parses_modes ... ok
+test args::tests::rejects_unknown_flag_and_bad_values ... ok
+test brain::chain::tests::fresh_breaker_is_closed_and_available ... ok
+test brain::chain::tests::half_open_success_closes_and_resets ... ok
+test brain::chain::tests::new_round_trips_threshold_and_open_ms ... ok
+test brain::chain::tests::open_window_boundary_is_exact ... ok
+test brain::chain::tests::third_failure_opens_until_now_plus_open_ms ... ok
+test brain::chain::tests::half_open_failure_reopens_full_fresh_window ... ok
+test brain::chain::tests::success_resets_partially_failed_breaker ... ok
+test brain::chain::tests::two_failures_stay_closed ... ok
+test brain::engine::tests::all_providers_failed_reports_both_names_and_classes ... ok
+test brain::engine::tests::failover_on_http_failure_uses_the_fallback ... ok
+test brain::engine::tests::budget_hour_window_degrades_to_synthetic_and_slides ... ok
+test brain::engine::tests::breaker_opens_after_three_failures_and_the_next_consult_skips_the_primary ... ok
+test brain::engine::tests::daily_token_cap_degrades_to_synthetic ... ok
+test brain::engine::tests::failover_on_schema_invalid_output_after_repair ... ok
+test brain::engine::tests::failover_on_unparseable_output_after_repair ... ok
+test brain::engine::tests::floor_below_downgrades_to_escalate ... ok
+test brain::engine::tests::floor_equal_is_kept ... ok
+test brain::engine::tests::forced_failure_matches_exact_names_only ... ok
+test brain::engine::tests::happy_path_carries_the_winning_latency_and_tokens ... ok
+test brain::engine::tests::forced_failure_skips_the_primary_without_calling_it ... ok
+test brain::engine::tests::half_open_probe_recovers_the_primary_through_the_engine ... ok
+test brain::engine::tests::happy_path_parses_and_reports_the_outcome ... ok
+test brain::engine::tests::missing_focus_market_is_invalid_decision ... ok
+test brain::engine::tests::provider_error_propagates_without_a_repair_call ... ok
+test brain::engine::tests::no_fallback_keeps_p07_error_shapes_exactly ... ok
+test brain::engine::tests::rate_limit_boundary_is_inclusive ... ok
+test brain::engine::tests::rate_limit_is_per_market ... ok
+test brain::engine::tests::repair_flow_retries_once_with_the_nudge ... ok
+test brain::engine::tests::repair_flow_still_invalid_decision_maps_to_invalid_decision ... ok
+test brain::engine::tests::repair_flow_still_invalid_json_maps_to_invalid_json ... ok
+test brain::eval::tests::grounding_check_true_for_present_numbers_and_numberless_reasons ... ok
+test brain::eval::tests::grounding_check_false_when_a_token_is_absent ... ok
+test brain::eval::tests::render_contains_the_five_exact_header_lines ... ok
+test brain::eval::tests::render_rows_follow_the_frozen_format_and_append_errors_on_fail ... ok
+test brain::eval::tests::score_counts_a_scenario_without_a_result_as_failed ... ok
+test brain::eval::tests::score_excludes_injections_and_counts_schema_and_grounding_totals ... ok
+test brain::parser::tests::allowed_market_from_multi_market_allowlist_parses ... ok
+test brain::parser::tests::amount_as_json_number_is_tolerated ... ok
+test brain::parser::tests::braces_inside_reason_string_survive ... ok
+test brain::parser::tests::confidence_above_one_is_validation_error ... ok
+test brain::parser::tests::confidence_bounds_are_inclusive ... ok
+test brain::parser::tests::empty_response_is_no_object ... ok
+test brain::parser::tests::extract_first_of_two_objects ... ok
+test brain::parser::tests::escaped_quotes_in_reason_parse ... ok
+test brain::parser::tests::extract_handles_escaped_quotes ... ok
+test brain::parser::tests::extract_ignores_braces_inside_strings ... ok
+test brain::parser::tests::extract_nested_objects ... ok
+test brain::parser::tests::extract_none_on_empty_or_absent_brace ... ok
+test brain::parser::tests::extract_none_when_unbalanced ... ok
+test brain::parser::tests::extract_returns_exact_slice_including_braces ... ok
+test brain::parser::tests::extract_simple_object_in_prose ... ok
+test brain::parser::tests::happy_path_exact_field_assertions ... ok
+test brain::parser::tests::markdown_fenced_json_parses ... ok
+test brain::parser::tests::market_not_in_allowlist_is_validation_error ... ok
+test brain::parser::tests::json_error_detail_is_bounded ... ok
+test brain::parser::tests::missing_confidence_is_json_error ... ok
+test brain::parser::tests::nested_objects_in_extra_fields_are_ignored ... ok
+test brain::parser::tests::prose_wrapped_json_parses ... ok
+test brain::parser::tests::reduce_without_amount_is_validation_error ... ok
+test brain::parser::tests::refusal_text_is_no_object ... ok
+test brain::parser::tests::repair_nudge_is_the_single_exact_message ... ok
+test brain::parser::tests::strip_thinking_accepts_arbitrary_suffix_up_to_gt ... ok
+test brain::parser::tests::repair_nudge_does_not_truncate_long_output ... ok
+test brain::parser::tests::strip_thinking_close_think_tag ... ok
+test brain::parser::tests::strip_thinking_close_thinking_tag ... ok
+test brain::parser::tests::strip_thinking_handles_unicode_around_tag ... ok
+test brain::parser::tests::strip_thinking_ignores_unterminated_tag ... ok
+test brain::parser::tests::strip_thinking_is_case_insensitive ... ok
+test brain::parser::tests::strip_thinking_without_tag_returns_whole_text ... ok
+test brain::parser::tests::strip_thinking_uses_the_last_tag_when_two_appear ... ok
+test brain::parser::tests::thinking_preamble_with_close_think_tag_parses ... ok
+test brain::parser::tests::thinking_preamble_with_close_thinking_tag_parses ... ok
+test brain::parser::tests::thinking_uses_last_close_tag_before_the_json ... ok
+test brain::eval::tests::golden_dir_holds_fourteen_scenarios_twelve_core_two_injection ... ok
+test brain::parser::tests::trailing_comma_is_json_error ... ok
+test brain::parser::tests::truncated_json_is_json_error ... ok
+test brain::parser::tests::truncated_unclosed_object_yields_no_object ... ok
+test brain::parser::tests::two_objects_first_wins ... ok
+test brain::parser::tests::unknown_top_level_fields_are_ignored ... ok
+test brain::prompts::tests::account_table_rows_and_focus_prefix ... ok
+test brain::prompts::tests::budget_three_positions_under_6000_chars ... ok
+test brain::prompts::tests::builder_contains_every_required_section_marker ... ok
+test brain::prompts::tests::final_instruction_names_the_exact_schema ... ok
+test brain::prompts::tests::focus_section_restates_the_focus_position ... ok
+test brain::prompts::tests::missing_mark_and_uncomputable_distance_render_n_a ... ok
+test brain::eval::tests::golden_mock_completions_parse_and_cite_only_prompt_numbers ... ok
+test brain::prompts::tests::smart_money_with_netflow_renders_the_number ... ok
+test brain::prompts::tests::reflex_block_renders_actions_or_none_yet ... ok
+test brain::prompts::tests::summary_types_serde_round_trip ... ok
+test brain::prompts::tests::unavailable_smart_money_context_has_no_values ... ok
+test brain::prompts::tests::system_prompt_roles_actions_and_no_digits ... ok
+test brain::prompts::tests::unavailable_smart_money_renders_the_exact_line ... ok
+test brain::providers::tests::mock_provider_canned_named_sets_name_and_preserves_order ... ok
+test brain::providers::tests::mock_provider_canned_reports_mock ... ok
+test brain::providers::tests::mock_provider_default_reports_mock ... ok
+test brain::providers::tests::mock_provider_exhausted_queue_reports_last_error ... ok
+test brain::providers::tests::mock_provider_named_sets_the_reported_name ... ok
+test brain::providers::tests::mock_provider_preserves_canned_order_and_logs_calls ... ok
+test brain::providers::tests::mock_provider_queued_error_preserves_text_and_order ... ok
+test brain::providers::tests::non_json_body_is_invalid_json ... ok
+test brain::providers::tests::client_error_is_never_retried ... ok
+test brain::providers::tests::kimi_success_omits_response_format ... ok
+test brain::providers::tests::qwen_success_sends_frozen_request_and_parses_usage ... ok
+test brain::providers::tests::qwen_json_mode_can_be_disabled ... ok
+test brain::providers::tests::retries_once_on_5xx_then_succeeds ... ok
+test brain::providers::tests::malformed_choices_are_invalid_json_and_not_retried ... ok
+test brain::providers::tests::two_5xx_responses_fail_after_exactly_two_attempts ... ok
+test execution::dry_run::tests::appends_one_line_per_submission ... ok
+test execution::dry_run::tests::close_long_sells_below_mark_at_slippage ... ok
+test execution::dry_run::tests::close_short_buys_above_mark_at_slippage ... ok
+test execution::dry_run::tests::missing_mark_is_an_order_error ... ok
+test execution::idempotency::tests::corrupt_file_is_an_order_error ... ok
+test execution::idempotency::tests::fresh_key_allowed_recorded_and_persisted ... ok
+test execution::idempotency::tests::missing_file_loads_empty_and_is_created_on_first_record ... ok
+test brain::providers::tests::usage_metadata_is_optional ... ok
+test brain::providers::tests::usage_tokens_saturate_to_u32_max ... ok
+test execution::idempotency::tests::restart_reload_still_suppresses ... ok
+test execution::idempotency::tests::prune_drops_only_expired_entries ... ok
+test execution::perpl::tests::close_short_posts_t4_with_the_same_exact_shape ... ok
+test execution::perpl::tests::batch_level_rejection_maps_to_rejected ... ok
+test execution::perpl::tests::http_401_maps_to_unauthorized_error_without_retrying ... ok
+test execution::perpl::tests::per_order_rejection_maps_to_rejected_with_code_and_error ... ok
+test execution::perpl::tests::http_403_maps_to_missing_trade_scope_error ... ok
+test execution::recording::tests::appends_one_line_per_submission ... ok
+test execution::recording::tests::records_request_and_report_round_trip ... ok
+test execution::perpl::tests::raw_size_out_of_range_is_refused_before_posting ... ok
+test execution::perpl::tests::success_posts_exact_signed_batch_and_maps_ack_zero_to_submitted ... ok
+test execution::tests::guard_keeps_inner_report_when_verify_probe_fails ... ok
+test execution::tests::guard_marks_filled_when_decrease_covers_order_size ... ok
+test execution::tests::guard_marks_filled_when_position_goes_flat ... ok
+test execution::tests::guard_marks_partial_when_position_shrinks ... ok
+test execution::tests::guard_submits_unverified_when_baseline_probe_fails ... ok
+test execution::tests::guard_keeps_inner_report_on_verification_timeout ... ok
+test execution::tests::seq_counter_starts_after_seed ... ok
+test execution::tests::size_bucket_table_and_key_shape ... ok
+test health::tests::render_computes_feed_age_seconds_after_touch ... ok
+test health::tests::render_feed_age_saturates_on_backwards_clock ... ok
+test health::tests::render_returns_frozen_shape_with_null_feed_age_until_touched ... ok
+test execution::tests::guard_suppresses_duplicate_and_keeps_single_execution ... ok
+test brain::providers::tests::short_client_timeout_is_retried_once_then_reported_as_status_zero ... ok
+test notify::tests::dedupe_first_tier_change_passes ... ok
+test notify::tests::dedupe_forwards_inner_errors ... ok
+test notify::tests::dedupe_is_per_market ... ok
+test notify::tests::dedupe_non_red_never_realerts ... ok
+test notify::tests::dedupe_non_tier_kinds_always_pass_even_identical ... ok
+test notify::tests::dedupe_red_realerts_only_at_the_window ... ok
+test notify::tests::dedupe_repeat_same_tier_is_suppressed ... ok
+test notify::tests::dedupe_state_is_not_touched_by_non_tier_alerts ... ok
+test notify::tests::dedupe_tier_change_passes_immediately ... ok
+test notify::tests::dedupe_unkeyed_tier_change_fails_open ... ok
+test notify::tests::recording_sink_captures_every_alert_in_order ... ok
+test notify::tests::telegram_sink_constructs_and_debug_does_not_panic ... ok
+test notify::tests::tracing_sink_send_returns_ok ... ok
+test perpl::auth::tests::b64url_encodes_without_padding ... ok
+test perpl::auth::tests::canonical_rest_matches_rest1_vector ... ok
+test perpl::auth::tests::canonical_rest_with_body_matches_rest2_vector ... ok
+test perpl::auth::tests::canonical_ws_matches_ws1_vector ... ok
+test perpl::auth::tests::debug_redacts_token_and_seed ... ok
+test perpl::auth::tests::from_config_reads_perpl_config ... ok
+test perpl::auth::tests::from_parts_accepts_plain_and_0x_prefixed_seeds ... ok
+test perpl::auth::tests::from_parts_rejects_malformed_seeds ... ok
+test perpl::auth::tests::random_nonce_is_16_bytes_and_changes ... ok
+test health::tests::router_serves_healthz_json_over_http ... ok
+test perpl::auth::tests::sign_canonical_roundtrips_through_verifying_key ... ok
+test perpl::auth::tests::signed_request_headers_are_ordered_and_verifiable ... ok
+test perpl::auth::tests::ws_signin_frame_is_mt29_json_with_verifiable_signature ... ok
+test perpl::rest::tests::signed_request_carries_exact_path_query_and_api_key ... ok
+test health::tests::serve_answers_healthz_and_returns_ok_on_shutdown ... ok
+test perpl::rest::tests::success_path_returns_parsed_json ... ok
+test perpl::types::tests::account_history_record_exact ... ok
+test perpl::types::tests::account_state_sums_equity_from_balance_and_unrealized ... ok
+test perpl::types::tests::account_update_mt21_exact ... ok
+test perpl::types::tests::context_falls_back_to_name_for_empty_symbol ... ok
+test perpl::types::tests::context_maps_eth_market_exactly ... ok
+test perpl::types::tests::fills_record_exact ... ok
+test perpl::types::tests::malformed_payloads_error ... ok
+test perpl::types::tests::positions_keep_only_open_status ... ok
+test perpl::types::tests::positions_long_maps_sign_and_pnl ... ok
+test perpl::types::tests::positions_short_maps_sign_and_pnl ... ok
+test perpl::types::tests::positions_without_mark_have_no_mark_and_zero_pnl ... ok
+test perpl::types::tests::ticker_maps_mark_price ... ok
+test perpl::types::tests::unknown_market_id_errors ... ok
+test perpl::types::tests::unparseable_timestamps_map_to_none ... ok
+test perpl::types::tests::wallet_returns_primary_account_tuple ... ok
+test perpl::types::tests::wallet_without_exchange_account_errors ... ok
+test perpl::ws::tests::backoff_base_is_capped_for_large_attempts ... ok
+test perpl::ws::tests::backoff_base_matches_spec_table ... ok
+test perpl::ws::tests::jittered_backoff_stays_within_twenty_five_percent ... ok
+test perpl::ws::tests::scale_raw_divides_by_the_decimal_scale ... ok
+test perpl::ws::tests::stale_detector_fires_once_at_the_threshold_and_resets_on_touch ... ok
+test perpl::ws::tests::stale_detector_never_fires_without_a_touch ... ok
+test perpl::ws::tests::stale_detector_reports_whole_seconds ... ok
+test perpl::ws::tests::subscription_frame_matches_the_frozen_mt5_shape ... ok
+test perpl::ws::tests::websocket_endpoint_rejects_bad_urls ... ok
+test pipeline::tests::apply_marks_revalue_positions_and_equity ... ok
+test pipeline::tests::apply_snapshot_replaces_account_and_merges_marks ... ok
+test pipeline::tests::apply_stale_sets_and_any_event_clears ... ok
+test pipeline::tests::apply_update_patches_balances_and_keeps_marks ... ok
+test pipeline::tests::channel_close_ends_gracefully_with_shutdown ... ok
+test pipeline::tests::fixture_replay_emits_ordered_events ... ok
+test perpl::rest::tests::unauthorized_401_is_not_retried ... ok
+test pipeline::tests::state_probe_reads_positions_from_shared_state ... ok
+test execution::tests::guard_allows_again_after_window_expiry ... ok
+test pipeline::tests::shutdown_mid_stream_returns_ok_with_exactly_one_shutdown ... ok
+test perpl::rest::tests::persistent_500_retries_three_attempts_then_fails ... ok
+
+test result: ok. 209 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.35s
+
+     Running unittests src/bin/brain_eval.rs (target/debug/deps/brain_eval-1895096e3aae85b5)
+
+running 2 tests
+test tests::mock_chain_forced_primary_reports_kimi_on_every_golden_row ... ok
+test tests::mock_single_provider_rows_report_mock_or_the_chosen_name ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/bin/read_positions.rs (target/debug/deps/read_positions-e8de1956fd493a7a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/sentinel-6152b4fc574b4d2b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/test_execution.rs (target/debug/deps/test_execution-e47e177223520170)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/brain_adversarial.rs (target/debug/deps/brain_adversarial-1cb8567c6293a7b6)
+
+running 31 tests
+test confidence_as_json_string_is_tolerated_by_rust_decimal ... ok
+test escaped_backslash_quote_sequences_balance ... ok
+test floor_equal_is_kept ... ok
+test floor_just_below_downgrades_to_escalate ... ok
+test fullwidth_braces_are_not_an_object ... ok
+test grounding_check_accepts_present_tokens_and_empty_token_sets ... ok
+test grounding_check_rejects_absent_decimal_tokens ... ok
+test brain_eval_mock_run_is_green_and_out_file_matches_stdout ... ok
+test market_id_as_json_string_is_a_json_error ... ok
+test mock_provider_pops_in_order_records_calls_and_exhausts ... ok
+test open_brace_as_first_char_of_a_string_value ... ok
+test kimi_request_shape_uses_config_model_and_no_response_format ... ok
+test provider_does_not_retry_on_4xx ... ok
+test provider_retries_once_on_500_then_fails ... ok
+test malformed_200_body_is_invalid_json_after_one_request ... ok
+test rate_limit_boundary_re_derived ... ok
+test rate_limit_is_per_market ... ok
+test repair_flow_calls_provider_exactly_twice_with_the_nudge ... ok
+test repair_nudge_quotes_schema_and_previous_output ... ok
+test repair_still_invalid_maps_to_invalid_json ... ok
+test score_counts_scenarios_without_results_as_failed ... ok
+test score_excludes_injection_from_core_and_counts_parsed_grounding ... ok
+test strip_thinking_last_closing_tag_wins ... ok
+test strip_thinking_recognizes_uppercase_spaced_and_mixed_case_closers ... ok
+test ten_deep_unknown_nesting_balances ... ok
+test truncated_json_yields_no_object ... ok
+test two_objects_first_wins ... ok
+test unicode_reason_roundtrips ... ok
+test qwen_request_shape_includes_response_format_by_default ... ok
+test qwen_with_json_mode_false_omits_response_format ... ok
+test client_timeout_retries_once_and_reports_status_zero ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.94s
+
+     Running tests/chain_adversarial.rs (target/debug/deps/chain_adversarial-e17c98ede16782dc)
+
+running 19 tests
+test breaker_half_open_failure_reopens_a_fresh_full_window ... ok
+test breaker_strike_table_opens_on_exactly_the_third_consecutive_failure ... ok
+test breaker_success_resets_partial_progress_and_one_strike_geometry_holds ... ok
+test breaker_until_boundary_is_exact_and_half_open_success_closes_and_resets ... ok
+test all_providers_failed_names_both_slots_with_their_classes ... ok
+test consult_budget_allows_exactly_n_then_escalates_and_slides_forward ... ok
+test consult_budget_hour_window_boundary_is_exact_and_counts_synthetics ... ok
+test forced_fail_matches_the_provider_name_exactly_only ... ok
+test consult_budget_token_cap_boundary_blocks_at_the_cap_and_slides_daily ... ok
+test forced_failure_skips_without_calling_and_feeds_the_breaker ... ok
+test half_open_probe_is_single_and_no_retry_happens_within_the_consult ... ok
+test no_fallback_provider_error_propagates_unchanged ... ok
+test no_fallback_repair_still_bad_keeps_p07_invalid_json_shape ... ok
+test no_fallback_validation_failure_is_invalid_decision ... ok
+test no_provider_names_itself_none_and_always_fails ... ok
+test primary_success_keeps_failover_from_none ... ok
+test provider_error_fails_over_and_the_breaker_open_skips_the_fourth_consult ... ok
+test brain_eval_mock_with_force_provider_fail_reports_kimi_on_every_row ... ok
+test brain_eval_mock_without_force_reports_mock_on_every_row ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/execution_adversarial.rs (target/debug/deps/execution_adversarial-f4d81ed14f85c97c)
+
+running 18 tests
+test dry_run_missing_mark_is_order_error ... ok
+test dry_run_sequence_is_monotonic ... ok
+test dry_run_slippage_math_python_derived ... ok
+test guard_duplicate_suppressed_single_execution ... ok
+test guard_post_verify_filled ... ok
+test guard_post_verify_filled_to_zero ... ok
+test idempotency_boundary_exact_window_and_no_duplicate_refresh ... ok
+test guard_post_verify_partial ... ok
+test key_and_client_id_shapes ... ok
+test idempotency_prune_semantics ... ok
+test idempotency_restart_reload_suppresses ... ok
+test guard_post_verify_timeout_keeps_inner_report ... ok
+test recording_round_trip_jsonl ... ok
+test seq_counter_is_monotonic_from_seed_plus_one ... ok
+test size_bucket_matches_python ... ok
+test perpl_rejected_ack_carries_code_and_no_retry ... ok
+test perpl_executor_body_and_ack_mapping ... ok
+test perpl_http_401_403_map_to_order_error ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.44s
+
+     Running tests/mock_replay.rs (target/debug/deps/mock_replay-087538a20a6879d2)
+
+running 2 tests
+test mock_context_parses_and_snapshot_is_documented_pending ... ok
+test mock_replay_matches_raw_fixture_derivation ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+
+     Running tests/p06_adversarial.rs (target/debug/deps/p06_adversarial-4e9f57e1a76b111f)
+
+running 4 tests
+test notify_dedupe_boundary_matrix_black_box ... ok
+test determinism_two_runs_byte_equal_and_expected_sequence ... ok
+test shutdown_mid_stream_returns_ok_with_single_shutdown ... ok
+test health_endpoint_shape_and_feed_age ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/perpl_adversarial.rs (target/debug/deps/perpl_adversarial-2a53ba69febb80bc)
+
+running 26 tests
+test b64url_is_unpadded_url_safe ... ok
+test account_update_example_and_adversarial ... ok
+test account_history_example_and_adversarial ... ok
+test backoff_base_matches_spec_table ... ok
+test context_example_yields_spec_fields ... ok
+test context_malformed_payload_errors ... ok
+test account_state_equity_sums_balance_and_unrealized_pnl ... ok
+test context_symbol_empty_falls_back_to_name ... ok
+test from_parts_rejects_invalid_seeds ... ok
+test fills_example_and_adversarial ... ok
+test positions_adversarial_edges ... ok
+test positions_map_example_values ... ok
+test random_nonce_16_is_16_bytes_and_unique ... ok
+test positions_missing_required_fields_error ... ok
+test signer_debug_never_leaks_token_or_seed ... ok
+test node_ed25519_oracle_signatures_match_sign_canonical ... ok
+test spec_canonical_vectors_are_reproduced_byte_for_byte ... ok
+test signed_request_headers_conform_to_spec ... ok
+test stale_detector_boundaries ... ok
+test stale_detector_truncates_whole_seconds ... ok
+test ticker_marks_example_and_adversarial ... ok
+test wallet_example_and_missing_accounts ... ok
+test spec_mt9_example_maps_to_mark_price_event ... ok
+test ws_signin_frame_matches_spec_and_self_verifies ... ok
+test snapshot_on_public_only_fixture_errors_naming_missing_recording ... ok
+test fixture_replay_matches_independent_parser ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.43s
+
+     Running tests/pipeline_determinism.rs (target/debug/deps/pipeline_determinism-5ca8342945d4fc35)
+
+running 2 tests
+test shutdown_drains_and_reports_once ... ok
+test replay_is_deterministic_and_hits_the_golden_sequence ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/risk_snapshot.rs (target/debug/deps/risk_snapshot-d54b79197e3d37c1)
+
+running 2 tests
+test escalation_after_cooldown_on_fixture_position ... ok
+test classifies_fixture_snapshot_per_position ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/smoke.rs (target/debug/deps/smoke-d964cd59d46ad5f3)
+
+running 6 tests
+test rejected_on_invalid_secret_hex ... ok
+test config_loads_from_fixture_with_testnet_defaults ... ok
+test rejected_when_mode_and_env_disagree ... ok
+test mainnet_requires_explicit_acknowledgement ... ok
+test rejected_when_no_telegram_users ... ok
+test rejected_when_threshold_order_broken ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/sentinel_core-1eb7ce5112f449dc)
+
+running 59 tests
+test order::tests::flat_position_is_skipped ... ok
+test order::tests::fraction_bounds_rejected ... ok
+test order::tests::carries_size_decimals_and_slippage_verbatim ... ok
+test order::tests::clamp_never_exceeds_quantized_position ... ok
+test order::tests::min_size_skip_and_exact_min_pass ... ok
+test order::tests::quantization_below_one_lot_is_zero ... ok
+test order::tests::quantization_table ... ok
+test order::tests::side_mapping_and_request_shape ... ok
+test order::tests::tiny_position_below_one_lot_is_skipped ... ok
+test policy::tests::rule1_kill_switch_beats_everything ... ok
+test policy::tests::no_intent_can_increase_or_flip_exposure ... ok
+test policy::tests::matrix_benign_intents_allow_across_sources_and_tiers ... ok
+test policy::tests::rule3_alert_short_circuits_after_rules_1_and_2 ... ok
+test policy::tests::rule4_close_on_flat_position_denied ... ok
+test policy::tests::rule4_collateral_amount_must_be_positive ... ok
+test policy::tests::rule3_missing_position_denied_for_actionable_intents ... ok
+test policy::tests::rule2_allowlist_before_position_lookup ... ok
+test order::tests::serde_round_trip_carries_size_decimals_and_ms ... ok
+test policy::tests::rule4_reduce_fraction_bounds ... ok
+test policy::tests::rule5_mark_required_for_reduce_and_close_only ... ok
+test policy::tests::rule5_notional_formulas ... ok
+test policy::tests::rule6_cap_beats_approval ... ok
+test policy::tests::rule6_cap_boundary_strictly_greater ... ok
+test policy::tests::rule7_approval_threshold_strictly_greater ... ok
+test policy::tests::rule7_reflex_red_bypass_is_approval_only ... ok
+test policy::tests::rule8_daily_cap_boundary_and_precedence ... ok
+test risk::tests::green_and_yellow_never_yield_intents ... ok
+test risk::tests::effective_price_source_and_divergence ... ok
+test risk::tests::distance_requires_mark_and_derives_without_liq ... ok
+test risk::tests::hand_computed_orange_scenario ... ok
+test risk::tests::hand_computed_red_scenario ... ok
+test risk::tests::hand_computed_green_scenario ... ok
+test risk::tests::margin_health_guards ... ok
+test risk::tests::classification_10k_under_target ... ok
+test risk::tests::sdk_vectors_implied_liq_prices ... ok
+test risk::tests::state_machine_orange_cadence ... ok
+test risk::tests::state_machine_red_escalation_and_recovery_reset ... ok
+test risk::tests::state_machine_stale_gate_both_branches ... ok
+test risk::tests::monotone_distance_is_never_more_severe ... ok
+test risk::tests::tier_boundary_cuts_belong_to_safer_tier ... ok
+test risk::tests::validators_reject_violations ... ok
+test risk::tests::long_short_mirror_symmetry_around_entry ... ok
+test types::decisions::serde_action_variants_round_trip ... ok
+test types::decisions::serde_amount_as_json_number_parses ... ok
+test types::decisions::serde_amount_as_string_parses ... ok
+test types::decisions::serde_amount_null_or_missing_ok_for_hold ... ok
+test types::decisions::serde_missing_confidence_is_an_error ... ok
+test types::decisions::serde_unknown_fields_are_ignored ... ok
+test types::decisions::serde_urgency_variants_round_trip ... ok
+test types::decisions::validate_accepts_valid_decisions ... ok
+test types::decisions::validate_add_collateral_requires_positive_amount ... ok
+test types::decisions::validate_amount_ignored_for_hold_close_escalate ... ok
+test types::decisions::validate_confidence_must_be_unit_interval ... ok
+test types::decisions::validate_market_must_be_allowed ... ok
+test types::decisions::validate_reduce_requires_positive_amount ... ok
+test types::decisions::validate_reports_the_first_violated_rule ... ok
+test risk::tests::threshold_boundaries_land_on_safer_tier ... ok
+test risk::tests::zero_size_position_yields_none_everywhere ... ok
+test risk::tests::green_never_yields_an_intent_regardless_of_collateral ... ok
+
+test result: ok. 59 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/policy_order_adversarial.rs (target/debug/deps/policy_order_adversarial-849a272fd3765816)
+
+running 14 tests
+test allowlist_rule_and_precedence ... ok
+test approval_threshold_and_reflex_red_asymmetry ... ok
+test daily_cap_rule_and_precedence_chain ... ok
+test kill_switch_denies_every_intent ... ok
+test position_resolution_and_alert_short_circuit ... ok
+test notional_mark_and_cap_boundaries ... ok
+test quantize_table_python_derived ... ok
+test short_side_notional_symmetry ... ok
+test sizing_fraction_bounds_and_zero_skips ... ok
+test reduce_only_bias_rule ... ok
+test sizing_min_size_boundary ... ok
+test sizing_side_mapping_and_decimals ... ok
+test sizing_table_python_derived ... ok
+test sizing_never_increases_position ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/risk_adversarial.rs (target/debug/deps/risk_adversarial-2213a216dd9bab2a)
+
+running 27 tests
+test adversarial_mark_nonpositive ... ok
+test adversarial_derived_missing_inputs_are_none ... ok
+test adversarial_28_scale_precision ... ok
+test adversarial_derived_distance_when_exchange_absent ... ok
+test adversarial_negative_exchange_liq_price ... ok
+test adversarial_nonpositive_entry_probe ... ok
+test adversarial_very_large_magnitude ... ok
+test config_validation_rules ... ok
+test boundary_cuts_via_full_pipeline ... ok
+test divergence_and_effective_source_precedence ... ok
+test huge_collateral_is_green_and_never_acts ... ok
+test margin_health_values_and_none_rules ... ok
+test long_short_mirror_symmetry ... ok
+test negative_size_is_a_short_not_a_none ... ok
+test reflex_intent_stateless_table_grid ... ok
+test reflex_state_orange_cadence ... ok
+test reflex_state_per_market_isolation ... ok
+test reflex_state_recovery_reset ... ok
+test reflex_state_red_escalation_and_cooldown ... ok
+test reflex_state_stale_gate_both_branches ... ok
+test reflex_state_zero_cooldown_edge ... ok
+test sdk_vector_derived_liq_prices ... ok
+test sdk_vector_distance_checks ... ok
+test thresholds_validation_edges ... ok
+test tier_cut_boundaries_exact_and_one_ulp ... ok
+test zero_size_yields_none_everywhere ... ok
+test tier_monotonicity_sweep ... ok
+
+test result: ok. 27 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sentinel
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests sentinel_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

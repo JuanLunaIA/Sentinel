@@ -239,8 +239,8 @@ fn render_row(result: &ScenarioResult) -> String {
         "fail"
     };
     let mut row = format!(
-        "{verdict} {} action={action} expected={expected} schema={schema} grounding={grounding} ({}ms)",
-        result.name, result.latency_ms
+        "{verdict} {} action={action} expected={expected} schema={schema} grounding={grounding} provider={} ({}ms)",
+        result.name, result.provider, result.latency_ms
     );
     if let Some(error) = result.error.as_deref() {
         row.push_str(&format!(" error={}", one_line(error)));
@@ -460,11 +460,11 @@ mod tests {
         };
         let text = render_scoreboard(&Scoreboard::default(), &[passed, failed.clone()]);
         assert!(text.contains(
-            "PASS 02-healthy-green action=HOLD expected=HOLD schema=ok grounding=ok (12ms)"
+            "PASS 02-healthy-green action=HOLD expected=HOLD schema=ok grounding=ok provider=mock (12ms)"
         ));
         assert!(text.contains(
             "FAIL 10-near-liq-critical action=error expected=REDUCE|CLOSE schema=invalid \
-             grounding=n/a (0ms) error=brain: provider qwen returned HTTP 401"
+             grounding=n/a provider=qwen (0ms) error=brain: provider qwen returned HTTP 401"
         ));
 
         let degraded_text = render_scoreboard(&Scoreboard::default(), &[failed]);
