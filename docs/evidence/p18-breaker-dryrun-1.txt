@@ -1,0 +1,154 @@
+==================================================================
+  SENTINEL P14 — DEAD-MAN'S-SWITCH DEMO (unattended)
+  date:      2026-10-06T12:41:08-03:00
+  fixture:   tests/fixtures/perpl/crash-scenario.jsonl
+  snapshot:  tests/fixtures/p14/breaker-snapshot.json
+  work dir:  /tmp/p14-breaker-demo.M5hzyP
+==================================================================
+
+== (0) build: breaker --release + sentinel ==
+contracts: build OK
+   Compiling sentinel v0.1.0 (/home/luna/.hermes/Sentinel/crates/sentinel)
+   Compiling breaker v0.1.0 (/home/luna/.hermes/Sentinel/crates/breaker)
+    Finished `release` profile [optimized] target(s) in 2m 46s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+rust: build OK
+
+== (1) anvil on http://127.0.0.1:8547 + deploy SentinelAuditAnchor ==
+anvil up (pid 7498), chain 31337
+SentinelAuditAnchor deployed at: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+== (2) daemon: replay tests/fixtures/perpl/crash-scenario.jsonl (heartbeats every 8s, anchor 0x5FbDB2315678afecb367f032d93F642f64180aa3) ==
+    (`cargo run --bin sentinel -- --replay …` with the same env; the built
+     binary is started directly by default so a concurrent cargo job cannot
+     hold the lock — set P14_CARGO_RUN=1 for literal cargo run)
+daemon started (pid 7571, logs: /tmp/p14-breaker-demo.M5hzyP/daemon.log)
+
+== (3) breaker: dry_run, anchor 0x5FbDB2315678afecb367f032d93F642f64180aa3, guardian 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, port 9090 ==
+    (`cargo run -p breaker --release` with the same env; built binary started directly)
+breaker started (pid 7572, logs: /tmp/p14-breaker-demo.M5hzyP/breaker.log)
+waiting for the breaker HTTP surface ...
+
+== (4) wait for a fresh heartbeat (stale=false) ==
+    ... waiting for a fresh heartbeat on the anchor (stale=false) (10s elapsed)
+{"address":"0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266","age_secs":1791301488,"max_tier":0,"stale":true,"critical":false,"armed":false}
+status (fresh):
+{
+  "generated_at_ms": 1791301494638,
+  "guardians": [
+    {
+      "address": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "last_ts_ms": 1791301486000,
+      "age_secs": 8,
+      "max_tier": 3,
+      "stale": false,
+      "critical": true,
+      "armed": false
+    }
+  ]
+}
+on-chain Heartbeat events (cast logs):
+  logIndex: 0
+  removed: false
+  topics: [
+  	0xa068fbc1b92cb8ea8005e568b0b15b538691078d8437eb83346db7791c7bc6ee
+  ]
+  transactionHash: 0x102055acb4b85193954e055c06d8b5178fad56030f8faf7cfaf92ffb777dba0c
+  transactionIndex: 0
+  decoded:
+  	param0: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  	param1: 0x191e0d2a05c57842c519fedefa72821dea72d7be919224c4d0269ceac2029491
+  	param2: 0
+  	param3: 3
+
+== (5) kill -9 the daemon (simulated unresponsive Sentinel) ==
+scripts/breaker-demo.sh: line 246:  7571 Killed                     setsid env ENABLE_ANCHOR=true ANCHOR_CONTRACT_ADDRESS="$ADDR" RPC_SIGNER_KEY="$ANVIL_KEY" HEARTBEAT_INTERVAL_SECS="$HB_SECS" PERPL_RPC_URL="$RPC" EXECUTION_MODE=DRY_RUN LOG_FORMAT=pretty RUST_LOG="${RUST_LOG:-sentinel=info}" PORT="$DAEMON_PORT" SENTINEL_MOCK_PACE=1 SENTINEL_MOCK_CAP_MS=1200 "${RUN_DAEMON[@]}" > "$WORK/daemon.log" 2>&1
+daemon dead; no more heartbeats will be posted
+journal baseline: 3 line(s) in data/breaker-journal.jsonl
+
+== (6) wait for stale (age > 24s), then fire ==
+    ... waiting for staleness (age > 3 x 8s) (10s elapsed)
+{"address":"0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266","age_secs":18,"max_tier":3,"stale":false,"critical":true,"armed":false}
+status (stale):
+{
+  "generated_at_ms": 1791301512943,
+  "guardians": [
+    {
+      "address": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "last_ts_ms": 1791301486000,
+      "age_secs": 26,
+      "max_tier": 3,
+      "stale": true,
+      "critical": true,
+      "armed": true
+    }
+  ]
+}
+trigger body: {"guardian":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","reason":"sentinel-unresponsive-heartbeat-stale-critical","requested_at_ms":1791301512946}
+X-Breaker-Signature: sha256=31089a9fe59621a53ec9fe2c58c639a87f6c12b22ec0403ccf6f7e7ea9edbf22  (HMAC-SHA256 over the raw body)
+(this POST is the frozen CRE dead-man's-switch hop — the exact request
+ workflow-cre/sentinel-deadman/ sends when a guardian is stale && critical;
+ the breaker's own 5 s auto-path may alternatively fire first — the shared
+ one-fire-per-epoch gate makes the two paths idempotent.)
+POST /breaker/trigger -> HTTP 202 {"accepted":true,"epoch":3,"fired":true}
+
+waiting for the journal line in data/breaker-journal.jsonl ...
+journal line (first fire):
+{
+  "ts_ms": 1791301513182,
+  "guardian": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  "epoch": 3,
+  "mode": "dry_run",
+  "market_id": 32,
+  "fraction": 0.5,
+  "size": 0.635,
+  "notional_usd": 999.109,
+  "status": "simulated",
+  "detail": "reduce 0.5 × 10 = 0.635 @ mark 1573.4 (notional 999.1090, distance 5.99% [fallback market metadata: size_decimals=3, min_size=0]); dry-run fill at 1565.5330 (mark 1573.4, 50 bps slippage); client_order_id sentinel-32-4; sentinel-unresponsive-heartbeat-stale-critical; snapshot=file:tests/fixtures/p14/breaker-snapshot.json; age=27s; tier=3 (Red)"
+}
+
+waiting for armed=true in the status (fired this epoch) ...
+
+alert emitted by the breaker (frozen literal 'BREAKER: Sentinel unresponsive'):
+[2m2026-10-06T15:45:13.182702Z[0m [33m WARN[0m [2msentinel::alert[0m[2m:[0m breaker alert [3mtext[0m[2m=[0m🚨 BREAKER: Sentinel unresponsive: guardian 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 stale 27s — reduce 0.5 × 10 = 0.635 @ mark 1573.4 (notional 999.1090, distance 5.99% [fallback market metadata: size_decimals=3, min_size=0]); dry-run fill at 1565.5330 (mark 1573.4, 50 bps slippage); client_order_id sentinel-32-4; sentinel-unresponsive-heartbeat-stale-critical; snapshot=file:tests/fixtures/p14/breaker-snapshot.json; age=27s; tier=3 (Red) [3mat_ms[0m[2m=[0m1791301513182
+
+== (7) summary ==
+  anchor contract:   0x5FbDB2315678afecb367f032d93F642f64180aa3
+  guardian:          0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  heartbeats posted: 2 Heartbeat events on-chain
+  trigger:           HTTP 202 (the CRE hop's signed POST /breaker/trigger)
+  journal:           {"ts_ms":1791301513182,"guardian":"0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266","epoch":3,"mode":"dry_run","market_id":32,"fraction":0.5,"size":0.635,"notional_usd":999.109,"status":"simulated","detail":"reduce 0.5 × 10 = 0.635 @ mark 1573.4 (notional 999.1090, distance 5.99% [fallback market metadata: size_decimals=3, min_size=0]); dry-run fill at 1565.5330 (mark 1573.4, 50 bps slippage); client_order_id sentinel-32-4; sentinel-unresponsive-heartbeat-stale-critical; snapshot=file:tests/fixtures/p14/breaker-snapshot.json; age=27s; tier=3 (Red)"}
+  mode:              dry_run (no live orders; SPEC-P14 §4)
+
+--- breaker log tail ---
+[2m2026-10-06T15:44:38.439854Z[0m [32m INFO[0m [2mbreaker[0m[2m:[0m breaker: starting [3mmode[0m[2m=[0m"dry_run" [3manchor[0m[2m=[0m0x5FbDB2315678afecb367f032d93F642f64180aa3 [3mguardians[0m[2m=[0m1 [3minterval_secs[0m[2m=[0m8 [3mstale_mult[0m[2m=[0m3 [3mport[0m[2m=[0m9090
+[2m2026-10-06T15:44:38.454057Z[0m [32m INFO[0m [2mbreaker[0m[2m:[0m breaker: first heartbeat poll completed [3mapplied[0m[2m=[0m0
+[2m2026-10-06T15:44:38.454134Z[0m [32m INFO[0m [2mbreaker[0m[2m:[0m breaker: armed HTTP surface listening [3mport[0m[2m=[0m9090
+[2m2026-10-06T15:44:38.454110Z[0m [32m INFO[0m [2mbreaker::watcher[0m[2m:[0m breaker watcher: started [3mcontract[0m[2m=[0m0x5FbDB2315678afecb367f032d93F642f64180aa3 [3mlookback_blocks[0m[2m=[0m7200 [3mpoll_secs[0m[2m=[0m15
+[2m2026-10-06T15:44:38.454158Z[0m [32m INFO[0m [2mbreaker::trigger[0m[2m:[0m breaker trigger: auto-fire loop started [3mguardians[0m[2m=[0m1 [3mcadence_secs[0m[2m=[0m5
+[2m2026-10-06T15:44:53.457093Z[0m [32m INFO[0m [2mbreaker::watcher[0m[2m:[0m breaker watcher: heartbeats recorded [3mapplied[0m[2m=[0m2 [3mtrackers[0m[2m=[0m1
+[2m2026-10-06T15:45:13.181990Z[0m [32m INFO[0m [2mbreaker::trigger[0m[2m:[0m breaker trigger: firing [3mguardian[0m[2m=[0m0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 [3mepoch[0m[2m=[0m3 [3mage_secs[0m[2m=[0m27 [3mmax_tier[0m[2m=[0m3 [3mtier[0m[2m=[0m"Red" [3mreason[0m[2m=[0m"sentinel-unresponsive-heartbeat-stale-critical"
+[2m2026-10-06T15:45:13.182228Z[0m [33m WARN[0m [2mbreaker::executor[0m[2m:[0m breaker executor: no market metadata; using the documented Perpl fallback (size_decimals=3, min_size=0) [3mmarket_id[0m[2m=[0m32
+[2m2026-10-06T15:45:13.182702Z[0m [33m WARN[0m [2msentinel::alert[0m[2m:[0m breaker alert [3mtext[0m[2m=[0m🚨 BREAKER: Sentinel unresponsive: guardian 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 stale 27s — reduce 0.5 × 10 = 0.635 @ mark 1573.4 (notional 999.1090, distance 5.99% [fallback market metadata: size_decimals=3, min_size=0]); dry-run fill at 1565.5330 (mark 1573.4, 50 bps slippage); client_order_id sentinel-32-4; sentinel-unresponsive-heartbeat-stale-critical; snapshot=file:tests/fixtures/p14/breaker-snapshot.json; age=27s; tier=3 (Red) [3mat_ms[0m[2m=[0m1791301513182
+[2m2026-10-06T15:45:13.182731Z[0m [32m INFO[0m [2mbreaker::executor[0m[2m:[0m breaker executor: action recorded [3mguardian[0m[2m=[0m0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266 [3mepoch[0m[2m=[0m3 [3mstatus[0m[2m=[0m"simulated" [3mmarket_id[0m[2m=[0mSome(32) [3mchannel[0m[2m=[0m"tracing"
+[2m2026-10-06T15:45:13.182751Z[0m [32m INFO[0m [2mbreaker::armed[0m[2m:[0m breaker armed: trigger accepted (fired) [3mguardian[0m[2m=[0m0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 [3mepoch[0m[2m=[0m3 [3mreason[0m[2m=[0msentinel-unresponsive-heartbeat-stale-critical
+--- daemon log tail ---
+[2m2026-10-06T15:44:38.600192Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m sentinel starting [3mmode[0m[2m=[0mDRY_RUN [3mreplay[0m[2m=[0mtrue [3mperpl_env[0m[2m=[0mtestnet [3mchain_id[0m[2m=[0m10143 [3mversion[0m[2m=[0m"0.1.0"
+[2m2026-10-06T15:44:38.621807Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m audit journal open [3mnext_seq[0m[2m=[0m55 [3mdir[0m[2m=[0m"data/audit"
+[2m2026-10-06T15:44:38.622984Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m telegram bot disabled (placeholder token or empty allowlist)
+[2m2026-10-06T15:44:38.623056Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m alerts: tracing only (no telegram chat configured)
+[2m2026-10-06T15:44:38.777584Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m health + audit API on /healthz, /api/audit [3mport[0m[2m=[0m18080
+[2m2026-10-06T15:44:38.781742Z[0m [32m INFO[0m [2msentinel::pipeline[0m[2m:[0m pipeline started [3mmarkets[0m[2m=[0m2 [3mpositions[0m[2m=[0m2 [3mreplay[0m[2m=[0mtrue
+[2m2026-10-06T15:44:38.874534Z[0m [32m INFO[0m [2msentinel::anchor[0m[2m:[0m anchor: service started [3mnext_seq[0m[2m=[0m0
+[2m2026-10-06T15:44:39.160025Z[0m [32m INFO[0m [2msentinel::anchor[0m[2m:[0m anchor: heartbeat posted [3mtx[0m[2m=[0m0x4e8ecf056568214007284691e4ec52acb9de183e6e5a60274e2a7cfbd07a0d6e [3mseq[0m[2m=[0m55
+[2m2026-10-06T15:44:39.437244Z[0m [32m INFO[0m [2msentinel::anchor[0m[2m:[0m anchor: batch anchored [3mfrom_seq[0m[2m=[0m1 [3mentries[0m[2m=[0m57 [3mtx[0m[2m=[0m0x65ca7441bcf2d842717356542337b4e3c44548ce54f4d8e8a886d8dd7f323405
+[2m2026-10-06T15:44:47.144086Z[0m [32m INFO[0m [2msentinel::anchor[0m[2m:[0m anchor: heartbeat posted [3mtx[0m[2m=[0m0x102055acb4b85193954e055c06d8b5178fad56030f8faf7cfaf92ffb777dba0c [3mseq[0m[2m=[0m55
+[2m2026-10-06T15:44:48.205762Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"tier_change" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🟡 ETH#32 GREEN→YELLOW · distance 24.10% · consult scheduled
+[2m2026-10-06T15:44:48.205963Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"consult_scheduled" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🧠 ETH#32 YELLOW · consult scheduled · distance 24.10%
+
+==================================================================
+  DEMO COMPLETE — dead-man's-switch fired with exit 0
+==================================================================
+[cleanup] all processes killed; work dir /tmp/p14-breaker-demo.M5hzyP removed (script exit 0)
+[breaker-demo] transcript written to docs/evidence/p14-breaker-demo.txt (exit 0)

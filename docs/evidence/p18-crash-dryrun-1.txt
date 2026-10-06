@@ -1,0 +1,37 @@
+==================================================================
+  SENTINEL CRASH REHEARSAL — replay, DRY_RUN, zero manual steps
+  fixture: tests/fixtures/perpl/crash-scenario.jsonl
+  ETH long: 30% distance → crash → 6% distance (logical 600s)
+==================================================================
+[2m2026-10-06T15:37:51.946606Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m sentinel starting [3mmode[0m[2m=[0mDRY_RUN [3mreplay[0m[2m=[0mtrue [3mperpl_env[0m[2m=[0mtestnet [3mchain_id[0m[2m=[0m10143 [3mversion[0m[2m=[0m"0.1.0"
+[2m2026-10-06T15:37:51.958576Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m audit journal open [3mnext_seq[0m[2m=[0m47 [3mdir[0m[2m=[0m"data/audit"
+[2m2026-10-06T15:37:51.958756Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m telegram bot disabled (placeholder token or empty allowlist)
+[2m2026-10-06T15:37:51.958815Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m alerts: tracing only (no telegram chat configured)
+[2m2026-10-06T15:37:51.963372Z[0m [33m WARN[0m [2msentinel[0m[2m:[0m anchor skipped: ANCHOR_CONTRACT_ADDRESS / RPC_SIGNER_KEY not configured (PENDING-WALLET, see STUBS.md)
+[2m2026-10-06T15:37:51.965802Z[0m [33m WARN[0m [2msentinel[0m[2m:[0m health server bind failed [3merror[0m[2m=[0mAddress already in use (os error 98)
+[2m2026-10-06T15:37:51.966005Z[0m [33m WARN[0m [2msentinel::supervisor[0m[2m:[0m supervised task exited early; restarting [3mtask[0m[2m=[0m"health-api" [3mrestarts[0m[2m=[0m1 [3mreason[0m[2m=[0m"exit"
+[2m2026-10-06T15:37:51.966567Z[0m [32m INFO[0m [2msentinel::pipeline[0m[2m:[0m pipeline started [3mmarkets[0m[2m=[0m2 [3mpositions[0m[2m=[0m2 [3mreplay[0m[2m=[0mtrue
+[2m2026-10-06T15:37:52.967325Z[0m [33m WARN[0m [2msentinel[0m[2m:[0m health server bind failed [3merror[0m[2m=[0mAddress already in use (os error 98)
+[2m2026-10-06T15:37:52.967462Z[0m [33m WARN[0m [2msentinel::supervisor[0m[2m:[0m supervised task exited early; restarting [3mtask[0m[2m=[0m"health-api" [3mrestarts[0m[2m=[0m2 [3mreason[0m[2m=[0m"exit"
+[2m2026-10-06T15:37:54.968480Z[0m [33m WARN[0m [2msentinel[0m[2m:[0m health server bind failed [3merror[0m[2m=[0mAddress already in use (os error 98)
+[2m2026-10-06T15:37:54.968650Z[0m [33m WARN[0m [2msentinel::supervisor[0m[2m:[0m supervised task exited early; restarting [3mtask[0m[2m=[0m"health-api" [3mrestarts[0m[2m=[0m3 [3mreason[0m[2m=[0m"exit"
+[2m2026-10-06T15:37:58.970454Z[0m [33m WARN[0m [2msentinel[0m[2m:[0m health server bind failed [3merror[0m[2m=[0mAddress already in use (os error 98)
+[2m2026-10-06T15:37:58.970599Z[0m [33m WARN[0m [2msentinel::supervisor[0m[2m:[0m supervised task exited early; restarting [3mtask[0m[2m=[0m"health-api" [3mrestarts[0m[2m=[0m4 [3mreason[0m[2m=[0m"exit"
+[2m2026-10-06T15:38:06.972320Z[0m [33m WARN[0m [2msentinel[0m[2m:[0m health server bind failed [3merror[0m[2m=[0mAddress already in use (os error 98)
+[2m2026-10-06T15:38:06.972597Z[0m [33m WARN[0m [2msentinel::supervisor[0m[2m:[0m supervised task exited early; restarting [3mtask[0m[2m=[0m"health-api" [3mrestarts[0m[2m=[0m5 [3mreason[0m[2m=[0m"exit"
+[2m2026-10-06T15:38:15.398076Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"tier_change" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🟡 ETH#32 GREEN→YELLOW · distance 24.10% · consult scheduled
+[2m2026-10-06T15:38:15.398306Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"consult_scheduled" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🧠 ETH#32 YELLOW · consult scheduled · distance 24.10%
+[2m2026-10-06T15:38:22.974364Z[0m [33m WARN[0m [2msentinel[0m[2m:[0m health server bind failed [3merror[0m[2m=[0mAddress already in use (os error 98)
+[2m2026-10-06T15:38:22.974517Z[0m [33m WARN[0m [2msentinel::supervisor[0m[2m:[0m supervised task exited early; restarting [3mtask[0m[2m=[0m"health-api" [3mrestarts[0m[2m=[0m6 [3mreason[0m[2m=[0m"exit"
+[2m2026-10-06T15:38:44.223234Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"tier_change" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🟠 ETH#32 YELLOW→ORANGE · distance 14.88%
+[2m2026-10-06T15:38:44.223371Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"reflex_action" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m⚡ ETH#32 reduce 25% · size 2.500 · sentinel-32-1 · simulated
+[2m2026-10-06T15:38:52.975642Z[0m [33m WARN[0m [2msentinel[0m[2m:[0m health server bind failed [3merror[0m[2m=[0mAddress already in use (os error 98)
+[2m2026-10-06T15:38:52.975922Z[0m [33m WARN[0m [2msentinel::supervisor[0m[2m:[0m supervised task exited early; restarting [3mtask[0m[2m=[0m"health-api" [3mrestarts[0m[2m=[0m7 [3mreason[0m[2m=[0m"exit"
+[2m2026-10-06T15:39:03.429194Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"tier_change" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m🔴 ETH#32 ORANGE→RED · distance 7.38%
+[2m2026-10-06T15:39:06.651871Z[0m [32m INFO[0m [2msentinel::alert[0m[2m:[0m alert [3mkind[0m[2m=[0m"reflex_action" [3mmarket_id[0m[2m=[0m32 [3mtext[0m[2m=[0m⚡ ETH#32 reduce 50% · size 5.000 · sentinel-32-2 · simulated
+[2m2026-10-06T15:39:06.652141Z[0m [33m WARN[0m [2msentinel::pipeline[0m[2m:[0m feed event channel closed; ending pipeline
+[2m2026-10-06T15:39:06.652215Z[0m [32m INFO[0m [2msentinel::pipeline[0m[2m:[0m pipeline stopped [3mevents[0m[2m=[0m128
+[2m2026-10-06T15:39:06.652750Z[0m [32m INFO[0m [2msentinel[0m[2m:[0m pipeline finished [3mevents[0m[2m=[0m128 [3mexecuted[0m[2m=[0m2 [3malerts[0m[2m=[0m6 [3mdenied[0m[2m=[0m0
+==================================================================
+  rehearsal complete — evidence: docs/evidence/p06-crash-demo.txt
+==================================================================
