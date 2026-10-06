@@ -116,6 +116,17 @@ impl LivePerpl {
         let _ = self.shutdown_tx.send(true);
     }
 
+    /// On-chain id of the wallet's primary exchange account.
+    ///
+    /// # Errors
+    /// `PerplError::Rest` when the wallet holds no exchange account (the
+    /// 404-class case: create the SCA first — see SETUP-MANUAL).
+    pub async fn primary_account_id(&self) -> Result<u64> {
+        let wallet = self.rest.get_wallet().await?;
+        let (account_id, _, _, _, _, _) = types::parse_wallet(&wallet)?;
+        Ok(account_id)
+    }
+
     /// Full market table from `/v1/pub/context`, fetched once and cached.
     async fn markets(&self) -> Result<&Vec<Market>> {
         self.markets

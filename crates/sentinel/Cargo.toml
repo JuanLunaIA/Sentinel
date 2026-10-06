@@ -18,6 +18,10 @@ path = "src/main.rs"
 name = "read-positions"
 path = "src/bin/read_positions.rs"
 
+[[bin]]
+name = "test-execution"
+path = "src/bin/test_execution.rs"
+
 [lints]
 workspace = true
 

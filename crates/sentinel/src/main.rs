@@ -22,5 +22,13 @@ async fn main() -> anyhow::Result<()> {
         "sentinel initialized"
     );
 
+    if cfg.features.enable_reflex {
+        sentinel::reflex::daemon(cfg.clone())
+            .await
+            .context("reflex daemon")?;
+    } else {
+        tracing::info!("reflex disabled (ENABLE_REFLEX=false); exiting");
+    }
+
     Ok(())
 }
