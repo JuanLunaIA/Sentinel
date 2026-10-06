@@ -1,4 +1,4 @@
-== sentinel verify-facts  2026-10-05T21:38:15Z ==
+== sentinel verify-facts  2026-10-06T16:06:04Z ==
 -- toolchain --
 rustc: rustc 1.98.1 (48a229cea 2026-09-01)
 cargo: cargo 1.98.1 (797e8a9bc 2026-08-05)
