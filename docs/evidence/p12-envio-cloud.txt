@@ -1,0 +1,60 @@
+# Sentinel P12 — Envio Cloud deployment attempt (result: BLOCKED, recorded)
+# Date: 2026-10-06 (UTC-03). Budget: ≤30 min. No account/login available in this
+# environment → nothing deployed; no public GraphQL URL produced;
+# ENVIO_GRAPHQL_ENDPOINT intentionally NOT added to indexer/.env.
+
+================================================================================
+## 1. `pnpx envio@latest deploy`
+================================================================================
+
+  $ pnpx envio@latest deploy
+  [01:18:51] ERROR: error: unrecognized subcommand 'deploy'
+
+  Usage: envio [OPTIONS] <COMMAND>
+  For more information, try '--help'.
+  (verified: exit code 1)
+
+  → The envio 3.12.1 CLI has no `deploy` subcommand. Hosted deployments go
+    through the separate Envio Cloud CLI (`envio-cloud`) / the cloud dashboard.
+
+================================================================================
+## 2. Envio Cloud CLI — auth state
+================================================================================
+
+  $ pnpx envio-cloud token
+  .../node_modules/envio-cloud postinstall: Done
+  You are not currently logged in. Run 'envio-cloud login' first.
+  (verified: exit code 0 — informational refusal, no session)
+
+  $ pnpx envio-cloud whoami
+  Error: unknown command "whoami" for "envio-cloud"
+  Run 'envio-cloud --help' for usage.
+
+================================================================================
+## 3. Exact blocker + what a deploy needs
+================================================================================
+
+BLOCKER: no Envio Cloud session. Authentication options (per the CLI's own
+shipped docs, .claude/skills/envio-cloud-cli/SKILL.md):
+  - `envio-cloud login`                     → interactive browser login (30-day session) — impossible headless;
+  - `envio-cloud login --token <github-token>` or ENVIO_GITHUB_TOKEN → needs a
+    GitHub token with scopes read:org, read:user, user:email — none available here.
+
+Secondary (structural) notes:
+  - Cloud indexers are linked to a git repo/branch and deployments are
+    per-commit (`envio-cloud indexer add --name <name> --repo <repo> [--branch main]`,
+    then `envio-cloud deployment status <indexer> <commit>` etc.). This task
+    explicitly forbids git operations, so even with an account the flow would
+    require the operator to push the repo first.
+  - Live Monad-testnet indexing (either cloud or self-hosted) additionally
+    depends on STUB-17 (funded RPC_SIGNER_KEY to deploy SentinelAuditAnchor on
+    testnet) — at P12 the anchor exists only on local anvil.
+
+CONSEQUENCE: `ENVIO_GRAPHQL_ENDPOINT` is not set in .env (nothing was deployed).
+The local equivalent used for the P12 query proof is
+http://127.0.0.1:8888/v1/graphql (see p12-envio-anvil.txt).
+
+Local static checks that DID run for the deploy-adjacent tooling:
+  - `pnpx envio@latest config view` (default config.yaml) → exit 0, resolved config printed;
+  - `pnpx envio@latest codegen` → exit 0 (types generated);
+  - `pnpm exec tsc --noEmit` → exit 0;  `pnpm test` → 3/3 passed.

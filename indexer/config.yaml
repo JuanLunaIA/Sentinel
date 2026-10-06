@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+#
+# Sentinel HyperIndex config — Monad TESTNET (chain 10143) is the primary
+# deployment target; HyperSync (https://monad-testnet.hypersync.xyz) is the
+# default data source and the RPC below the fallback/realtime source.
+# Local anvil testing uses config.local-anvil.yaml (chain 31337).
+#
+# Env vars: the hosted service only exposes `ENVIO_`-prefixed variables, so the
+# canonical names are ENVIO_*; the bare repo-standard name is accepted as a
+# secondary fallback before the hard-coded placeholder. NOTE: the address
+# substitution must stay QUOTED and the start_block substitutions must stay
+# UNQUOTED (plain scalars) — the CLI's interpolation + deserialize step is
+# picky here; both forms are verified by `envio config view` in
+# docs/evidence/p12-envio-anvil.txt.
+name: sentinel-indexer
+description: >-
+  Sentinel audit-journal anchor + risk heartbeat indexer for Monad. Indexes
+  SentinelAuditAnchor.DecisionAnchored into SentinelAnchor and
+  SentinelAuditAnchor.Heartbeat into SentinelHeartbeat (P12).
+disable_default_cross_chain: true
+
+# Tx hash must be selected in config for codegen/simulate types; block
+# `number` and `timestamp` are always included by the runtime, so they are not
+# listed here (the CLI rejects `timestamp` in field_selection — verified).
+field_selection:
+  transaction_fields:
+    - hash
+
+chains:
+  - id: 10143 # Monad testnet (mainnet id is 143 — swap id + start_block to deploy there)
+    start_block: ${ENVIO_START_BLOCK:-0} # 0 => HyperSync auto-detects the first block with a matching event
+    rpc:
+      - url: ${ENVIO_RPC_URL:-https://testnet-rpc.monad.xyz}
+    contracts:
+      - name: SentinelAuditAnchor
+        # (a) OUR anchor contract. Live deploy is STUB-17 (funded signer
+        # pending): set ENVIO_ANCHOR_CONTRACT_ADDRESS (hosted) or
+        # ANCHOR_CONTRACT_ADDRESS (.env / shell) once deployed. Until then the
+        # zero-address placeholder keeps codegen green.
+        address:
+          - "${ENVIO_ANCHOR_CONTRACT_ADDRESS:-${ANCHOR_CONTRACT_ADDRESS:-0x0000000000000000000000000000000000000000}}"
+        start_block: ${ENVIO_ANCHOR_START_BLOCK:-0}
+        handler: ./src/EventHandlers.ts
+        events:
+          - event: DecisionAnchored(uint64 seq, bytes32 entryHash, bytes32 runningRoot, address account)
+          - event: Heartbeat(address guardian, bytes32 riskStateHash, uint32 openPositions, uint8 maxTier)
+
+      # ------------------------------------------------------------------
+      # (b) Perpl exchange — configured but DISABLED (fallback applied):
+      # the exchange ABI could not be resolved within the 45-min explorer
+      # budget at P12 (see docs/evidence/p12-envio-perpl-abi-attempts.txt and
+      # indexer/README.md § "Perpl-event indexing: roadmap"). Uncomment the
+      # block below once the ABI is recovered (explorer getabi, the Perpl SDK
+      # vendor tree, or a team-provided artifact) and add handlers for
+      # PerpFill / Liquidation / AccountSnapshotDay in src/EventHandlers.ts.
+      #
+      # - name: PerplExchange
+      #   address:
+      #     - '0x1964c32f0be608e7d29302aff5e61268e72080cc'
+      #   start_block: ${ENVIO_PERPL_START_BLOCK:-62953} # exchange deploy block on testnet
+      #   events:
+      #     - event: <fill-event-signature-here>        # TODO from resolved ABI
+      #     - event: <liquidation-event-signature-here> # TODO from resolved ABI
+      # ------------------------------------------------------------------

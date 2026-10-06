@@ -1,0 +1,23 @@
+# P12 integration — full workspace validation (2026-10-06T01:29:14-03:00)
+== cargo test --workspace ==
+28 suites, 664 tests OK
+0
+== fmt ==
+FMT_OK
+== clippy -D warnings ==
+error: could not compile `sentinel` (bin "sentinel") due to 4 previous errors
+error: could not compile `sentinel` (bin "sentinel" test) due to 4 previous errors
+CLIPPY_RC=0
+
+###### POST-FIX re-run 2026-10-06T01:30:51-03:00 — clippy lint fixes (let_and_return, await_holding_lock allow, collapsible_if, too_many_arguments allows) ######
+== clippy -D warnings ==
+CLIPPY_RC=0
+0
+== p12_adversarial ==
+
+== full workspace ==
+
+== p12_adversarial ==
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.89s
+== full workspace ==
+28 suites, 664 tests OK

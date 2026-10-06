@@ -1,0 +1,61 @@
+# Sentinel indexer schema — FROZEN for P12: entity and field names are verbatim
+# from the spec; do not rename. Scalar mapping notes:
+#   BigInt -> bigint in handlers, serialized as a STRING in the GraphQL API
+#   Int    -> number
+#   String -> used for prices/sizes/percentages (decimal strings; never floats
+#             for financial values) and for hex hashes.
+# `@index` annotations are additive (query performance), they do not change the
+# frozen names.
+
+type PerpFill {
+  id: ID!
+  market_id: Int! @index
+  account: String! @index
+  side: String!
+  price: String!
+  size: String!
+  ts: BigInt! @index
+  tx_hash: String!
+  block_number: BigInt!
+}
+
+type Liquidation {
+  id: ID!
+  market_id: Int! @index
+  account: String! @index
+  size: String!
+  price: String!
+  ts: BigInt! @index
+  tx_hash: String!
+  # Left nullable on purpose: some liquidation event shapes omit the collateral
+  # actually lost; flip to `String!` only once the exchange ABI confirms it is
+  # always present.
+  collateral_lost: String
+}
+
+type AccountSnapshotDay {
+  id: ID!
+  account: String! @index
+  day: String! @index
+  max_tier: Int!
+  min_distance_pct: String!
+}
+
+type SentinelAnchor {
+  id: ID!
+  seq: BigInt! @index
+  entry_hash: String!
+  root: String!
+  account: String! @index
+  ts: BigInt!
+  tx_hash: String!
+}
+
+type SentinelHeartbeat {
+  id: ID!
+  guardian: String! @index
+  risk_state_hash: String!
+  max_tier: Int!
+  ts: BigInt! @index
+  tx_hash: String!
+}

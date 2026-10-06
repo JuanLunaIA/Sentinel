@@ -1,0 +1,117 @@
+# Sentinel P12 — Perpl exchange ABI resolution attempts (explorer path) + fallback
+# Address under test: 0x1964c32f0be608e7d29302aff5e61268e72080cc (Monad testnet;
+#   confirmed to be the Perpl exchange instance via docs/evidence/p01-perpl-context-testnet.json
+#   instances[0].address).
+# Budget: HARD 45-minute cap on explorer resolution. RESULT: UNRESOLVED via
+#   explorer within budget  →  sanctioned fallback applied (exchange contract
+#   stays configured-but-commented in indexer/config.yaml; see
+#   indexer/README.md § "Perpl-event indexing: roadmap (ABI unresolved, fallback
+#   applied)").
+# Date: 2026-10-06 (UTC-03).
+
+================================================================================
+## 1. Explorer API attempts (ordered)
+================================================================================
+
+[1] testnet.monadexplorer.com Etherscan-style getabi
+  $ curl -s "https://testnet.monadexplorer.com/api?module=contract&action=getabi&address=0x1964..."
+  → "Redirecting..."   (HTTP 308)
+  $ curl -sI ... | grep -i location
+  → location: https://testnet.monadvision.com/api?module=contract&action=getabi&address=0x1964...
+
+[2] followed redirect (testnet.monadvision.com/api...)
+  $ curl -sL ... -w "%{http_code}"
+  → final_code=403
+  → body: <!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title>
+          (Cloudflare bot challenge page; "ray id" shown)
+
+[3] monadscan.com (mainnet Etherscan-family host)
+  $ curl -s "https://monadscan.com/api?module=contract&action=getabi&address=0x1964..."
+  → {"status":"0","message":"NOTOK","result":"Invalid API URL endpoint, use api.monadscan.com"}
+
+[4] api.monadscan.com
+  $ curl -s "https://api.monadscan.com/api?module=contract&action=getabi&address=0x1964..."
+  → {"status":"0","message":"NOTOK","result":"You are using a deprecated V1 endpoint,
+     switch to Etherscan API V2 using https://docs.etherscan.io/v2-migration"}
+
+[5] Etherscan API V2 (the migration target; both candidate chains)
+  $ curl -s "https://api.etherscan.io/v2/api?chainid=10143&module=contract&action=getabi&address=0x1964..."
+  → {"status":"0","message":"NOTOK","result":"Missing/Invalid API Key"}
+  $ curl -s "https://api.etherscan.io/v2/api?chainid=143&module=contract&action=getabi&address=0x1964..."
+  → {"status":"0","message":"NOTOK","result":"Missing/Invalid API Key"}
+  (No API key available in this environment; signup is interactive.)
+
+[6] Sourcify (verification registry)
+  $ curl -s "https://sourcify.dev/server/v2/contract/10143/0x1964...?fields=abi"
+  → {"match":null,"creationMatch":null,"runtimeMatch":null,"chainId":"10143",
+     "address":"0x1964C32f0bE608E7D29302AFF5E61268E72080cc"}
+     → contract is NOT verified on Sourcify.
+
+[7] MonadVision web UI / alternate hosts
+  $ curl -s -A "Mozilla/5.0 ..." "https://testnet.monadvision.com/api?module=contract&action=getabi..."
+  → Next.js HTML app document (not an API JSON response)
+  $ curl "https://api.monadvision.com/..." / "https://testnet-api.monadvision.com/..."
+  → unreachable (HTTP 000)
+
+[8] Real browser (testnet.monadvision.com/address/0x1964...?tab=contract)
+  → "Verificación de seguridad en curso" — Cloudflare challenge iframe; clicking the
+     turnstile checkbox did not clear it in the headless browser session.
+
+CONCLUSION: every available explorer/verification API route for this address is
+blocked by (a) Cloudflare bot walls, (b) deprecated V1 endpoints pointing to
+Etherscan V2 which requires an API key we do not have, or (c) the contract not
+being verified on Sourcify. Explorer resolution: FAILED within budget.
+
+================================================================================
+## 2. What IS available for the next wave (discovered during the attempt)
+================================================================================
+
+[2.1] A candidate full ABI exists in the vendored Perpl SDK:
+  vendor/dex-sdk/crates/sdk/abi/dex/Exchange.json   (~2.1 MB, 204 events)
+  Fill/liquidation candidates (name + arg types):
+    TakerOrderFilledV2(uint256,uint256,uint256,uint256,uint256,int256,uint256,uint256,uint256)
+    MakerOrderFilledV2(uint256,uint256,uint256,uint256,uint256,uint256,uint256,int256,uint256,uint256,uint256)
+    PositionLiquidated(uint256,uint256,uint8,uint256,uint256,uint256,uint256,int256,int256,int256,uint256,int256,uint256,bool)
+    BuyToLiquidateSettled(...) / AccountLiquidationCredit(...) / PositionLiquidationCredit(...)
+
+[2.2] On-chain cross-validation (Monad testnet RPC https://testnet-rpc.monad.xyz):
+  - contract has code at the address (ERC1967-proxy-style bytecode prefix observed).
+  - latest block at attempt time: 68,582,132.
+  - eth_getLogs on the public RPC is limited: {"code":-32614,"message":"eth_getLogs is
+    limited to a 100 range"} — window scans below used 100-block ranges.
+  - topic0 from the vendor ABI signatures vs. 100 blocks (68581994–68582094):
+      0xa59d6df87b5cb9e8cca8c09e8f1e240b7a1d4a2ee8f6c636c12ce22b43b82d70  MakerOrderFilledV2 ×21
+      0x9d9bc0117914a61672fc4d289495e1031d64c5f8d4a714db38b52c85856d4999  TakerOrderFilledV2 ×20
+      0x6fc9c0ea1c0531654320ba06740c802447dbdef7c26cf749c4f12553cdd958a9  PositionLiquidated ×0 (window)
+      0x66c4fd8d726a62e549cbf66bc9a8e005cb6e30b73e027b3d86c4df1388d2b16f  AccountLiquidationCredit ×0 (window)
+    → the vendor ABI's signatures match live events; the exchange trades ~40 fills/100 blocks.
+
+[2.3] Field-mapping caveat (why the fallback was NOT lifted beyond "candidate"):
+  Event inputs are exchange-native ids and scaled integers, not the address/string
+  forms the frozen entities need. From the vendor ABI:
+    MakerOrderFilledV2 inputs: perpId, accountId, orderId, pricePNS, lotLNS, feeCNS,
+      lockedBalanceCNS, amountCNS, balanceCNS, builderId, builderFeeCNS
+    PositionLiquidated inputs: perpId, posAccountId, positionType, markPricePNS,
+      liqPricePNS, liqLotLNS, posLotLNS, deltaPnlCNS, fundingCNS, posAmountCNS,
+      posDepositCNS, accAmountCNS, accBalanceCNS, onOrderBook
+    TakerOrderFilledV2 inputs: entryPricePNS, collatPricePNS, pnlPricePNS, lotLNS,
+      feeCNS, amountCNS, balanceCNS, builderId, builderFeeCNS  (no perp/account ids!)
+  → mapping `PerpFill.account` / `Liquidation.account` (String) requires the
+    accountId → address relation (e.g. the exchange's AccountCreated(address,uint256)),
+    and PNS/LNS/CNS fixed-point scales must be decoded into decimal strings.
+    TakerOrderFilledV2 alone cannot populate the frozen fields; a correct design
+    needs the (maker+taker) pair or on-contract id resolution per tx.
+
+================================================================================
+## 3. Fallback applied (sanctioned) — state as shipped
+================================================================================
+
+- indexer/config.yaml: exchange contract block present but COMMENTED (address +
+  start_block ${ENVIO_PERPL_START_BLOCK:-62953}); anchor contract is the only
+  indexed contract.
+- indexer/schema.graphql: PerpFill / Liquidation / AccountSnapshotDay entities are
+  declared (tables + GraphQL surface live; empty).
+- indexer/src/EventHandlers.ts: no exchange handlers.
+- Roadmap section written in indexer/README.md § "Perpl-event indexing: roadmap
+  (ABI unresolved, fallback applied)" listing the exact next steps (copy ABI from
+  the vendor tree, resolve id mapping, uncomment config block, add handlers).

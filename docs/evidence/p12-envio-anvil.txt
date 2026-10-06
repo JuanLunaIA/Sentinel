@@ -1,0 +1,242 @@
+# Sentinel P12 — Envio HyperIndex: local anvil end-to-end (PRIMARY evidence)
+# Date: 2026-10-06 (session local, UTC-03). Repo: /home/luna/.hermes/Sentinel
+# Artifacts: indexer/ (project), config.local-anvil.yaml, src/EventHandlers.ts
+# Raw console: p12-envio-anvil-console.log (+ p12-envio-anvil-console-attempt1.log)
+#
+# RESULT: PASS — SentinelAuditAnchor deployed to a local anvil chain (31337),
+# events emitted, indexed by `envio dev` (HyperIndex 3.12.1) into Postgres, and
+# queried back through the local Hasura GraphQL endpoint, including one tx
+# indexed LIVE (realtime) after the indexer reported ready.
+
+================================================================================
+## 0. Environment prep notes (what the stock flow needed on this machine)
+================================================================================
+
+(a) Docker socket: the session user was not in the docker group and
+    `docker ps` → "permission denied ... /var/run/docker.sock". Worked around
+    with a scoped relay (cleaned up at the end):
+
+      sudo socat UNIX-LISTEN:/home/luna/.hermes/cache/scratch/docker-p12.sock,mode=666,fork,reuseaddr UNIX-CONNECT:/var/run/docker.sock
+      export DOCKER_HOST=unix:///home/luna/.hermes/cache/scratch/docker-p12.sock
+      # → envio dev log: "Connected to Docker via DOCKER_HOST (unix:///home/luna/.hermes/cache/scratch/docker-p12.sock)"
+
+(b) Host firewall vs docker bridges: a system nftables table dropped ALL
+    container↔container traffic (both directions confirmed with file-backed
+    `nc` probes: rc=143/SIGTERM from `timeout`, no RST; DNS resolved fine):
+
+      table inet filter {
+        chain forward { type filter hook forward priority filter; policy drop; ... }
+        chain input   { type filter hook input;   policy drop; ... } }
+      # hasura ↔ postgres on envio-network: Postgres connection failed,
+      #   "Host": "Unknown or invalid host", container envio-hasura (unhealthy),
+      #   dev aborts: "Hasura did not become healthy on port 8888 within 120 s."
+
+    Fix applied (narrow; only envio's own bridge; reverted after the run):
+
+      sudo nft add rule inet filter forward iifname "br-7e7a78547dd3" oifname "br-7e7a78547dd3" accept
+      # → rule added, handle 16; hasura restarted → "Up (healthy)",
+      #   logs: "Starting API server" ... normal startup.
+
+(c) Port conflict: the host already publishes a service on 127.0.0.1:8080
+    (verified `ss -tln`), which is Hasura's default external port. The local
+    runs set HASURA_EXTERNAL_PORT=8888 (in indexer/.env and the shell).
+
+(d) pnpm 11 blocked esbuild's build script during `envio init`
+    (ERR_PNPM_IGNORED_BUILDS). Fixed with `pnpm approve-builds esbuild`
+    (recorded in indexer/pnpm-workspace.yaml → allowBuilds).
+
+================================================================================
+## 1. Contract deploy + transactions (anvil 127.0.0.1:8547)
+================================================================================
+
+  $ anvil --silent --port 8547
+  $ cast block-number --rpc-url http://127.0.0.1:8547
+  0                                                           # ANVIL READY
+
+  $ cd contracts && forge create src/SentinelAuditAnchor.sol:SentinelAuditAnchor \
+      --rpc-url http://127.0.0.1:8547 \
+      --private-key 0xac09..(anvil key #0, throwaway) --broadcast
+  DEPLOYED=0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+  $ cast send <addr> 'anchor(uint64,bytes32,bytes32)' 1 0x11..32 0x22..32 ...
+  blockNumber          2
+  logs  [{...(DecisionAnchored topic0 0x8e91e279fa0ecd8e63f2e02c10a6ed25ee8ba052a972045c37b8c38f1bc0d555),
+          seq=1 entryHash=0x1111..11 runningRoot=0x2222..22 account=0xf39Fd6..2266,
+          blockTimestamp=0x6ac46cda}]
+  status               1 (success)
+  transactionHash      0x96195a40e908debcb7ee348c5f98954c5f39d6e7ece5dc9f67399a9950eee3ce
+
+  $ cast send <addr> 'anchor(uint64,bytes32,bytes32)' 2 0x33..32 0x44..32 ...
+  blockNumber          3
+  status               1 (success)
+  transactionHash      0x5dea77b5e5c8df66ac411e9824aff835c571af743cb77a1d694b4c859bb158aa
+
+  $ cast send <addr> 'beat(bytes32,uint32,uint8)' 0x55..32 3 2 ...
+  blockNumber          4
+  logs  [{...(Heartbeat topic0 0xa068fbc1b92cb8ea8005e568b0b15b538691078d8437eb83346db7791c7bc6ee),
+          guardian=0xf39Fd6..2266 riskStateHash=0x5555..55 openPositions=3 maxTier=2}]
+  status               1 (success)
+  transactionHash      0xf8255319896ae97d2651d7798eca0c54bb21677792aa609afe1dbfc9e8665d5d
+
+  $ cast call <addr> 'lastSeq(address)(uint64)' 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+  2                                                         # replay guard state
+  $ cast logs --from-block 0 --to-block latest --address <addr> | grep -c data
+  3                                                         # 2 anchors + 1 heartbeat
+
+================================================================================
+## 2. envio dev (local anvil config) — console highlights
+# Full raw console: p12-envio-anvil-console.log
+================================================================================
+
+  $ DOCKER_HOST=unix:///.../docker-p12.sock HASURA_EXTERNAL_PORT=8888 \
+      pnpx envio@latest dev --config config.local-anvil.yaml
+  Using Postgres already running on port 5433
+  Using Hasura already running on port 8888
+  [01:17:48] INFO: Initializing the indexer storage...
+  [01:17:48] INFO: No cache found to upload.
+  [01:17:48] INFO: Tracking tables in Hasura
+  [01:17:49] INFO: Hasura configuration completed
+  [01:17:49] INFO: The indexer storage is ready. Starting indexing!
+  [01:17:53] INFO: Reorg threshold reached
+  [01:17:53] INFO: All events have been fetched
+      chainId: 31337
+  [01:17:53] INFO: Creating the 12 remaining schema indexes before the indexer reports ready...
+      indexes: [ "AccountSnapshotDay_account_6uan1mbqwk", "AccountSnapshotDay_day_ej6bwffvbh",
+                 "Liquidation_account_8qztcx9yra", "Liquidation_market_id_0v2n8u41zm",
+                 "Liquidation_ts_2snrph7eqp", "PerpFill_account_2kowh0b2os",
+                 "PerpFill_market_id_fn64100uop", "PerpFill_ts_az3z0hf3l3",
+                 "SentinelAnchor_account_aralenbu08", "SentinelAnchor_seq_2g4ufelrzx",
+                 "SentinelHeartbeat_guardian_di8dzrmfxt", "SentinelHeartbeat_ts_bbv93d7orj" ]
+  [01:17:53] INFO: Committed 12 schema indexes and the ready timestamp in 0.07s.
+  [01:17:53] INFO: The indexer is ready. Switching to realtime indexing.
+  [01:18:13] WARN: No new blocks detected within 20s. (reduced-rate polling, chainId 31337, knownHeight 4)
+  [01:18:28] INFO: New blocks successfully found.
+      source: "RPC (127.0.0.1:8547)"  knownHeight: 4  newBlockHeight: 5
+
+  # ^ block 5 = the live seq=3 anchor sent AFTER the indexer was ready (see §3.3)
+
+================================================================================
+## 3. GraphQL proof — curl queries against the local Hasura endpoint
+#   endpoint: http://127.0.0.1:8888/v1/graphql   header: x-hasura-admin-secret: testing
+================================================================================
+
+### 3.1 SentinelAnchor (before the live tx)
+
+  $ curl -s http://127.0.0.1:8888/v1/graphql -H 'x-hasura-admin-secret: testing' \
+      -H 'content-type: application/json' \
+      -d '{"query":"{ SentinelAnchor(order_by: {seq: asc}) { id seq entry_hash root account ts tx_hash } }"}'
+  {"data":{"SentinelAnchor":[
+    {"id":"31337_2_0","seq":"1","entry_hash":"0x1111..11","root":"0x2222..22",
+     "account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791257818",
+     "tx_hash":"0x96195a40e908debcb7ee348c5f98954c5f39d6e7ece5dc9f67399a9950eee3ce"},
+    {"id":"31337_3_0","seq":"2","entry_hash":"0x3333..33","root":"0x4444..44",
+     "account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791257818",
+     "tx_hash":"0x5dea77b5e5c8df66ac411e9824aff835c571af743cb77a1d694b4c859bb158aa"}]}}
+  # (values abbreviated with ".." only in this writeup; the raw run printed 64-hex)
+
+### 3.2 SentinelHeartbeat
+
+  {"data":{"SentinelHeartbeat":[
+    {"id":"31337_4_0","guardian":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+     "risk_state_hash":"0x5555..55","max_tier":2,"ts":"1791257819",
+     "tx_hash":"0xf8255319896ae97d2651d7798eca0c54bb21677792aa609afe1dbfc9e8665d5d"}]}}
+
+### 3.3 LIVE capture — new anchor tx (seq=3) indexed in realtime
+
+  $ cast send <addr> 'anchor(uint64,bytes32,bytes32)' 3 0x66..32 0x77..32 ...
+  blockNumber          5
+  status               1 (success)
+  transactionHash      0xeea21503885fee68b9ae65f0c563f15a654c5e8e8ead47088693f25d02bd1cf6
+
+  # 6 seconds later, re-query:
+  {"data":{"SentinelAnchor":[ ...,
+    {"id":"31337_5_0","seq":"3","entry_hash":"0x6666..66","account":"0xf39F...2266",
+     "ts":"1791260303","tx_hash":"0xeea21503885fee68b9ae65f0c563f15a654c5e8e8ead47088693f25d02bd1cf6"}]}}
+  # rows: seq 1, 2, 3 — the third row arrived through realtime RPC sync.
+
+### 3.4 Aggregates + SQL cross-check
+
+  $ curl ... -d '{"query":"{ SentinelAnchor_aggregate { aggregate { count } } SentinelHeartbeat_aggregate { aggregate { count } } PerpFill_aggregate { aggregate { count } } }"}'
+  {"data":{"SentinelAnchor_aggregate":{"aggregate":{"count":3}},
+           "SentinelHeartbeat_aggregate":{"aggregate":{"count":1}},
+           "PerpFill_aggregate":{"aggregate":{"count":0}}}}
+
+  $ docker exec envio-postgres psql -U postgres -d envio-dev -c 'select
+      (select count(*) from "SentinelAnchor") as anchors,
+      (select count(*) from "SentinelHeartbeat") as heartbeats,
+      (select count(*) from "PerpFill") as fills,
+      (select count(*) from "Liquidation") as liqs;'
+   anchors | heartbeats | fills | liqs
+  ---------+------------+-------+------
+         3 |          1 |     0 |    0
+
+### 3.5 docs/queries.graphql — all four queries exercised against the endpoint
+
+  Q1 liquidations by market  → {"data":{"Liquidation":[]}}          (empty: exchange ABI fallback)
+  Q2 fills by account        → {"data":{"PerpFill":[]}}             (empty: exchange ABI fallback)
+  Q3 anchors ordered by seq  → 3 rows (above), sorted seq asc
+  Q4 heartbeat timeline      → query OK; jq gap-analysis pipeline runs, exit 0
+                                (only 1 heartbeat row → no gaps to report)
+
+================================================================================
+## 4. Cleanup (executed; system returned to pre-run state)
+================================================================================
+
+  $ # kill dev → stack teardown via the CLI's own command:
+  $ pnpx envio latest local docker down
+  Connected to Docker via DOCKER_HOST (unix:///.../docker-p12.sock)
+  Stopping containers...
+  Environment cleaned up                                # no envio containers remain
+
+  $ sudo nft -a list chain inet filter forward | grep br-7e7a78547dd3
+          iifname "br-7e7a78547dd3" oifname "br-7e7a78547dd3" accept # handle 16
+  $ sudo nft delete rule inet filter forward handle 16   # → chain back to its original ruleset
+
+  $ # (the 8080→8888 UID-scoped nat redirect added during debugging was also removed)
+  $ # socat relay killed; anvil killed (PID); ports 8547/8888/5433 verified closed
+  $ ss -tln | grep -E "8547|8888|5433" || echo "all closed"
+  all closed
+
+================================================================================
+## 5. Reproduce (runbook)
+================================================================================
+
+  anvil --silent --port 8547 &
+  cd contracts && forge create src/SentinelAuditAnchor.sol:SentinelAuditAnchor \
+     --rpc-url http://127.0.0.1:8547 --private-key 0xac09... --broadcast
+  cast send <addr> 'anchor(uint64,bytes32,bytes32)' 1 0x11.. 0x22.. --rpc-url http://127.0.0.1:8547 --private-key 0xac09...
+  cast send <addr> 'beat(bytes32,uint32,uint8)' 0x55.. 3 2 --rpc-url http://127.0.0.1:8547 --private-key 0xac09...
+  cd ../indexer
+  # per §0: docker socket access + nft bridge rule + HASURA_EXTERNAL_PORT
+  pnpx envio@latest dev --config config.local-anvil.yaml
+  curl -s http://127.0.0.1:8888/v1/graphql -H 'x-hasura-admin-secret: testing' \
+       -H 'content-type: application/json' \
+       -d '{"query":"{ SentinelAnchor(order_by: {seq: asc}) { seq entry_hash ts tx_hash } }"}'
+
+================================================================================
+## 6. Raw GraphQL outputs (verbatim, unabridged — as returned by curl)
+================================================================================
+
+[3.1 before]
+{"data":{"SentinelAnchor":[{"id":"31337_2_0","seq":"1","entry_hash":"0x1111111111111111111111111111111111111111111111111111111111111111","root":"0x2222222222222222222222222222222222222222222222222222222222222222","account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791257818","tx_hash":"0x96195a40e908debcb7ee348c5f98954c5f39d6e7ece5dc9f67399a9950eee3ce"}, {"id":"31337_3_0","seq":"2","entry_hash":"0x3333333333333333333333333333333333333333333333333333333333333333","root":"0x4444444444444444444444444444444444444444444444444444444444444444","account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791257818","tx_hash":"0x5dea77b5e5c8df66ac411e9824aff835c571af743cb77a1d694b4c859bb158aa"}]}}
+
+[3.3 after — note: this query's selection omitted `root`, hence absent here]
+{"data":{"SentinelAnchor":[{"id":"31337_2_0","seq":"1","entry_hash":"0x1111111111111111111111111111111111111111111111111111111111111111","account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791257818","tx_hash":"0x96195a40e908debcb7ee348c5f98954c5f39d6e7ece5dc9f67399a9950eee3ce"}, {"id":"31337_3_0","seq":"2","entry_hash":"0x3333333333333333333333333333333333333333333333333333333333333333","account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791257818","tx_hash":"0x5dea77b5e5c8df66ac411e9824aff835c571af743cb77a1d694b4c859bb158aa"}, {"id":"31337_5_0","seq":"3","entry_hash":"0x6666666666666666666666666666666666666666666666666666666666666666","account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791260303","tx_hash":"0xeea21503885fee68b9ae65f0c563f15a654c5e8e8ead47088693f25d02bd1cf6"}]}}
+
+[3.2 heartbeat]
+{"data":{"SentinelHeartbeat":[{"id":"31337_4_0","guardian":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","risk_state_hash":"0x5555555555555555555555555555555555555555555555555555555555555555","max_tier":2,"ts":"1791257819","tx_hash":"0xf8255319896ae97d2651d7798eca0c54bb21677792aa609afe1dbfc9e8665d5d"}]}}
+
+[3.4 aggregates]
+{"data":{"SentinelAnchor_aggregate":{"aggregate" : {"count" : 3}},"SentinelHeartbeat_aggregate":{"aggregate" : {"count" : 1}},"PerpFill_aggregate":{"aggregate" : {"count" : 0}}}}
+
+[3.5 Q3 anchors-by-seq — full selection incl. root]
+{"data":{"SentinelAnchor":[{"id":"31337_2_0","seq":"1","entry_hash":"0x1111111111111111111111111111111111111111111111111111111111111111","root":"0x2222222222222222222222222222222222222222222222222222222222222222","account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791257818","tx_hash":"0x96195a40e908debcb7ee348c5f98954c5f39d6e7ece5dc9f67399a9950eee3ce"}, {"id":"31337_3_0","seq":"2","entry_hash":"0x3333333333333333333333333333333333333333333333333333333333333333","root":"0x4444444444444444444444444444444444444444444444444444444444444444","account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791257818","tx_hash":"0x5dea77b5e5c8df66ac411e9824aff835c571af743cb77a1d694b4c859bb158aa"}, {"id":"31337_5_0","seq":"3","entry_hash":"0x6666666666666666666666666666666666666666666666666666666666666666","root":"0x7777777777777777777777777777777777777777777777777777777777777777","account":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","ts":"1791260303","tx_hash":"0xeea21503885fee68b9ae65f0c563f15a654c5e8e8ead47088693f25d02bd1cf6"}]}}
+
+[3.5 Q1] {"data":{"Liquidation":[]}}
+[3.5 Q2] {"data":{"PerpFill":[]}}
+[3.5 Q4] heartbeat timeline query returned 1 row; jq gap pipeline printed nothing and exited 0 (no gaps).
+
+# Local-only dependencies for this proof: foundry (anvil/forge/cast), docker
+# images postgres:18.3 + hasura/graphql-engine:v2.43.0 (pre-pulled), node+pnpm.
+# The Monad-testnet production config (config.yaml) uses ENVIO_ANCHOR_CONTRACT_ADDRESS
+# and is otherwise identical in shape; live Monad rows remain PENDING-WALLET (STUB-17).

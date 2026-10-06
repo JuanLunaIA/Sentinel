@@ -1,0 +1,14 @@
+(node:16569) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Connected to Docker via DOCKER_HOST (unix:///home/luna/.hermes/cache/scratch/docker-p12.sock)
+Started envio-hasura
+Started envio-postgres
+Waiting for Postgres...Waiting for Hasura... ready (0.0s)
+........................................................................................................................
+[00:46:33.891] [31mERROR[39m: [36mFailed starting Docker containers: Hasura did not become healthy on port 8888 within 120 s.
+
+Try:
+- docker logs envio-hasura
+- Verify Postgres is running (Hasura depends on it).
+- Ensure nothing else is using port 8888.[39m
+

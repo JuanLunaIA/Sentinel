@@ -1,0 +1,120 @@
+# Sentinel indexer — example GraphQL queries (Envio HyperIndex / Hasura surface)
+#
+# WHERE TO RUN
+#   Local (dev):        http://127.0.0.1:8888/v1/graphql   # HASURA_EXTERNAL_PORT=8888 (default 8080)
+#                       header: x-hasura-admin-secret: testing
+#   Envio Cloud:        https://indexer.dev.hyperindex.xyz/<deployment-id>/v1/graphql  (no auth)
+#                       — deployment not performed at P12 (no account/login); see
+#                         docs/evidence/p12-envio-cloud.txt
+#
+# CONVENTIONS
+#   - Root fields are the entity names verbatim: SentinelAnchor, SentinelHeartbeat,
+#     PerpFill, Liquidation, AccountSnapshotDay (+ _aggregate, _by_pk).
+#   - BigInt columns (seq, ts, block_number) are serialized as STRINGS in the API.
+#   - Exchange entities (PerpFill / Liquidation / AccountSnapshotDay) exist but are
+#     empty until the Perpl exchange ABI is resolved and handlers land — see
+#     indexer/README.md § "Perpl-event indexing: roadmap (ABI unresolved, fallback applied)".
+
+# ---------------------------------------------------------------------------
+# 1) Last 50 liquidations for a given market (newest first)
+# ---------------------------------------------------------------------------
+query LiquidationsByMarket($market_id: Int!, $limit: Int = 50) {
+  Liquidation(
+    where: { market_id: { _eq: $market_id } }
+    order_by: { ts: desc }
+    limit: $limit
+  ) {
+    id
+    market_id
+    account
+    size
+    price
+    ts
+    tx_hash
+    collateral_lost
+  }
+}
+# variables: { "market_id": 16 }
+
+# ---------------------------------------------------------------------------
+# 2) Your fills, newest first (optionally windowed by time)
+# ---------------------------------------------------------------------------
+query FillsByAccount($account: String!, $since_ts: bigint = "0", $limit: Int = 200) {
+  PerpFill(
+    where: { account: { _eq: $account }, ts: { _gte: $since_ts } }
+    order_by: { ts: desc }
+    limit: $limit
+  ) {
+    id
+    market_id
+    account
+    side
+    price
+    size
+    ts
+    tx_hash
+    block_number
+  }
+}
+# variables: { "account": "0x..." }
+
+# ---------------------------------------------------------------------------
+# 3) All anchors ordered by seq (per account or global)
+# ---------------------------------------------------------------------------
+query AllAnchors($account: String) {
+  SentinelAnchor(
+    where: { account: { _eq: $account } }   # omit the variable for every account
+    order_by: { seq: asc }
+  ) {
+    id
+    seq
+    entry_hash
+    root
+    account
+    ts
+    tx_hash
+  }
+}
+# variables: { "account": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" }  (or {})
+
+# ---------------------------------------------------------------------------
+# 4) Heartbeat gaps > 2× the expected interval
+#
+# GraphQL cannot diff consecutive rows; fetch the ordered timeline and
+# post-process. Expected interval is a policy constant (seconds) — e.g. 60 s.
+# ---------------------------------------------------------------------------
+query HeartbeatTimeline($guardian: String) {
+  SentinelHeartbeat(
+    where: { guardian: { _eq: $guardian } }   # omit for all guardians
+    order_by: { ts: asc }
+  ) {
+    id
+    guardian
+    ts
+    tx_hash
+    max_tier
+  }
+}
+#
+# Post-processing (jq, shell): prints every gap larger than 2 × INTERVAL.
+#
+#   INTERVAL=60
+#   curl -s http://127.0.0.1:8888/v1/graphql \
+#     -H 'content-type: application/json' \
+#     -H 'x-hasura-admin-secret: testing' \
+#     -d '{"query":"{ SentinelHeartbeat(order_by: {ts: asc}) { guardian ts } }"}' \
+#   | jq --argjson iv "$INTERVAL" -r '
+#       .data.SentinelHeartbeat as $hb
+#       | [range(1; ($hb|length)) as $i
+#          | { prev: ($hb[$i-1] | .ts | tonumber),
+#              curr: ($hb[$i]   | .ts | tonumber),
+#              guardian: $hb[$i].guardian }]
+#       | .[] | (select((.curr - .prev) > (2 * $iv))
+#                | "gap \(.curr - .prev)s (\(.prev) -> \(.curr)) guardian=\(.guardian)")'
+#
+# SQL equivalent (psql against the local Postgres, schema = public):
+#
+#   SELECT guardian, ts, ts - lag(ts) OVER (PARTITION BY guardian ORDER BY ts) AS gap_s
+#   FROM "SentinelHeartbeat"
+#   ORDER BY guardian, ts;
+#   -- then read rows WHERE gap_s > 2 * <interval>

@@ -1,0 +1,57 @@
+(node:21228) [DEP0205] DeprecationWarning: `module.register()` is deprecated. Use `module.registerHooks()` instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Using Postgres already running on port 5433
+Using Hasura already running on port 8888
+[01:17:48.063] [32mINFO[39m: [36mInitializing the indexer storage...[39m
+
+[01:17:48.180] [32mINFO[39m: [36mNo cache found to upload.[39m
+
+[01:17:48.216] [32mINFO[39m: [36mTracking tables in Hasura[39m
+
+[01:17:49.793] [32mINFO[39m: [36mHasura configuration completed[39m
+
+[01:17:49.794] [32mINFO[39m: [36mThe indexer storage is ready. Starting indexing![39m
+
+[01:17:53.661] [32mINFO[39m: [36mReorg threshold reached[39m
+
+[01:17:53.707] [32mINFO[39m: [36mAll events have been fetched[39m
+    [35mchainId[39m: 31337
+
+[01:17:53.713] [32mINFO[39m: [36mAll chains are caught up. Finalizing the indexer before switching to realtime: flushing pending writes, then creating the indexes the schema promises.[39m
+
+[01:17:53.756] [32mINFO[39m: [36mCreating the 12 remaining schema indexes before the indexer reports ready. Writes are paused until they are committed. This can take a long time on a large database.[39m
+    [35mstorage[39m: "postgres"
+    [35mindexes[39m: [
+      "AccountSnapshotDay_account_6uan1mbqwk",
+      "AccountSnapshotDay_day_ej6bwffvbh",
+      "Liquidation_account_8qztcx9yra",
+      "Liquidation_market_id_0v2n8u41zm",
+      "Liquidation_ts_2snrph7eqp",
+      "PerpFill_account_2kowh0b2os",
+      "PerpFill_market_id_fn64100uop",
+      "PerpFill_ts_az3z0hf3l3",
+      "SentinelAnchor_account_aralenbu08",
+      "SentinelAnchor_seq_2g4ufelrzx",
+      "SentinelHeartbeat_guardian_di8dzrmfxt",
+      "SentinelHeartbeat_ts_bbv93d7orj"
+    ]
+
+[01:17:53.822] [32mINFO[39m: [36mCommitted 12 schema indexes and the ready timestamp in 0.07s.[39m
+    [35mstorage[39m: "postgres"
+
+[01:17:53.823] [32mINFO[39m: [36mThe indexer is ready. Switching to realtime indexing.[39m
+
+[01:18:13.823] [33mWARN[39m: [36mNo new blocks detected within 20s. Polling will continue at a reduced rate. For better reliability, refer to our RPC fallback guide: https://docs.envio.dev/docs/HyperIndex/rpc-sync[39m
+    [35mchainId[39m: 31337
+    [35mknownHeight[39m: 4
+
+[01:18:28.859] [32mINFO[39m: [36mNew blocks successfully found.[39m
+    [35mchainId[39m: 31337
+    [35mknownHeight[39m: 4
+    [35msource[39m: "RPC (127.0.0.1:8547)"
+    [35mnewBlockHeight[39m: 5
+
+[01:18:48.869] [33mWARN[39m: [36mNo new blocks detected within 20s. Polling will continue at a reduced rate. For better reliability, refer to our RPC fallback guide: https://docs.envio.dev/docs/HyperIndex/rpc-sync[39m
+    [35mchainId[39m: 31337
+    [35mknownHeight[39m: 5
+

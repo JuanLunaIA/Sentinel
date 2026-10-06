@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+#
+# LOCAL anvil variant of config.yaml — used ONLY for the local end-to-end
+# proof captured in docs/evidence/p12-envio-anvil.txt. Chain 31337 has no
+# HyperSync, so the RPC below is the primary data source.
+#
+# Reproduce:
+#   anvil --silent --port 8547 &
+#   cd contracts && forge create src/SentinelAuditAnchor.sol:SentinelAuditAnchor \
+#     --rpc-url http://127.0.0.1:8547 \
+#     --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast
+#   cast send <addr> 'anchor(uint64,bytes32,bytes32)' 1 0x11.. 0x22.. --rpc-url http://127.0.0.1:8547 --private-key 0xac09..
+#   pnpx envio dev --config config.local-anvil.yaml
+#   curl -s http://127.0.0.1:8888/v1/graphql -H 'x-hasura-admin-secret: testing' \
+#     -d '{"query":"{ SentinelAnchor(order_by: {seq: asc}) { seq entry_hash ts } }"}'
+#
+# HASURA_EXTERNAL_PORT=8888 in .env (host already serves :8080).
+name: sentinel-indexer
+description: Local anvil (chain 31337) variant for the P12 end-to-end proof.
+disable_default_cross_chain: true
+field_selection:
+  transaction_fields:
+    - hash
+chains:
+  - id: 31337
+    start_block: 0
+    rpc:
+      - url: ${ENVIO_LOCAL_RPC_URL:-http://127.0.0.1:8547}
+    contracts:
+      - name: SentinelAuditAnchor
+        # Both env-substituted (for CI re-runs) and defaulted to the
+        # deterministic first-deploy address of anvil key #0.
+        address:
+          - "${ENVIO_ANCHOR_CONTRACT_ADDRESS:-0x5FbDB2315678afecb367f032d93F642f64180aa3}"
+        handler: ./src/EventHandlers.ts
+        events:
+          - event: DecisionAnchored(uint64 seq, bytes32 entryHash, bytes32 runningRoot, address account)
+          - event: Heartbeat(address guardian, bytes32 riskStateHash, uint32 openPositions, uint8 maxTier)
