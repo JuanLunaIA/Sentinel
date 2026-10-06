@@ -21,3 +21,6 @@ help: consider using `is_ok()`
 error: could not compile `sentinel` (bin "test-execution") due to 1 previous error
 warning: build failed, waiting for other jobs to finish...
 CLIPPY_FAIL
+
+== POST-FIX RE-RUN (2026-10-05T21:24:33-03:00) — bin lint fix (is_ok), no behavior change ==
+CLIPPY_OK
