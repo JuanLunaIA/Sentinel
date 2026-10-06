@@ -22,6 +22,10 @@ path = "src/bin/read_positions.rs"
 name = "test-execution"
 path = "src/bin/test_execution.rs"
 
+[[bin]]
+name = "brain_eval"
+path = "src/bin/brain_eval.rs"
+
 [lints]
 workspace = true
 
