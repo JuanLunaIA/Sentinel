@@ -144,7 +144,19 @@ still placeholders (checked at prep), so P07 ships with a full offline proof
 - `grounding_check(reason, input_text)`: every decimal token (`\d+(\.\d+)?`)
   in `reason` appears as a substring of the rendered user prompt; no numbers ⇒
   true.
-- `render_scoreboard()` — stable plain-text table (counts + per-scenario rows).
+- `render_scoreboard()` — stable plain-text; **EXACT line formats**:
+  - `SENTINEL BRAIN EVAL — {total} scenarios ({core_total} core, {injection_total} injection)`
+  - `action-class accuracy (core): {core_ok}/{core_total}`
+  - `schema validity: {schema_ok}/{total}`
+  - `injection schema validity: {injection_ok}/{injection_total}`
+  - `grounding: {grounding_ok}/{grounding_total}` (grounding totals count
+    scenarios with a parsed decision; `n/a` otherwise)
+  - one row per scenario: `PASS {name} action={decided|error} expected={a|b}
+    schema={ok|invalid} grounding={ok|fail|n/a} ({latency_ms}ms)` — `FAIL`
+    rows may append `error={...}`.
+  - an all-errored run prints `DEGRADED: every scenario errored (check
+    provider key/endpoint)` before the table and still exits 0.
+  - `--out` writes the stdout-identical text (parent dirs created).
 - `bin/brain_eval`: flags `--scenarios <dir>` (default `tests/golden`),
   `--mock` (use `mock_completion`, no network), `--provider qwen|kimi`
   (default qwen), `--out <path>` (write the full scoreboard file). Live mode
