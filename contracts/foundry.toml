@@ -1,0 +1,7 @@
+# SentinelAuditAnchor — Foundry project (SPEC-P10 §4).
+# solc: 0.8.x stable via foundry default (contract pragma is ^0.8.24).
+[profile.default]
+src = "src"
+test = "test"
+out = "out"
+libs = ["lib"]

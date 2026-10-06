@@ -1,0 +1,19 @@
+# Sentinel P10 — anvil end-to-end (2026-10-06T00:16:38-03:00)
+== forge build ==
+build: OK
+== anvil up on http://127.0.0.1:8545 ==
+== deploy SentinelAuditAnchor ==
+contract: 0x5FbDB2315678afecb367f032d93F642f64180aa3
+== anchor service e2e (ignored test against the real contract) ==
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.05s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running tests/p10_anvil_e2e.rs (target/debug/deps/p10_anvil_e2e-072637b41e6f7021)
+
+running 1 test
+p10 anvil e2e ok: AnchorRunReport { batches: 1, entries_anchored: 5, heartbeats: 1, failures: 0 }; 1 DecisionAnchored event(s); audit-verify: ✅ journal consistent; 5 entries; 5 anchored; root matches at seq 5 |   https://testnet.monadexplorer.com/tx/0xe67e2d0dbc13c0909b60c053985cbd4e9693ee2a8006d0da7f2c8fb6692875ed
+test anchors_a_five_entry_journal_on_anvil ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+
+== all green ==

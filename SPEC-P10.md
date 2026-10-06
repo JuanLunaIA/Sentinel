@@ -201,3 +201,24 @@ PENDING.
 ## 12 Report format
 
 JSON `{files_created, tests[{cmd,exit,observed}], open_issues}`.
+
+## 13 Changelog (integration-time changes only)
+
+- **v1.0.1 (parent, integration):**
+  (a) `AnchorSink` gained a PROVIDED method `last_anchored_seq(&self) ->
+  Option<u64>` (default `None`) so `run` can implement §5's resume-from-
+  contract rule generically; the two required methods are unchanged.
+  (b) Seq mapping frozen: on-chain seq = journal seq + 1 (the contract guard
+  is 1-based); CLI `{M}` = highest anchored on-chain seq, `{X}` = highest seq
+  whose batch root recomputed; `--no-chain` prints an em dash for `{X}`.
+  (c) `anchor()` stores `lastRoot = runningRoot` (spec said "update";
+  batchAnchor stays verbatim `lastRoot = entryHashes[len-1]`).
+  (d) `/api/audit/verify` resolves the journal dir via `AUDIT_DIR` /
+  `data/audit` (deployment-identical to `main.rs`; the frozen journal API
+  exposes no dir accessor — P15 threads it if per-instance verify is needed).
+  (e) Known limitation: an un-anchored backlog spanning a UTC day rotation
+  logs a warning and no-ops (read_entries reads the current-day file); P16
+  revisits cross-file reads.
+  (f) Torn-line "warn" is an `eprintln!` in core (no tracing dependency).
+  (g) Live deploy/heartbeat remain PENDING-WALLET (STUB-17); local anvil e2e
+  is the standing proof: `docs/evidence/p10-anvil-e2e.txt`.
