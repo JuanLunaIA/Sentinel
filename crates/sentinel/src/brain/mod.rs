@@ -7,6 +7,7 @@
 //!
 //! **Skeleton status (P07):** interfaces frozen; implemented by the P07 waves.
 
+pub mod chain;
 pub mod engine;
 pub mod eval;
 pub mod parser;

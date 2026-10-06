@@ -194,6 +194,11 @@ pub struct StrategyConfig {
     pub min_interval_secs: u64,
     /// Minimum model confidence accepted, `[0, 1]`.
     pub confidence_floor: Decimal,
+    /// Maximum consults per sliding hour (budget guard; on breach the brain
+    /// degrades to ESCALATE).
+    pub max_consults_per_hour: u32,
+    /// Maximum estimated tokens per sliding day (budget guard).
+    pub max_tokens_per_day: u64,
 }
 
 /// Execution mode and heartbeat pacing.
@@ -404,6 +409,8 @@ impl Config {
         let strategy = StrategyConfig {
             min_interval_secs: parse_or(&vars, "STRATEGY_MIN_INTERVAL_SECS", 120u64)?,
             confidence_floor: parse_or(&vars, "STRATEGY_CONFIDENCE_FLOOR", Decimal::new(6, 1))?,
+            max_consults_per_hour: parse_or(&vars, "STRATEGY_MAX_CONSULTS_PER_HOUR", 30u32)?,
+            max_tokens_per_day: parse_or(&vars, "STRATEGY_MAX_TOKENS_PER_DAY", 200_000u64)?,
         };
 
         let mode = match opt(&vars, "EXECUTION_MODE")
@@ -538,6 +545,12 @@ impl Config {
         }
         if self.strategy.min_interval_secs == 0 {
             return Err(cfg_err("STRATEGY_MIN_INTERVAL_SECS", "must be > 0"));
+        }
+        if self.strategy.max_consults_per_hour == 0 {
+            return Err(cfg_err("STRATEGY_MAX_CONSULTS_PER_HOUR", "must be > 0"));
+        }
+        if self.strategy.max_tokens_per_day == 0 {
+            return Err(cfg_err("STRATEGY_MAX_TOKENS_PER_DAY", "must be > 0"));
         }
         if self.execution.heartbeat_interval_secs == 0 {
             return Err(cfg_err("HEARTBEAT_INTERVAL_SECS", "must be > 0"));
