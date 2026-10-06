@@ -1,0 +1,16 @@
+# Sentinel P09 — test-nansen --check (LIVE, free: unpaid 402 parse against api.nansen.ai)
+# date: 2026-10-05T23:37:19-03:00
+x402 challenge: https://api.nansen.ai/api/v1/profiler/perp-positions (x402Version 2) — 8 rail(s)
+server error field: Payment required
+network      | asset                                      |     amount | payTo                                      | domain name/version
+------------------------------------------------------------------------------------------------------------------------------
+eip155:8453  | 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913 |      10000 | 0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f | USD Coin/2
+eip155:196   | 0x779Ded0c9e1022225f8E0630b35a9b54bE713736 |      10000 | 0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f | USD₮0/1
+eip155:56    | 0xcE24439F2D9C6a2289F741120FE202248B666666 | 10000000000000000 | 0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f | United Stables/1
+eip155:56    | 0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d | 10000000000000000 | 0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f | World Liberty Financial USD/1
+eip155:56    | 0x55d398326f99059fF775485246999027B3197955 | 10000000000000000 | 0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f | Tether USD/1
+eip155:56    | 0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d | 10000000000000000 | 0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f | USD Coin/1
+eip155:143   | 0x754704Bc059F8C67012fEd69BC8A327a5aafb603 |      10000 | 0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f | USDC/2   <== MONAD (target)
+solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp | EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v |      10000 | J7ZvJEspvwP1oRxQZ7mYmNmT22NTm3GWq3t7HEbvPZYx | ?/?
+selected Monad rail (eip155:143): asset=0x754704Bc059F8C67012fEd69BC8A327a5aafb603 amount=10000 payTo=0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f maxTimeoutSeconds=300 domain=USDC/2
+check rc=0

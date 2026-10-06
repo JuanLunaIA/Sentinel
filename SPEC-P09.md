@@ -226,3 +226,23 @@ retry once, else PENDING.
 ## 10 Report format
 
 JSON `{files_created, tests[{cmd,exit,observed}], open_issues}`.
+
+## 11 Changelog (integration-time changes only)
+
+- **v1.0.1 (parent, integration):**
+  (a) §7 wording corrected: with the §3.1 skew (`validAfter = now−60`,
+  `validBefore = now+maxTimeoutSeconds`) the window is `maxTimeout + 60`
+  (reference-client semantics); the v1.0 §7 equality sentence was
+  numerically inconsistent and is superseded.
+  (b) Accepted quirks (frozen-stub artifacts, flagged by the wave): ledger
+  I/O errors surface as `NansenError::Challenge`; transport failures map to
+  `Retry{status:0}`; a free pass-through (first 200, no challenge) reports
+  `rail_network: ""` and `cost 0`.
+  (c) Tamper semantics pinned: `accepted.amount` is not an EIP-712-signed
+  field; the binding is the echo invariant `accepted.amount ==
+  authorization.value` (asserted) plus signature coverage of domain +
+  authorization (negative recovery tests for swapped `value`/`asset`).
+  (d) Live `--check` (free) executed against api.nansen.ai on 2026-10-05
+  23:37−03: 8 rails parsed, Monad rail selected — evidence
+  `docs/evidence/p09-x402-check.txt`. The paid smoke stays PENDING-WALLET
+  (STUB-16).
