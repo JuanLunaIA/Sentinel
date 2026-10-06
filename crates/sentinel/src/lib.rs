@@ -17,6 +17,7 @@ pub mod args;
 pub mod bot;
 pub mod brain;
 pub mod config;
+pub mod consult;
 pub mod error;
 pub mod execution;
 pub mod health;
