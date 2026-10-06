@@ -26,6 +26,10 @@ path = "src/bin/test_execution.rs"
 name = "brain_eval"
 path = "src/bin/brain_eval.rs"
 
+[[bin]]
+name = "test-nansen"
+path = "src/bin/test_nansen.rs"
+
 [lints]
 workspace = true
 

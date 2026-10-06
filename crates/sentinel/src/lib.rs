@@ -17,6 +17,7 @@ pub mod config;
 pub mod error;
 pub mod execution;
 pub mod health;
+pub mod nansen;
 pub mod notify;
 pub mod perpl;
 pub mod pipeline;
