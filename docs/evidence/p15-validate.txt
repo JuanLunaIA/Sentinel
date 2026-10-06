@@ -1,0 +1,32 @@
+# P15 — parent acceptance (2026-10-06 ~05:00 -03)
+
+## Automated
+- p15_adversarial (verifier): 32 passed / 1 ignored (fixture generator); stable x3; sha256 4bd2ef32a7753a5d19d082cbb6b793c916edee33dd248437f1f197a6a291fd3c
+- sentinel lib: 404 passed (incl. 21 api::tests)
+- workspace clippy -D warnings rc=0; fmt clean (final gate at 04:53-04:57)
+
+## Live browser pass (parent, real daemon)
+- anvil :8548 + SentinelAuditAnchor 0x5FbDB2315678afecb367f032d93F642f64180aa3 + daemon replay
+  (PORT 8091, ENABLE_ANCHOR=true, HEARTBEAT_INTERVAL_SECS=8, SENTINEL_MOCK_PACE=1)
+- /healthz -> {"feed_age_s":33772,"mode":"DRY_RUN","uptime_s":16,"version":"0.1.0"}
+- GET / -> 61670 bytes (real dashboard, not placeholder)
+- /api/state -> 2 positions with distance_pct/tier/last_action ("reduce 25%"), heartbeat
+  {age_s:0, seq:36, tx 0xf77e693a...}, paused:false
+- /api/decisions?limit=5 -> 5 entries, newest seq 35
+- /api/audit/verify -> {"entries":36,"first_seq":0,"valid_up_to_seq":35,"broken_at":null}
+- kill switch LIVE: POST /api/pause?key=... -> banner "GUARDIAN PAUSED" (screenshot);
+  POST /api/resume -> paused:false (verified in browser + curl)
+- hooks: header/positions/feed/audit/resilience/backtest/nansen/killswitch all present
+- CRE panel embed filled with real build/hash data (sentinel-deadman, built,
+  PENDING-ACCOUNT note)
+
+## Screenshots (docs/evidence/)
+- p15-dashboard-top.png (114160 B) — header + positions + audit verifier
+- p15-dashboard-positions-feed.png (99745 B) — feed + resilience (heartbeat 2s, breaker epoch 3 + journal, CRE)
+- p15-dashboard-audit-resilience.png (90006 B) — backtest bars + nansen + kill switch
+- p15-dashboard-bottom.png (90006 B) — same scroll clamp as above (kept for completeness)
+- p15-dashboard-paused-banner.png (153357 B) — GUARDIAN PAUSED banner
+
+## Notes
+- reflex latency renders 0 us: P13 engine emits zeros (fresh bin run verified) — adjudicated in SPEC-P15 v1.0.1 (e)
+- nansen panel zeros are honest (no paid calls yet, PENDING-WALLET)

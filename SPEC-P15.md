@@ -84,6 +84,24 @@ HTML static checks (8 section markers/data hooks present, no external URLs — r
 http(s):// unless in a comment, <= 200KB, no `innerHTML` with template data). `cargo test` green;
 clippy -D warnings + fmt clean; report {files_created, tests[{cmd,exit,observed}], open_issues}.
 
+## 4bis. Changelog / adjudications (parent, integration) — v1.0.1
+
+- (a) `feed_fresh` semantics: sourced from the live stream's stale flag (false when
+  live_state is absent; true when live and not stale) — pinned by the verifier suite.
+- (b) `/api/nansen/spend.recent` is in ledger append order (spec did not freeze order).
+- (c) Rate limit: burst 120 / ~60 per min refill; first X-Forwarded-For value is the
+  identity; OPTIONS preflight answered 204. main.rs must serve via
+  `into_make_service_with_connect_info::<SocketAddr>()` for the socket-addr fallback
+  (parent applies the one-line wiring at P16 integration; XFF path already works).
+- (d) Tier thresholds are hardcoded 25/15/8 in /api/state (DashboardState carries no
+  Config; overriding RISK_*_PCT does not change the dashboard's derived tiers).
+- (e) `metrics.reflex_eval_eval` renders 0 µs because the P13 engine emits zeros
+  (bin-verified on a fresh run; not an artifact edit). Panel is honest; leave as is.
+- (f) Audit panel's anchored seq/tx come from the heartbeat status file (P16 writer);
+  `entries`/`valid_up_to_seq` from the live VerifyReport.
+- (g) Explorer tx links are assembled at runtime from string parts (static file keeps
+  0 http(s):// literals); page load makes no external requests (resource-timing proof).
+
 ## 5. Standing rules
 
 Latest versions via live registries; no new deps without parent approval; loud stubs; LC_ALL=C;

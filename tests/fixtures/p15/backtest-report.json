@@ -1,0 +1,1 @@
+{"aggregate_capital_saved_usd":"1234.56","latency":{"p50_ms":12,"p99_ms":88},"schema_version":1,"scenarios":[{"capital_saved_usd":"100.00","name":"flash-crash-30"},{"capital_saved_usd":"234.56","name":"slow-bleed-15"}]}

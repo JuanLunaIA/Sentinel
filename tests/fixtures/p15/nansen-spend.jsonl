@@ -1,0 +1,2 @@
+{"cost_usd":"0.05","endpoint":"/api/v1/smart-money/netflow","network":"eip155:143","payer":"0x93053f1e7a5feda532fe69cbbE43cbec3a0f13f","ts_ms":1767225600000,"tx_hash":"0xaaaa8a2c3b4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7"}
+{"cost_usd":"0.10","endpoint":"/api/v1/perp-leaderboard","network":"eip155:143","payer":"0x93053f1e7a5feda532fe69cbbE43cbec3a0f13f","ts_ms":1767229200000,"tx_hash":null}
