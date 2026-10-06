@@ -123,7 +123,7 @@ wallet, positions. WS: initial `mt:19`+`mt:26`, then `mt:9` steps with a
 marks). Replay does not apply fills to state (documented; P13 models
 savings). Demo env in `scripts/crash-demo.sh`: `MARKET_ALLOWLIST=32,16`,
 `MAX_ORDER_SIZE_USD=100000`, `REQUIRE_APPROVAL_ABOVE_USD=100000`,
-`REFLEX_COOLDOWN_SECS=60`, `SENTINEL_MOCK_PACE=1`, `SENTINEL_MOCK_CAP_MS≈3200`
+`REFLEX_COOLDOWN_SECS=150` (one Orange action; the 150 s gate cleanly admits the Red entry), `SENTINEL_MOCK_PACE=1`, `SENTINEL_MOCK_CAP_MS≈3200`
 (≈80 s wall). Expected sequence: Yellow consult-scheduled → Orange reduce
 2.500 → Red reduce 5.000, alerts each step.
 
