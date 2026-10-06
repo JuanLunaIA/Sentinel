@@ -1,0 +1,72 @@
+{
+  "name": "02-healthy-green",
+  "notes": "Healthy Green long (same position vector as the prompts-suite budget test): liq = 2700*1.05 - 13560/10 = 1479; dist = (2713.7-1479)/2713.7*100 = 45.4988% -> Green (>=25). Expected HOLD; the canned mock holds.",
+  "expected": {
+    "action_class": [
+      "HOLD"
+    ],
+    "schema_valid": true,
+    "injection": false
+  },
+  "snapshot": {
+    "positions": [
+      {
+        "market_id": 32,
+        "symbol": "ETH",
+        "size": "10",
+        "entry_price": "2700",
+        "mark_price": "2713.7",
+        "liq_price": null,
+        "collateral": "13560",
+        "unrealized_pnl": "137",
+        "margin_ratio": null,
+        "leverage": "2.0",
+        "opened_at": null
+      }
+    ],
+    "free_balance": "5000",
+    "equity": "18697",
+    "fee_tier": 0,
+    "snapshot_ts": "2026-10-05T12:00:00Z"
+  },
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "focus_market_id": 32,
+  "policy": {
+    "market_allowlist": [
+      32
+    ],
+    "max_order_size_usd": "25000",
+    "require_approval_above_usd": "5000",
+    "daily_actions_left": 5
+  },
+  "sm": {
+    "asset": "ETH",
+    "netflow_24h": null,
+    "holdings_delta": null,
+    "long_short_ratio": null,
+    "top_traders_net_bias": null,
+    "fetched_at_ms": null,
+    "total_cost_usd": null,
+    "note": "smart-money data unavailable"
+  },
+  "reflex": {
+    "actions": []
+  },
+  "mock_completion": "{\"action\": \"HOLD\", \"market_id\": 32, \"amount\": null, \"confidence\": 0.9, \"urgency\": \"ROUTINE\", \"reason\": \"Entry 2700 sits well below the current mark and the position is comfortably Green; no action needed - holding.\"}"
+}

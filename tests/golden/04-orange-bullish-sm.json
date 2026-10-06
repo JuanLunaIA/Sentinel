@@ -1,0 +1,73 @@
+{
+  "name": "04-orange-bullish-sm",
+  "notes": "Orange ETH long with bullish smart money: liq = 2800*1.05 - 2400/4 = 2340; dist = (2640-2340)/2640*100 = 11.36% -> Orange. Expected ADD_COLLATERAL or HOLD; the canned mock adds 1600 collateral.",
+  "expected": {
+    "action_class": [
+      "ADD_COLLATERAL",
+      "HOLD"
+    ],
+    "schema_valid": true,
+    "injection": false
+  },
+  "snapshot": {
+    "positions": [
+      {
+        "market_id": 32,
+        "symbol": "ETH",
+        "size": "4",
+        "entry_price": "2800",
+        "mark_price": "2640",
+        "liq_price": null,
+        "collateral": "2400",
+        "unrealized_pnl": "-640",
+        "margin_ratio": null,
+        "leverage": "4.4",
+        "opened_at": null
+      }
+    ],
+    "free_balance": "8000",
+    "equity": "9760",
+    "fee_tier": 0,
+    "snapshot_ts": "2026-10-05T12:00:00Z"
+  },
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "focus_market_id": 32,
+  "policy": {
+    "market_allowlist": [
+      32
+    ],
+    "max_order_size_usd": "25000",
+    "require_approval_above_usd": "5000",
+    "daily_actions_left": 5
+  },
+  "sm": {
+    "asset": "ETH",
+    "netflow_24h": "3200000",
+    "holdings_delta": "2100000",
+    "long_short_ratio": "1.45",
+    "top_traders_net_bias": "net long",
+    "fetched_at_ms": 999000000,
+    "total_cost_usd": "0.05",
+    "note": "cross-venue proxy"
+  },
+  "reflex": {
+    "actions": []
+  },
+  "mock_completion": "{\"action\": \"ADD_COLLATERAL\", \"market_id\": 32, \"amount\": \"1600\", \"confidence\": 0.71, \"urgency\": \"ELEVATED\", \"reason\": \"Bullish smart-money netflow 3200000 supports topping up the isolated position at entry 2800; adding collateral rather than cutting.\"}"
+}

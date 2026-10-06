@@ -1,0 +1,73 @@
+{
+  "name": "01-deep-underwater-red",
+  "notes": "Deep-underwater long: liq = entry*(1+mmr) - collateral/|size| = 2600*1.05 - 3216/8 = 2328; dist = |2400-2328|/2400*100 = 3.00% -> Red (<8). Expected REDUCE or CLOSE; the canned mock reduces half the size.",
+  "expected": {
+    "action_class": [
+      "REDUCE",
+      "CLOSE"
+    ],
+    "schema_valid": true,
+    "injection": false
+  },
+  "snapshot": {
+    "positions": [
+      {
+        "market_id": 32,
+        "symbol": "ETH",
+        "size": "8",
+        "entry_price": "2600",
+        "mark_price": "2400",
+        "liq_price": null,
+        "collateral": "3216",
+        "unrealized_pnl": "-1600",
+        "margin_ratio": null,
+        "leverage": "6.0",
+        "opened_at": null
+      }
+    ],
+    "free_balance": "1200",
+    "equity": "2816",
+    "fee_tier": 0,
+    "snapshot_ts": "2026-10-05T12:00:00Z"
+  },
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "focus_market_id": 32,
+  "policy": {
+    "market_allowlist": [
+      32
+    ],
+    "max_order_size_usd": "25000",
+    "require_approval_above_usd": "15000",
+    "daily_actions_left": 5
+  },
+  "sm": {
+    "asset": "ETH",
+    "netflow_24h": null,
+    "holdings_delta": null,
+    "long_short_ratio": null,
+    "top_traders_net_bias": null,
+    "fetched_at_ms": null,
+    "total_cost_usd": null,
+    "note": "smart-money data unavailable"
+  },
+  "reflex": {
+    "actions": []
+  },
+  "mock_completion": "{\"action\": \"REDUCE\", \"market_id\": 32, \"amount\": \"4\", \"confidence\": 0.86, \"urgency\": \"ELEVATED\", \"reason\": \"Mark 2400 sits below entry 2600 and the position is deep underwater; reducing 4 units now to cut liquidation risk.\"}"
+}

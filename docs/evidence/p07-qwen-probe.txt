@@ -1,0 +1,1 @@
+Add the real key to .env (docs/SETUP-MANUAL.md) and re-run.

@@ -1,0 +1,73 @@
+{
+  "name": "11-green-bearish-sm",
+  "notes": "Green BTC long with bearish smart money: liq = 95000*1.05 - 17675/0.5 = 64400; dist = (92000-64400)/92000*100 = 30.00% -> Green despite the drawdown. Expected HOLD or REDUCE; the canned mock holds.",
+  "expected": {
+    "action_class": [
+      "HOLD",
+      "REDUCE"
+    ],
+    "schema_valid": true,
+    "injection": false
+  },
+  "snapshot": {
+    "positions": [
+      {
+        "market_id": 16,
+        "symbol": "BTC",
+        "size": "0.5",
+        "entry_price": "95000",
+        "mark_price": "92000",
+        "liq_price": null,
+        "collateral": "17675",
+        "unrealized_pnl": "-1500",
+        "margin_ratio": null,
+        "leverage": "2.6",
+        "opened_at": null
+      }
+    ],
+    "free_balance": "20000",
+    "equity": "36175",
+    "fee_tier": 0,
+    "snapshot_ts": "2026-10-05T12:00:00Z"
+  },
+  "markets": [
+    {
+      "id": 16,
+      "symbol": "BTC",
+      "base": "BTC",
+      "price_decimals": 1,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.1",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "10",
+      "min_size": "0",
+      "tick_size": "0.1",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "focus_market_id": 16,
+  "policy": {
+    "market_allowlist": [
+      16
+    ],
+    "max_order_size_usd": "25000",
+    "require_approval_above_usd": "5000",
+    "daily_actions_left": 5
+  },
+  "sm": {
+    "asset": "BTC",
+    "netflow_24h": "-1800000",
+    "holdings_delta": "-900000",
+    "long_short_ratio": "0.92",
+    "top_traders_net_bias": "net short",
+    "fetched_at_ms": 999000000,
+    "total_cost_usd": "0.05",
+    "note": "cross-venue proxy"
+  },
+  "reflex": {
+    "actions": []
+  },
+  "mock_completion": "{\"action\": \"HOLD\", \"market_id\": 16, \"amount\": null, \"confidence\": 0.69, \"urgency\": \"ROUTINE\", \"reason\": \"Bearish smart-money flow noted, but entry 95000 still leaves a comfortable buffer; holding while watching.\"}"
+}

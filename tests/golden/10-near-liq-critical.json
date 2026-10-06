@@ -1,0 +1,73 @@
+{
+  "name": "10-near-liq-critical",
+  "notes": "Near-liquidation critical: liq = 2600*1.05 - 2475/8 = 2420.625; dist = (2450-2420.625)/2450*100 = 1.199% -> Red. Expected REDUCE or CLOSE; the canned mock closes.",
+  "expected": {
+    "action_class": [
+      "REDUCE",
+      "CLOSE"
+    ],
+    "schema_valid": true,
+    "injection": false
+  },
+  "snapshot": {
+    "positions": [
+      {
+        "market_id": 32,
+        "symbol": "ETH",
+        "size": "8",
+        "entry_price": "2600",
+        "mark_price": "2450",
+        "liq_price": null,
+        "collateral": "2475",
+        "unrealized_pnl": "-1200",
+        "margin_ratio": null,
+        "leverage": "7.9",
+        "opened_at": null
+      }
+    ],
+    "free_balance": "900",
+    "equity": "2175",
+    "fee_tier": 0,
+    "snapshot_ts": "2026-10-05T12:00:00Z"
+  },
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "focus_market_id": 32,
+  "policy": {
+    "market_allowlist": [
+      32
+    ],
+    "max_order_size_usd": "25000",
+    "require_approval_above_usd": "5000",
+    "daily_actions_left": 5
+  },
+  "sm": {
+    "asset": "ETH",
+    "netflow_24h": null,
+    "holdings_delta": null,
+    "long_short_ratio": null,
+    "top_traders_net_bias": null,
+    "fetched_at_ms": null,
+    "total_cost_usd": null,
+    "note": "smart-money data unavailable"
+  },
+  "reflex": {
+    "actions": []
+  },
+  "mock_completion": "{\"action\": \"CLOSE\", \"market_id\": 32, \"amount\": null, \"confidence\": 0.92, \"urgency\": \"CRITICAL\", \"reason\": \"Mark 2450 leaves almost no distance to liquidation; closing immediately.\"}"
+}

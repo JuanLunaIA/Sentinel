@@ -1,0 +1,77 @@
+{
+  "name": "09-red-reflex-already-acted",
+  "notes": "Red with reflex already acting: liq = 2500*1.05 - 3925/10 = 2232.5; dist = (2350-2232.5)/2350*100 = 5.00% -> Red. Reflex block shows the recent reduce/alert. Expected REDUCE, CLOSE or HOLD; the canned mock holds the remainder.",
+  "expected": {
+    "action_class": [
+      "REDUCE",
+      "CLOSE",
+      "HOLD"
+    ],
+    "schema_valid": true,
+    "injection": false
+  },
+  "snapshot": {
+    "positions": [
+      {
+        "market_id": 32,
+        "symbol": "ETH",
+        "size": "10",
+        "entry_price": "2500",
+        "mark_price": "2350",
+        "liq_price": null,
+        "collateral": "3925",
+        "unrealized_pnl": "-1500",
+        "margin_ratio": null,
+        "leverage": "6.0",
+        "opened_at": null
+      }
+    ],
+    "free_balance": "1500",
+    "equity": "3925",
+    "fee_tier": 0,
+    "snapshot_ts": "2026-10-05T12:00:00Z"
+  },
+  "markets": [
+    {
+      "id": 32,
+      "symbol": "ETH",
+      "base": "ETH",
+      "price_decimals": 2,
+      "size_decimals": 3,
+      "initial_margin_fraction": "0.083333",
+      "maintenance_margin_fraction": "0.05",
+      "max_leverage": "12",
+      "min_size": "0",
+      "tick_size": "0.01",
+      "maker_fee_micros": 45,
+      "taker_fee_micros": 345,
+      "order_ttl_blocks": 20
+    }
+  ],
+  "focus_market_id": 32,
+  "policy": {
+    "market_allowlist": [
+      32
+    ],
+    "max_order_size_usd": "25000",
+    "require_approval_above_usd": "5000",
+    "daily_actions_left": 5
+  },
+  "sm": {
+    "asset": "ETH",
+    "netflow_24h": null,
+    "holdings_delta": null,
+    "long_short_ratio": null,
+    "top_traders_net_bias": null,
+    "fetched_at_ms": null,
+    "total_cost_usd": null,
+    "note": "smart-money data unavailable"
+  },
+  "reflex": {
+    "actions": [
+      "reduce 25% ETH (#32) - red breach",
+      "alert: distance 5% and falling"
+    ]
+  },
+  "mock_completion": "{\"action\": \"HOLD\", \"market_id\": 32, \"amount\": null, \"confidence\": 0.7, \"urgency\": \"ELEVATED\", \"reason\": \"Reflex already reduced at the 2350 mark; holding the remainder.\"}"
+}
