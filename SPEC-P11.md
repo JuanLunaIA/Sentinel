@@ -153,3 +153,22 @@ checklist); rustfmt only owned files; no unwrap/expect outside
 ## 12 Report format
 
 JSON `{files_created, tests[{cmd,exit,observed}], open_issues}`.
+
+## 13 Changelog (integration-time changes only)
+
+- **v1.0.1 (parent, integration):**
+  (a) Effective-thresholds fix (verifier finding): `validate_key_value`
+  completes missing pct keys from compiled-in defaults (25/15/8); the new
+  additive `SharedPolicy::load_with_defaults` (used by `main.rs`) carries the
+  operator's `Config` thresholds so a non-default `RISK_*_PCT` environment
+  still validates consistently; safe lowering order is hard -> warn -> soft.
+  (b) `escape_md2` is char-wise: double application is not byte-idempotent
+  (documented + pinned by tests; single-escape path is exact).
+  (c) Pinned behaviors: `/audit 0` parses (renders empty); approve outcomes
+  journal `status = human_approved` AND `report_status = <lowercased
+  ExecutionStatus>`; intent placeholder stays `{"status":"pending"}` with the
+  human `executor` marker carried on the outcome payload.
+  (d) `HumanExecutor` keeps both unboxed variants with an
+  `#[allow(clippy::large_enum_variant)]` (boxing buys nothing here).
+  (e) Live checklist remains PENDING-TOKEN (STUB-18); heartbeat/anchor
+  failure + budget alert routing noted as STUB-19.

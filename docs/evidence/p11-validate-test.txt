@@ -1,0 +1,11 @@
+# P11 scoped validation (2026-10-06T01:13:19-03:00)
+# NOTE: full-workspace re-run happens at P12 integration (p12_adversarial is red until the concurrent P12 artifacts land)
+== sentinel lib ==
+test result: ok. 341 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.50s
+
+== p11 adversarial ==
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+== clippy (lib, -D warnings) ==
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
