@@ -67,8 +67,10 @@
   }
 
   /* positions --------------------------------------------------------------- */
-  .pos-wrap{overflow-x:auto}
-  .pos-grid{display:grid;grid-template-columns:1.05fr .62fr .82fr 1.3fr 2.1fr .78fr 1fr 1fr 1.35fr;gap:4px 10px;align-items:center;min-width:840px}
+  .pos-wrap{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#3a3a55 #151520}
+  .pos-grid{display:grid;grid-template-columns:1.05fr .62fr .82fr 1.3fr 2.1fr .78fr 1fr 1fr 1.35fr;gap:4px 10px;align-items:center;min-width:720px}
+  .pos-grid>*{min-width:0}
+  .pos-grid>*:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .pos-head{font-size:9px;letter-spacing:1.2px;color:var(--muted2);text-transform:uppercase;
     border-bottom:1px solid var(--line);padding-bottom:5px;margin-bottom:2px}
   .pos-row{padding:8px 0;border-bottom:1px solid #1b1b28}
