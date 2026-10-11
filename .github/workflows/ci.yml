@@ -45,6 +45,12 @@ jobs:
       - name: cargo clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+      # The breaker tests read contracts/out/SentinelAuditAnchor.json; build it
+      # once here so parallel tests don't race the forge-build fallback.
+      - name: forge build (contract artifacts)
+        working-directory: contracts
+        run: forge build -q
+
       - name: cargo test
         run: cargo test --workspace
 
@@ -81,6 +87,10 @@ jobs:
       - name: install
         working-directory: indexer
         run: pnpm install --frozen-lockfile
+
+      - name: codegen (handler types)
+        working-directory: indexer
+        run: pnpm codegen
 
       - name: typecheck + test
         working-directory: indexer

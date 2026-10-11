@@ -31,6 +31,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: forge build (contract artifacts for the breaker tests)
+        working-directory: contracts
+        run: forge build -q
       - run: cargo test --workspace
 
   release:
