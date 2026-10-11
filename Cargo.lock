@@ -1305,7 +1305,9 @@ dependencies = [
  "chrono",
  "hex",
  "hmac 0.13.0",
+ "ring",
  "rust_decimal",
+ "rustls",
  "sentinel",
  "sentinel-core",
  "serde",
@@ -1635,6 +1637,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce6e4c961d6cd6c9a86db418387425e8bdeaf05b3c8bc1411e6dca4c252f1453"
 dependencies = [
  "hybrid-array",
+]
+
+[[package]]
+name = "ctor"
+version = "0.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32a2785755761f3ddc1492979ce1e48d2c00d09311c39e4466429188f3dd6501"
+dependencies = [
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -4119,6 +4131,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
 dependencies = [
  "aws-lc-rs",
+ "log",
  "once_cell",
  "ring",
  "rustls-pki-types",
@@ -4372,6 +4385,7 @@ dependencies = [
  "axum",
  "base64 0.23.1",
  "chrono",
+ "ctor",
  "dotenvy",
  "ed25519-dalek",
  "futures-util",
@@ -4381,8 +4395,10 @@ dependencies = [
  "pretty_assertions",
  "rand_core 0.10.1",
  "reqwest 0.13.5",
+ "ring",
  "rstest",
  "rust_decimal",
+ "rustls",
  "sentinel-core",
  "serde",
  "serde_json",
@@ -4410,6 +4426,7 @@ dependencies = [
  "chrono",
  "hex",
  "proptest",
+ "ring",
  "rust_decimal",
  "rust_decimal_macros",
  "serde",

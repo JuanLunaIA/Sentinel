@@ -21,6 +21,7 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use tokio::sync::watch;
 use tracing::{info, warn};
+use rustls::crypto::ring::default_provider;
 use tracing_subscriber::EnvFilter;
 
 use breaker::armed::{ArmedState, serve};
@@ -31,6 +32,9 @@ use breaker::watcher::{DEFAULT_LOOKBACK_BLOCKS, HeartbeatWatcher, WatcherState};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install ring crypto provider");
     init_tracing();
 
     let cfg = Arc::new(BreakerConfig::from_env().context("breaker configuration was rejected")?);
