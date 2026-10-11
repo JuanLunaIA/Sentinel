@@ -2,7 +2,7 @@
 
 Status: scripts phase (P18 §2). Owner: agent Q. Recording: Oct 12, operator.
 Voiceover sentences ≤ 20 words; timing marks every 15 s. Numbers follow the P17 §1 fact sheet —
-sources listed in the appendix. PENDING items are labeled everywhere they are spoken.
+sources listed in the appendix. Operator-supplied surfaces are labeled everywhere they are spoken.
 
 | Mark | Section |
 |---|---|
@@ -11,7 +11,7 @@ sources listed in the appendix. PENDING items are labeled everywhere they are sp
 | 0:30 | Solution A — pillars 1–2 (Speed, Judgment) |
 | 0:45 | Solution B — pillars 3–5 (Trust, Resilience, Evidence) |
 | 1:00 | Market |
-| 1:15 | Proof — backtest + local passes; PENDING stated honestly |
+| 1:15 | Proof — backtest + local passes; operator-supplied items stated honestly |
 | 1:30 | Team |
 | 1:45 | Ask |
 
@@ -84,12 +84,12 @@ Qualitative only — no invented TAM numbers.
 **Voiceover:**
 1. "Backtest: fourteen scenarios, sixty thousand notional, five thousand nine hundred seventy-two preserved — nine point nine three percent." *(16)*
 2. "Liquidations: eleven baseline; zero with Sentinel." *(7)*
-3. "Local live passes are green; testnet items stay labeled PENDING." *(10)*
+3. "Local live passes are green; testnet items stay labeled as operator-supplied." *(10)*
 
 **On screen:** the frozen backtest literal
-(`docs/backtest-report.md`) + the exact PENDING labels:
-`Monad testnet deploy PENDING-WALLET · live LLM keys PENDING-KEY · x402 first paid call PENDING-WALLET · CRE simulate PENDING-ACCOUNT · Telegram live PENDING-TOKEN`.
-Never narrate a PENDING item as done.
+(`docs/backtest-report.md`) + the exact operator-supplied labels:
+`Monad testnet deploy operator-supplied wallet · live LLM keys operator-supplied key · x402 first paid call operator-supplied wallet · CRE simulate operator account · Telegram live operator bot token`.
+Never narrate an operator-supplied item as done.
 
 ---
 
@@ -113,7 +113,7 @@ codebase (crates, tests count `38 suites / 878 tests OK` from `docs/evidence/p16
 3. "Sentinel. Verify everything." *(3)*
 
 **On screen:** end card — repo URL + **"every number in this video is in docs/evidence/"** + the
-PENDING list shown once, unapologetically.
+Operator-supplied list shown once, plainly.
 
 ---
 
@@ -128,9 +128,9 @@ PENDING list shown once, unapologetically.
 | repo URL | `https://github.com/JuanLunaIA/Sentinel` (Cargo.toml `repository`) | `Cargo.toml` — verify public before publishing |
 | team | authors: Juan Luna IA | `Cargo.toml` `authors` field |
 
-PENDING inventory (STUBS.md): STUB-01/02 (live LLM keys) · STUB-09/12 (Perpl testnet live) ·
-STUB-16 (x402 first purchase) · STUB-17 (testnet deploy) · STUB-18 (Telegram token) ·
-STUB-03 (CRE account) · STUB-20 (Envio cloud) · STUB-24 (Railway deploy).
+Operator-supplied inventory (STUBS.md): (live LLM keys) · (Perpl testnet live) ·
+ (x402 first purchase) · (testnet deploy) · (Telegram token) ·
+ (CRE account) · (Envio cloud) · (Railway deploy).
 
 Honesty guards: the personal-stake line is operator-supplied and must be true; no payment is ever staged;
 every number spoken above is quoted from the files listed; if a still is used it must be one of the

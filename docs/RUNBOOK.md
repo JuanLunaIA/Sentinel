@@ -6,7 +6,7 @@ build + compose cycle + journal seq continuity), `docs/evidence/p16-validate.txt
 
 Scope: the `sentinel` daemon, `breaker`, the audit journal, and the two
 distribution paths (docker compose locally, Railway remote — Railway itself
-is **PENDING-ACCOUNT**, STUB-24: no headless session).
+is **operator account**, : no headless session).
 
 ---
 
@@ -34,11 +34,11 @@ the same image.
 
 ```bash
 cd /path/to/Sentinel
-cp .env.example .env         # placeholders pass validation for smoke runs
-./target/release/sentinel                  # mode from EXECUTION_MODE
-./target/release/sentinel --mode dry-run   # one-shot override
+cp .env.example .env # placeholders pass validation for smoke runs
+./target/release/sentinel # mode from EXECUTION_MODE
+./target/release/sentinel --mode dry-run # one-shot override
 ./target/release/sentinel --mode dry-run \
-    --replay tests/fixtures/perpl/crash-scenario.jsonl   # deterministic replay
+ --replay tests/fixtures/perpl/crash-scenario.jsonl # deterministic replay
 ```
 
 Stop: `Ctrl-C` (SIGINT) or `kill -TERM <pid>` — the daemon drains the pipeline
@@ -63,22 +63,22 @@ system nftables `forward` policy `drop` blocks container-bridge egress — see
 
 ```bash
 docker build --network=host \
-  --build-arg SENTINEL_UID=$(id -u) --build-arg SENTINEL_GID=$(id -g) \
-  -t sentinel:p16 .
+ --build-arg SENTINEL_UID=$(id -u) --build-arg SENTINEL_GID=$(id -g) \
+ -t sentinel:p16 .
 ```
 
 Run the daemon (live config from `.env`):
 
 ```bash
 docker run --rm -p 8080:8080 --env-file .env \
-  -v "$PWD/data:/app/data" sentinel:p16
+ -v "$PWD/data:/app/data" sentinel:p16
 ```
 
 Run a deterministic replay instead (safe without venue credentials):
 
 ```bash
 docker run --rm --env-file .env -v "$PWD/data:/app/data" sentinel:p16 \
-  sentinel --mode dry-run --replay tests/fixtures/perpl/crash-scenario.jsonl
+ sentinel --mode dry-run --replay tests/fixtures/perpl/crash-scenario.jsonl
 ```
 
 Stop: `docker stop <container>` (SIGTERM → graceful drain; 10 s grace).
@@ -86,20 +86,20 @@ Stop: `docker stop <container>` (SIGTERM → graceful drain; 10 s grace).
 ### 1.3 Docker compose (recommended)
 
 ```bash
-docker compose up -d          # sentinel + breaker
+docker compose up -d # sentinel + breaker
 docker compose ps
 docker compose logs -f sentinel
-docker compose down           # stop + remove (the ./data volume persists)
+docker compose down # stop + remove (the ./data volume persists)
 ```
 
 - `sentinel`: daemon; host `8080:8080`; `/healthz` reachable at
-  `http://localhost:8080/healthz`.
+ `http://localhost:8080/healthz`.
 - `breaker`: same image, `command: ["/usr/local/bin/breaker"]`; no host ports
-  (uncomment the `BREAKER_PORT` mapping in `docker-compose.yml` if needed).
+ (uncomment the `BREAKER_PORT` mapping in `docker-compose.yml` if needed).
 - Both use `env_file: .env` and share `./data:/app/data`; `restart: unless-stopped`.
 - Apply `.env` changes: `docker compose up -d --force-recreate`.
 - Rebuild after source changes: re-run the `docker build` command above, then
-  `docker compose up -d --force-recreate`.
+ `docker compose up -d --force-recreate`.
 
 **Port conflicts.** If `8080` is already taken on the host (it is on the dev
 box — vaultwarden), either stop the other service or add a local
@@ -107,9 +107,9 @@ box — vaultwarden), either stop the other service or add a local
 
 ```yaml
 services:
-  sentinel:
-    ports: !override
-      - "127.0.0.1:18080:8080"
+ sentinel:
+ ports: !override
+ - "127.0.0.1:18080:8080"
 ```
 
 (The verify script does exactly this automatically in a temp overlay;
@@ -168,8 +168,8 @@ redaction — tested in P16 §3).
 `scripts/docker-verify.sh` proves the P16 §1 acceptance substitute:
 
 ```bash
-scripts/docker-verify.sh          # full run (build + compose cycle), evidence transcript
-SENTINEL_SKIP_BUILD=1 scripts/docker-verify.sh   # re-run the cycle reusing sentinel:p16
+scripts/docker-verify.sh # full run (build + compose cycle), evidence transcript
+SENTINEL_SKIP_BUILD=1 scripts/docker-verify.sh # re-run the cycle reusing sentinel:p16
 ```
 
 What it does: builds the image → `docker compose up -d` (auto-selects host
@@ -190,9 +190,9 @@ chained, `seq` contiguous from 0. Verify it with the bundled CLI (works
 offline; also available inside the image):
 
 ```bash
-cargo run --release --bin audit-verify -- --no-chain          # local chain only
-audit-verify --journal data/audit/journal-20261006.jsonl      # explicit file (chain cross-check needs RPC + contract)
-audit-verify --no-chain                                       # inside the container image
+cargo run --release --bin audit-verify -- --no-chain # local chain only
+audit-verify --journal data/audit/journal-20261006.jsonl # explicit file (chain cross-check needs RPC + contract)
+audit-verify --no-chain # inside the container image
 ```
 
 Healthy: `✅ journal consistent; {N} entries; {M} anchored; root matches at seq {X}` (exit 0).
@@ -254,8 +254,8 @@ Demo (full sequence incl. anvil): `scripts/breaker-demo.sh` → evidence
 BODY='{"guardian":"0xf39F…92266","reason":"sentinel-unresponsive-heartbeat-stale-critical","requested_at_ms":1728000000000}'
 SIG=$(printf '%s' "$BODY" | openssl dgst -sha256 -hmac "$BREAKER_ARM_SECRET" -hex | awk '{print $NF}')
 curl -X POST http://127.0.0.1:9090/breaker/trigger \
-  -H 'Content-Type: application/json' -H "X-Breaker-Signature: sha256=$SIG" \
-  --data-raw "$BODY"      # → 202 {"fired":true, …}
+ -H 'Content-Type: application/json' -H "X-Breaker-Signature: sha256=$SIG" \
+ --data-raw "$BODY" # → 202 {"fired":true, …}
 curl -s http://127.0.0.1:9090/api/heartbeat-status | jq .
 ```
 
@@ -264,7 +264,7 @@ documented last-resort reduce path.
 
 ---
 
-## 7. Railway deploy (PENDING-ACCOUNT — STUB-24)
+## 7. Railway deploy (operator account — )
 
 `railway.toml` (repo root, config-as-code) already sets: DOCKERFILE builder →
 `Dockerfile`, deploy healthcheck `GET /healthz` (120 s timeout), restart
@@ -274,38 +274,38 @@ the daemon binds it.
 Steps (after `railway login` — interactive; not possible headless):
 
 1. **Project**: `railway init --name sentinel` (new project) or
-   `railway link` and pick project/environment/service.
+ `railway link` and pick project/environment/service.
 2. **Volume (REQUIRED — journal survival)**: attach a volume at `/app/data`
-   *before the first real deploy*:
-   `railway volume add --mount-path /app/data`
-   (Dashboard alternative: service → **Data** → **Add Volume** → mount path
-   `/app/data`.) Without it, the audit journal + breaker state reset on every
-   redeploy. Railway's own guidance for relative-path apps is exactly this
-   mount (`./data` → `/app/data`).
+ *before the first real deploy*:
+ `railway volume add --mount-path /app/data`
+ (Dashboard alternative: service → **Data** → **Add Volume** → mount path
+ `/app/data`.) Without it, the audit journal + breaker state reset on every
+ redeploy. Railway's own guidance for relative-path apps is exactly this
+ mount (`./data` → `/app/data`).
 3. **Variables** (from `.env.example` — never commit real secrets):
-   Dashboard → service → **Variables** → Raw Editor, or
-   `railway variables --set KEY=VALUE …`. Required set: `PERPL_ENV`,
-   `PERPL_API_KEY`, `PERPL_API_KEY_SECRET`, `PERPL_ACCOUNT`, `EXECUTION_MODE`
-   (`DRY_RUN` first), `QWEN_API_KEY` (+`KIMI_API_KEY` fallback), `TELOXIDE_TOKEN`
-   + `TELEGRAM_ALLOWED_USER_IDS`, risk knobs (`RISK_*`, `MAX_*`, …). Do **not**
-   set `PORT` (Railway injects it). `ANCHOR_*`/`RPC_SIGNER_KEY` and `BREAKER_*`
-   only once those wallets/secrets exist.
+ Dashboard → service → **Variables** → Raw Editor, or
+ `railway variables --set KEY=VALUE …`. Required set: `PERPL_ENV`,
+ `PERPL_API_KEY`, `PERPL_API_KEY_SECRET`, `PERPL_ACCOUNT`, `EXECUTION_MODE`
+ (`DRY_RUN` first), `QWEN_API_KEY` (+`KIMI_API_KEY` fallback), `TELOXIDE_TOKEN`
+ + `TELEGRAM_ALLOWED_USER_IDS`, risk knobs (`RISK_*`, `MAX_*`, …). Do **not**
+ set `PORT` (Railway injects it). `ANCHOR_*`/`RPC_SIGNER_KEY` and `BREAKER_*`
+ only once those wallets/secrets exist.
 4. **Deploy**: `railway up` (Dockerfile built remotely; builds have normal
-   internet — the local nftables caveat in §8 does not apply). Watch
-   `railway logs`; the deploy passes only when `/healthz` answers within 120 s.
+ internet — the local nftables caveat in §8 does not apply). Watch
+ `railway logs`; the deploy passes only when `/healthz` answers within 120 s.
 5. **Post-deploy checks**:
-   - `railway logs | grep "health + audit API"` — server bound;
-   - `railway volume files list /` — `data/audit/` appears once entries journal;
-   - optional: `railway domain` → `curl https://<domain>/healthz`.
-   - If logs show `audit journal persistence failed; degrading to in-memory …`,
-     the volume is mounted but not writable by the container user (uid 10001
-     default on Railway builds): rebuild with `SENTINEL_UID/GID` matching the
-     volume owner or run with a root-init chown wrapper — coordinate with the
-     account holder.
+ - `railway logs | grep "health + audit API"` — server bound;
+ - `railway volume files list /` — `data/audit/` appears once entries journal;
+ - optional: `railway domain` → `curl https://<domain>/healthz`.
+ - If logs show `audit journal persistence failed; degrading to in-memory …`,
+ the volume is mounted but not writable by the container user (uid 10001
+ default on Railway builds): rebuild with `SENTINEL_UID/GID` matching the
+ volume owner or run with a root-init chown wrapper — coordinate with the
+ account holder.
 
 Acceptance for this phase is **documentation only**: the deploy itself is
 blocked on an interactive Railway account (`docs/evidence/p16-deployed.png`
-deferred; STUB-24 in `docs/STUBS.md`).
+deferred; in `docs/STUBS.md`).
 
 ---
 
@@ -325,9 +325,9 @@ deferred; STUB-24 in `docs/STUBS.md`).
 ## 9. Standing operator constraints
 
 - Never commit `.env` (or any real secret); the docker context and image
-  exclude it (`.dockerignore`). Evidence artifacts must contain no secret
-  values (scanned in P16 §3).
+ exclude it (`.dockerignore`). Evidence artifacts must contain no secret
+ values (scanned in P16 §3).
 - Docker on this box: run via `sudo -n docker …` (user not in the `docker`
-  group; socket relay fallback in `indexer/README.md`).
+ group; socket relay fallback in `indexer/README.md`).
 - `LC_ALL=C` for scripts/evidence.
 - Mainnet is deliberately not wired: do not attempt `--mode mainnet`.

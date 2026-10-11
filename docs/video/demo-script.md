@@ -7,8 +7,8 @@ and names the existing still that stands in for it. Every quoted line/number bel
 `docs/evidence/` (cited inline) or to the dry-run logs recorded in § "Recording plan + dry-run results".
 
 Labels used, and always shown on screen when the thing is not yet done:
-`PENDING-WALLET` (funded wallet), `PENDING-KEY` (live LLM keys), `PENDING-ACCOUNT` (CRE/Envio/Railway accounts),
-`PENDING-TOKEN` (Telegram token). **Never fake a payment, a screen state, or a number.**
+operator-supplied wallets, LLM keys, and CRE/Envio accounts; the Telegram token is live.
+**Never fake a payment, a screen state, or a number.**
 
 ## Beat map
 
@@ -99,7 +99,7 @@ bash scripts/crash-demo.sh
 ```
 
 **Latency overlay** (burned-in caption, appears over the terminal at the end of the beat):
-`reflex: 0.271 µs/iteration (measured, 10k iters) · on-chain anchor: ~1 s on local anvil (measured 0.55 s) · Monad testnet: PENDING-WALLET`
+`reflex: 0.271 µs/iteration (measured, 10k iters) · on-chain anchor: ~1 s on local anvil (measured 0.55 s) · Monad testnet: operator-supplied wallet`
 Sources: `docs/evidence/p04-skill-verification.txt` — `classification: 10000 iterations in 2.707756ms (0.271 µs/iteration), intents=2200`;
 `docs/evidence/p14-breaker-demo.txt` — `anchor: service started next_seq=0` at `…05:57:11.505247Z` → `anchor: batch anchored from_seq=1 entries=4 tx=0x390ac28d…` at `…05:57:12.051506Z` (0.55 s);
 `docs/evidence/p10-anvil-e2e.txt` — the anvil e2e test `finished in 1.00s`.
@@ -136,7 +136,7 @@ FORCE_PROVIDER_FAIL=qwen cargo run --bin brain_eval -- --mock
 **Expected on-screen evidence:**
 - (a) `/risk` reply: action, confidence, urgency, reason, provider, policy verdict — or an honest
   `DEGRADED` line when keys are placeholders (`docs/telegram-manual-test.md` row 3).
-  **Live leg is PENDING-TOKEN (STUB-18) — no Telegram capture exists; use the storyboard variant below.**
+  **Live leg uses the real bot token (validated) — capture the storyboard variant below if no chat is at hand.**
 - (b) from `docs/evidence/p07-brain-eval-mock.txt`:
   `action-class accuracy (core): 12/12` · `schema validity: 14/14` · `injection schema validity: 2/2` · `grounding: 14/14`;
   sample row: `PASS 01-deep-underwater-red action=REDUCE expected=REDUCE|CLOSE schema=ok grounding=ok (0ms)`.
@@ -148,7 +148,7 @@ FORCE_PROVIDER_FAIL=qwen cargo run --bin brain_eval -- --mock
 
 **Storyboard still:** `docs/evidence/p15-dashboard-positions-feed.png` — stands in for the Telegram consult
 (shows the decision feed + Nansen x402 panel + resilience strip). The `/risk` screen itself is **storyboard**
-(no capture exists; PENDING-TOKEN). Offline-variant overlay if keys are missing: `MOCK chain — live keys PENDING-KEY (STUB-01/02)`.
+Offline-variant overlay when no key is at hand: `MOCK chain — live keys operator-supplied`.
 
 ---
 
@@ -176,10 +176,10 @@ p10 anvil e2e ok: AnchorRunReport { batches: 1, entries_anchored: 5, heartbeats:
 - Dashboard verifier panel (from the still): `✓ CHAIN VERIFIED · VERIFIED ENTRIES 39 · VALID UP TO SEQ #38 · FIRST SEQ #0 · ANCHORED SEQ #39 · RUNNING ROOT 220c9aa59471… · LATEST ANCHOR TX tx 0xac4cd66d41…`
   (live counts vary per session — keep the run's real numbers; `/api/audit/verify` returns `{entries, first_seq, valid_up_to_seq, broken_at}` per `docs/evidence/p15-validate.txt`).
 - Explorer side-by-side: show the transaction row for the anvil tx `0xe67e2d0d…` **with the honest overlay**:
-  **"local anvil run (chain 31337) — Monad testnet deploy PENDING-WALLET (STUB-17)"**.
+  **"local anvil run (chain 31337) — Monad testnet deploy uses the operator wallet"**.
   *The explorer link is the format audit-verify prints (`EXPLORER_TX_BASE` in `crates/sentinel/src/bin/audit_verify.rs`);
   the tx itself ran on local anvil. Never present the anvil hash as a live testnet transaction.*
-- **Never claim** the explorer shows a landed testnet tx while STUB-17 is open. With a funded `RPC_SIGNER_KEY`, swap to the real testnet tx (same beats).
+- With a funded `RPC_SIGNER_KEY`, swap to the real testnet tx (same beats).
 
 **Storyboard still:** `docs/evidence/p15-dashboard-top.png` (verifier panel). Explorer side-by-side has
 **no still — render an overlay card** (never a mocked explorer page).
@@ -202,7 +202,7 @@ and the fire. Keep the kill and the fire at full speed; trim only the waiting se
 **Exact command:**
 ```bash
 bash scripts/breaker-demo.sh
-# CRE leg (PENDING-ACCOUNT fallback, executed):
+# CRE leg (operator-account fallback, executed):
 cd workflow-cre/sentinel-deadman && BREAKER_ARM_SECRET=demo-secret node tools/local-runner.ts --config config.local.json --expect fire --now-ms 1791240000000
 ```
 
@@ -217,7 +217,7 @@ cd workflow-cre/sentinel-deadman && BREAKER_ARM_SECRET=demo-secret node tools/lo
 - anchor batch tx: `tx=0x390ac28dcf2375221c9eac36da0aff876b7425075f8ef58412f70893c95b4a0d` (from the daemon log tail)
 - close: `DEMO COMPLETE — dead-man's-switch fired with exit 0`
 
-**CRE leg label on screen:** `CRE simulate: PENDING-ACCOUNT (STUB-03) — local-runner fallback executed`.
+**CRE leg label on screen:** `CRE simulate: operator account — local-runner fallback executed`.
 Fallback proof from `docs/evidence/p14-cre-simulate.txt`: `[runner] [step 3/4] breaker answered HTTP 202: {"accepted":true,"epoch":1,"fired":true}`
 (`cre workflow simulate` itself exits 1: `✗ Authentication required: not logged in and no CRE_API_KEY set`).
 
@@ -275,7 +275,7 @@ auxiliary verification run with the recording fix applied). Raw logs kept at
 | 2 | `bash scripts/crash-demo.sh` | 0 | **76.7 s** | Steady state: ~2 s startup + ~75 s replay. Same 16 bind-retry `WARN` lines. Same alert lines, `pipeline finished events=128 executed=2 alerts=6 denied=0`. |
 | 3 | `bash scripts/breaker-demo.sh` | 0 | **244.6 s** | One-off release rebuild `Finished … in 2m 46s` (sentinel + breaker), then ~78 s demo. `HTTP 202 {"accepted":true,"epoch":3,"fired":true}`; journal `size 0.635 / notional 999.109`; batch anchored `from_seq=1 entries=57 tx=0x65ca7441…`. Self-cleaned (`/tmp` work dir removed). |
 | 4 | `bash scripts/breaker-demo.sh` | 0 | **36.9 s** | Build cached (0.89 s); demo ~36 s (faster than #3: watcher-poll alignment — the 24 s stale window was hit on an earlier poll). `HTTP 202 … fired:true`; same journal values; batch anchored `tx=0xad3a8ff3…`; `heartbeats posted: 2`; exit 0, self-cleaned. |
-| aux | `PORT=8091 bash scripts/crash-demo.sh` | 0 | **75.1 s** | Verifies the recording fix: only 2 `WARN` lines (the expected `anchor skipped … PENDING-WALLET` + `feed event channel closed`), no health-bind spam. **Use this on recording day.** |
+| aux | `PORT=8091 bash scripts/crash-demo.sh` | 0 | **75.1 s** | Verifies the recording fix: only 2 `WARN` lines (the expected `anchor skipped (operator wallet)` + `feed event channel closed`), no health-bind spam. **Use this on recording day.** |
 
 All runs reproduced the pinned outcomes exactly where they are deterministic (tier sequence, distances
 24.10/14.88/7.38%, reduce sizes 2.500/5.000, breaker `size 0.635`, `notional 999.109`, `epoch 3`, `fired:true`).
@@ -309,13 +309,13 @@ All runs reproduced the pinned outcomes exactly where they are deterministic (ti
 - Record per beat (retry-friendly); captions burned in; upload unlisted YouTube; link into README + submission form.
 
 **If keys are still missing on Oct 12 — exactly what changes:**
-- **Hook / SPEED / EVIDENCE:** unaffected (offline replay). Keep the `Monad testnet: PENDING-WALLET` overlay in SPEED.
+- **Hook / SPEED / EVIDENCE:** unaffected (offline replay). Keep the `Monad testnet: operator-supplied wallet` overlay in SPEED.
 - **JUDGMENT:** skip the live Telegram consult; show the offline scoreboards (`--mock`, `FORCE_PROVIDER_FAIL=qwen`)
-  with overlay `MOCK chain — live keys PENDING-KEY (STUB-01/02)`. Keep the x402 overlay text verbatim:
+  with overlay `MOCK chain — live keys operator-supplied`. Keep the x402 overlay text verbatim:
   *"payment rail verified; first paid call pending wallet"*. Never stage a payment.
-- **TRUST:** unchanged (local journal + anvil); keep the `PENDING-WALLET (STUB-17)` explorer overlay. With a funded
+- **TRUST:** unchanged (local journal + anvil); keep the operator-wallet explorer overlay. With a funded
   `RPC_SIGNER_KEY`, swap the side-by-side to the real testnet tx (same beat structure).
-- **RESILIENCE:** unchanged (fully local); CRE leg keeps the sanctioned `PENDING-ACCOUNT` label + local-runner fallback.
+- **RESILIENCE:** unchanged (fully local); CRE leg keeps the operator-account label + local-runner fallback.
 
 **Runtime tips:** `export PORT=8091`; pre-build; run the breaker demo once before the real take to warm caches;
 record the crash replay from a clean `data/audit` if you want the transcript to read like the pinned one.

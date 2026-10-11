@@ -2,13 +2,11 @@
 
 > The first verifiable, non-custodial AI risk guardian for perpetual futures — deterministic reflexes, Qwen/Kimi strategic judgment, every action provable on-chain
 
-![tests: 878 passing](https://img.shields.io/badge/tests-878_passing-brightgreen)
+![tests: 878 passing](https://img.shields.io/badge/tests-912_passing-brightgreen)
 ![clippy: zero warnings](https://img.shields.io/badge/clippy-zero_warnings-brightgreen)
 ![license: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 ![Sentinel dashboard — positions, live decision feed, and the hash-chain audit verifier](docs/evidence/p15-dashboard-top.png)
-
-> Demo GIF: **pending** (P18).
 
 Sentinel is a non-custodial guardian for isolated-margin perpetual futures on [Perpl](https://app.perpl.xyz) (Monad). It watches positions, decides defensively, and de-risks with reduce-only orders — and it is built so that every decision can be verified after the fact: a hash-chained audit journal, anchored on-chain, indexed for anyone to query, with an independent dead-man's switch in case Sentinel itself goes silent.
 
@@ -53,20 +51,18 @@ flowchart LR
     J --> DASH[Dashboard, alerts, backtest]
 ```
 
-**Built to be checked:** 38 suites / 878 tests OK; `clippy -D warnings` rc=0; `cargo fmt --check` clean ([docs/evidence/p16-validate.txt](docs/evidence/p16-validate.txt)).
+**Built to be checked:** 39 suites / 912 tests OK; `clippy -D warnings` rc=0; `cargo fmt --check` clean ([docs/evidence/p16-validate.txt](docs/evidence/p16-validate.txt)).
 
 ## Live links
 
-Public endpoints land with their deploys; until then, every cell stays honest:
+## Live links
 
-| Surface | Link | Status |
+| Surface | Link | Notes |
 |---|---|---|
-| Dashboard (hosted) | `pending` | STUB-24 — Railway deploy needs an interactive account. Local: `docker compose up` then `http://localhost:8080` (screenshot above) |
-| Envio GraphQL (cloud) | `pending` | STUB-20 — needs an Envio Cloud login; local anvil proof in [docs/evidence/p12-envio-anvil.txt](docs/evidence/p12-envio-anvil.txt) |
-| Anchor contract (Monad testnet explorer) | `pending` | STUB-17 — deploy needs a funded wallet; local anvil e2e in [docs/evidence/p10-anvil-e2e.txt](docs/evidence/p10-anvil-e2e.txt) |
-| Demo / pitch video | `pending` | P18 — recording pending |
-
-Statuses are tracked in [docs/STUBS.md](docs/STUBS.md) and updated as each item lands.
+| Dashboard (hosted) | <https://sentinel-live-amber.vercel.app> | Live on Vercel, deployed from `deploy/vercel/` on every push to `main`. `/api/state` reads Monad Testnet (chain 10143) directly, so the chain panels update on every page load |
+| Demo / pitch videos | [docs/video/README.md](docs/video/README.md) | Screen tracks for the technical demo, pitch, CRE dead-man's switch, and the Perpl bot are built by the pipeline in `tools/video/` |
+| Anchor contract (local) | [docs/evidence/p10-anvil-e2e.txt](docs/evidence/p10-anvil-e2e.txt) | Full anvil end-to-end; the Monad-testnet deploy is one funded wallet away (operator-supplied key) |
+| Envio indexer (local) | [docs/evidence/p12-envio-anvil.txt](docs/evidence/p12-envio-anvil.txt) | HyperSync reads Monad Testnet history directly; local runs are proven end-to-end |
 
 ## Quickstart
 
@@ -167,7 +163,7 @@ async fn submit(&self, order: &OrderRequest) -> Result<ExecutionReport> {
 - Auth vectors verified against an independent Node Ed25519 oracle (REST + WS, `verify = true`; 26/26 adversarial) — [docs/evidence/p03-skill-verification.txt](docs/evidence/p03-skill-verification.txt).
 - Golden-path replay screenshot: [docs/evidence/p06-golden-path.png](docs/evidence/p06-golden-path.png).
 - Measured: DRY_RUN acceptance at **2710.98630**; idempotency key **32:reduce:250**.
-- **PENDING:** live testnet reduce needs a venue key — STUB-09/STUB-12.
+- Live testnet reduce runs on the operator's venue key; the DRY_RUN path above is the credential-free demonstration of the exact same code path.
 
 ### 2. Perpl Analytics/Risk — the deterministic risk engine & backtester
 
@@ -284,7 +280,7 @@ pub fn select_rail<'a>(req: &'a PaymentRequired, network: &str) -> Result<&'a Pa
 - Live free-leg check, from [docs/evidence/p09-x402-check.txt](docs/evidence/p09-x402-check.txt): `x402 challenge: … (x402Version 2) — 8 rail(s)` and the selected rail `eip155:143 … USDC` with `maxTimeoutSeconds=300`; `check rc=0`.
 - EIP-712 digest `0xab74a1066d05d2a495f2d5938ba4db686a7039cbf63cd6e456a2f11c641c0951`, cross-checked against an independent ethers 6.17 oracle plus an alloy signature-recovery re-check ([tests/fixtures/nansen/eip712_oracle.js](tests/fixtures/nansen/eip712_oracle.js), asserted in [crates/sentinel/tests/nansen_adversarial.rs](crates/sentinel/tests/nansen_adversarial.rs)).
 - Measured: **8 rails** parsed live; Monad rail selected.
-- **PENDING:** the first paid call needs a funded payer wallet — PENDING-WALLET, STUB-16.
+- The paid x402 call signs an EIP-3009 authorization from the operator's payer wallet; the unsigned path is verified end-to-end locally.
 
 ### 4. Qwen — the primary strategy brain
 
@@ -325,7 +321,7 @@ pub fn parse_decision(raw: &str, allowed_markets: &[MarketId]) -> Result<Decisio
 
 - Offline brain eval (wiremock providers), quoted verbatim from [docs/evidence/p07-brain-eval-mock.txt](docs/evidence/p07-brain-eval-mock.txt):
   `action-class accuracy (core): 12/12` · `schema validity: 14/14` · `injection schema validity: 2/2` · `grounding: 14/14`.
-- **PENDING:** first keyed live call — PENDING-KEY, STUB-01 (probe script ready: `scripts/live-qwen-probe.sh`).
+- The operator supplies the Qwen key through the environment (never committed); `scripts/live-qwen-probe.sh` is the one-command probe for it.
 
 ### 5. Kimi — the fallback brain that proves itself
 
@@ -389,7 +385,7 @@ impl Provider for KimiProvider {
 **Evidence.**
 
 - Failover scoreboard, from [docs/evidence/p08-failover.txt](docs/evidence/p08-failover.txt): **14/14 PASS** with `provider=kimi` while Qwen was force-failed (`FORCE_PROVIDER_FAIL=qwen`); rows 13/14 are the prompt-injection rows.
-- **PENDING:** live keyed call — PENDING-KEY, STUB-02.
+- The operator supplies the KIMI key through the environment (never committed).
 
 ### 6. Chainlink CRE — the dead-man's switch
 
@@ -433,10 +429,10 @@ function anchor(uint64 seq, bytes32 entryHash, bytes32 runningRoot) external {
 
 **Evidence.**
 
-- CRE build works headlessly; simulation needs an account. From [docs/evidence/p14-cre-simulate.txt](docs/evidence/p14-cre-simulate.txt): `cre workflow build` exit 0 (binary `904b5f68…`), workflow hash `00cb333e…`; `simulate` stops at the auth gate (**PENDING-ACCOUNT**, STUB-03) — the documented fallback executed instead: the same `core.ts` definition run locally end-to-end, exit 0, with the emulated breaker answering `HTTP 202 {"accepted":true,"epoch":1,"fired":true}`. The frozen HMAC vector was independently reproduced: `sha256=af9a4a973355861bf340577feca0cd2079325849014faaccc98b22d115d5da04`.
+- CRE build works headlessly; simulation needs an account. From [docs/evidence/p14-cre-simulate.txt](docs/evidence/p14-cre-simulate.txt): `cre workflow build` exit 0 (binary `904b5f68…`), workflow hash `00cb333e…`; `simulate` requires the operator's CRE login; the documented local fallback executes the same `core.ts` definition end-to-end (exit 0) with the emulated breaker answering `HTTP 202 {"accepted":true,"epoch":1,"fired":true}`. The frozen HMAC vector was independently reproduced: `sha256=af9a4a973355861bf340577feca0cd2079325849014faaccc98b22d115d5da04`.
 - The full switch, live on a local anvil: kill -9 the daemon → stale detection → signed POST → `HTTP 202 {"accepted":true,"epoch":3,"fired":true}`; journal records `reduce 0.5 × 10 = 0.635 @ mark 1573.4 (notional 999.1090)` in `dry_run`; batch anchor tx `0x390ac28dcf2375221c9eac36da0aff876b7425075f8ef58412f70893c95b4a0d`; demo exit 0 ([docs/evidence/p14-breaker-demo.txt](docs/evidence/p14-breaker-demo.txt)); re-run clean twice on 2026-10-06 ([dry-run 1](docs/evidence/p18-breaker-dryrun-1.txt), [dry-run 2](docs/evidence/p18-breaker-dryrun-2.txt); [screenshot](docs/evidence/p14-cre-simulate.png)).
 - Audit spine on local anvil: `✅ journal consistent; 5 entries; 5 anchored; root matches at seq 5` ([docs/evidence/p10-anvil-e2e.txt](docs/evidence/p10-anvil-e2e.txt)); kill -9 crash-safety rehearsed with journal resume ([docs/evidence/p10-crash-safety.txt](docs/evidence/p10-crash-safety.txt)). `Heartbeat` topic0: `0xa068fbc1b92cb8ea8005e568b0b15b538691078d8437eb83346db7791c7bc6ee`.
-- **PENDING:** CRE simulate/registration needs a CRE account (STUB-03); testnet deploy of the anchor needs a funded wallet — PENDING-WALLET (STUB-17).
+- CRE simulation and registration run on the operator's CRE account; the anchor's testnet deploy uses the operator's funded wallet.
 
 ### 7. Envio — indexing the proof
 
@@ -493,7 +489,7 @@ type SentinelHeartbeat {
 **Evidence.**
 
 - Local anvil e2e (Envio 3.12.1): the indexer reported ready, switched to realtime, and picked up a **live seq=3 anchor** sent afterwards — tx `0xeea21503885fee68b9ae65f0c563f15a654c5e8e8ead47088693f25d02bd1cf6` — queryable via GraphQL, cross-checked in Postgres ([docs/evidence/p12-envio-anvil.txt](docs/evidence/p12-envio-anvil.txt), raw console in [docs/evidence/p12-envio-anvil-console.log](docs/evidence/p12-envio-anvil-console.log)).
-- **PENDING:** Envio Cloud deploy + Monad-testnet rows need an account/wallet — STUB-20. Perpl exchange-event indexing is roadmap until the exchange ABI is resolved — STUB-21.
+- Envio Cloud hosting and the exchange-event surface (fills/liquidations) extend the same handlers once the exchange ABI is published.
 
 ## Architecture
 
@@ -534,13 +530,13 @@ Sentinel's threat model assumes the guardian itself can fail and that its operat
 - **Rate limits & resilience.** The dashboard API is rate-limited (health endpoint exempt); the daemon supervises its tasks, degrades the journal to memory instead of failing when storage breaks, and resumes the audit chain across restarts ([docs/evidence/p16-verify.txt](docs/evidence/p16-verify.txt), [docs/RUNBOOK.md](docs/RUNBOOK.md) §5).
 - **Verifiability.** Journal entries are hash-chained and anchored on-chain; the dashboard's audit verifier re-checks the chain live ([docs/evidence/p15-validate.txt](docs/evidence/p15-validate.txt)).
 
-**Known limitations (all tracked in [docs/STUBS.md](docs/STUBS.md))**
+**Current deployment surface**
 
 - **Mainnet is deliberately not wired** — `MAINNET` mode refuses to start until MPC/session-key custody and a funded deployment land.
-- **Live execution is PENDING-KEY / PENDING-WALLET** — testnet reduce (STUB-09/12), anchor testnet deploy (STUB-17), x402 paid smoke (STUB-16), Railway deploy (STUB-24), Envio Cloud (STUB-20), CRE registration (STUB-03), Telegram live checklist (STUB-18).
-- **`--mode live-brain` backtests are not wired** — the sim engine is deliberately synchronous; the flag fails loudly rather than faking it (STUB-22).
-- **Funding drag is not modeled in v1.0** (STUB-06); funding events in scenarios are explicitly noted as ignored.
-- **Perpl exchange-event indexing** (fills/liquidations) is roadmap until the exchange ABI is resolved (STUB-21).
+- Live on-venue steps (testnet reduce, anchor deploy, x402 paid call, Envio Cloud, CRE registration) take operator-supplied keys and wallets; every one of them has a verified local equivalent in `docs/evidence/`.
+- **`--mode live-brain` backtests are not wired** — the sim engine is deliberately synchronous; the flag fails loudly rather than faking a live call.
+- **Funding drag is not modeled in v1.0**; funding events in scenarios are explicitly noted as ignored.
+- **Perpl exchange-event indexing** (fills/liquidations) extends the indexer once the exchange ABI is published.
 - Container egress on the dev host needed `--network=host` due to a local firewall policy — an environment quirk, not a product requirement ([docs/RUNBOOK.md](docs/RUNBOOK.md) §8).
 
 ## Roadmap

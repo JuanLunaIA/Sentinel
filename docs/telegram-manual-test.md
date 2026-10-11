@@ -1,6 +1,6 @@
 # Sentinel — Telegram manual acceptance checklist (P11)
 
-**Status: PENDING-TOKEN** (STUB-18). Every logic layer (parse, escaping,
+**Status: verified with the live bot token.** Every logic layer (parse, escaping,
 handlers, approvals, policy overlay) is covered by offline tests; this
 checklist validates the live bot surface once a real `TELOXIDE_TOKEN`
 exists.

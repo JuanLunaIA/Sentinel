@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same ref cancels an in-flight run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  rust:
+    name: Rust (fmt, clippy, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The workspace tracks stable; rust-toolchain.toml asks for rustfmt+clippy.
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace
+
+  contracts:
+    name: Contracts (forge test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: forge test
+        working-directory: contracts
+        run: forge test -vv
+
+  indexer:
+    name: Indexer (envio handlers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: indexer/pnpm-lock.yaml
+
+      - name: install
+        working-directory: indexer
+        run: pnpm install --frozen-lockfile
+
+      - name: typecheck + test
+        working-directory: indexer
+        run: |
+          pnpm exec tsc --noEmit
+          pnpm test
+
+  cre-workflow:
+    name: CRE workflow (typecheck)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workflow-cre/sentinel-deadman/package-lock.json
+
+      - name: install
+        working-directory: workflow-cre/sentinel-deadman
+        run: npm ci
+
+      - name: typecheck
+        working-directory: workflow-cre/sentinel-deadman
+        run: npm run typecheck

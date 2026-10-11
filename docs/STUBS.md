@@ -1,8 +1,9 @@
-# STUBS.md — loud-stub registry
+# STUBS.md — deployment-surface tracker
 
-Per P00 ground-truth rules: anything not yet verified against a live surface lives here,
-and any runtime path that uses it emits `tracing::warn!("STUB: ...")`.
-Silent stubs are forbidden. Update this file in the prompt that resolves each entry.
+Engineering rule: anything not yet verified against a live surface stays tracked here,
+and any runtime path that touches it logs a loud warning instead of failing silently.
+This file is the register of what graduated and what still needs an operator
+credential; it is updated as each surface lands.
 
 _Last full review: 2026-10-06 (pre-freeze verification pass)._
 

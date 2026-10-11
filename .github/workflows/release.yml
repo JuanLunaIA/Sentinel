@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.0.0)"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Gate: a release only ships if the full CI suite passes on that tag.
+  verify:
+    name: Verify (fmt, clippy, test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  release:
+    name: Build + publish release
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build release binaries
+        run: cargo build --release --workspace --bins
+
+      - name: Package binaries
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
+          STAGE="sentinel-${TAG}-x86_64-linux"
+          mkdir -p "dist/${STAGE}"
+          for b in sentinel breaker audit-verify backtest brain_eval read-positions test-execution test-nansen; do
+            src="target/release/${b}"
+            if [ -x "$src" ]; then
+              cp "$src" "dist/${STAGE}/"
+            fi
+          done
+          # Ship the operator-facing pieces alongside the binaries.
+          cp -r dashboard "dist/${STAGE}/dashboard" || true
+          cp LICENSE NOTICE "dist/${STAGE}/" 2>/dev/null || true
+          ( cd dist && tar czf "${STAGE}.tar.gz" "${STAGE}" )
+          # Also stage an unpacked copy of the live dashboard for the Pages-style
+          # artifact consumers.
+          ( cd "dist/${STAGE}" && sha256sum * > SHA256SUMS.txt 2>/dev/null || true )
+          ls -la dist/
+
+      - name: Upload release artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name || github.event.inputs.tag }}
+          name: Sentinel ${{ github.ref_name || github.event.inputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+          fail_on_unmatched_files: true

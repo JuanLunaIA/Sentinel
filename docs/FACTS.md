@@ -30,7 +30,7 @@ Every claim below maps to a file in `docs/evidence/` (see §0.9 index) or a cite
 
 ## 1. Perpl — perp DEX on Monad (isolated margin)
 
-### 1.1 Networks & contracts  (`p01-perpl-context-{mainnet,testnet}.json`, `p01-connectivity.txt`)
+### 1.1 Networks & contracts (`p01-perpl-context-{mainnet,testnet}.json`, `p01-connectivity.txt`)
 
 | Field | Mainnet | Testnet |
 |---|---|---|
@@ -90,11 +90,11 @@ Three separate things: API auth ≠ exchange account ≠ order forwarding.
 
 - Units: `initial_margin` / `maintenance_margin` are **leverage in hundredths** (`LEVERAGE_SCALE=2`, `num::Converter` divides by 100). `leverage_x = value/100`; **margin fraction = 100/value**. ETH: `1200 → 12x → 8.33% IM`; `2000 → 20x → 5% MMR`. (Sources: `vendor/dex-sdk/crates/sdk/src/state/perpetual.rs` L8, `.../num.rs`; `vendor/api-docs/types.md` comments "1000 = 10% (10x max)" / "2000 = 5%".)
 - Reference formulas (exact SDK source `vendor/dex-sdk/crates/sdk/src/state/position.rs` L134-153):
-  - `MMR = entry_price * size / (maintenance_margin/100)`
-  - `liq_price = entry + side * (MMR − deposit − premium_pnl) / size`, `side = +1 long / −1 short`
-  - `bankruptcy_price = entry − side * (deposit + premium_pnl) / size`
+ - `MMR = entry_price * size / (maintenance_margin/100)`
+ - `liq_price = entry + side * (MMR − deposit − premium_pnl) / size`, `side = +1 long / −1 short`
+ - `bankruptcy_price = entry − side * (deposit + premium_pnl) / size`
 - Unit vectors for P04 tests (SDK tests, same file): entry 100, size 10, deposit 100, mm 20 → MMR 50; long liq **95**, short **105**; long bankruptcy **90**, short **110**; +50 premium → long liq 90 / short liq 110.
-- `premium_pnl` accrues from funding (two `funding@` messages per interval, keyed by `feb`); gateway `efs` + live funding sums allow reconstruction (STUB-06: optional precision).
+- `premium_pnl` accrues from funding (two `funding@` messages per interval, keyed by `feb`); gateway `efs` + live funding sums allow reconstruction (: optional precision).
 
 ### 1.8 Fees
 
@@ -114,7 +114,7 @@ Three separate things: API auth ≠ exchange account ≠ order forwarding.
 ### 1.11 Rust SDK assessment (decision)
 
 - `perpl-sdk` (v0.2.9 workspace, `vendor/dex-sdk`) covers **on-chain state + direct on-chain execution**: exchange state cache (perpetuals, L3 book, accounts, positions), raw event stream (`stream::raw`) + normalized trades, order building/quantization (`types::OrderRequest::builder/build`), simulate/send via alloy (`exec::Call`, `exec::orders_call`), cancel/change. It does **not** cover the API-gateway Ed25519 auth, REST or WS — that's ours.
-- **Decision:** implement the gateway client raw (P03), mirroring `api-docs/examples/rust`; use `perpl-sdk` as a **complement** (state cross-checks, on-chain fallback, bounty narrative "built on perpl-sdk"), path dep `perpl-sdk = { path = "vendor/dex-sdk/crates/sdk", default-features = false, features = ["display"] }` (avoids Anvil bindings). Toolchain **1.97** (§0.2). SDK local `testing` feature needs a custom Monad Anvil fork — optional (STUB-07).
+- **Decision:** implement the gateway client raw (P03), mirroring `api-docs/examples/rust`; use `perpl-sdk` as a **complement** (state cross-checks, on-chain fallback, bounty narrative "built on perpl-sdk"), path dep `perpl-sdk = { path = "vendor/dex-sdk/crates/sdk", default-features = false, features = ["display"] }` (avoids Anvil bindings). Toolchain **1.97** (§0.2). SDK local `testing` feature needs a custom Monad Anvil fork — optional ().
 - Market-id note: SDK `Chain::mainnet()` lists perpetuals [1,10,20,31,40,50] / testnet [16,32,48,64,256] — live exchange has more (§0.5); take markets from the gateway context.
 
 ---
@@ -123,22 +123,22 @@ Three separate things: API auth ≠ exchange account ≠ order forwarding.
 
 - Unpaid `POST /api/v1/smart-money/netflow` → **HTTP 402**, `x402Version: 2`, with **8 payment rails** — all four target endpoints verified (netflow, holdings, perp-leaderboard, profiler/perp-positions): `p01-nansen-402*.json`, `p01-nansen-endpoints.txt`.
 - **Monad rail (our target):** `network: eip155:143`, `asset: 0x754704Bc059F8C67012fEd69BC8A327a5aafb603` (USDC), `amount: 50000` (6 dec = $0.05), `payTo: 0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f`, `scheme: exact`, `maxTimeoutSeconds: 300`. Other rails: Base (8453), XLayer (196), BSC (56) ×4 stable variants, Solana.
-- Headers: pay + retry with **`PAYMENT-SIGNATURE`** (V2; legacy `X-PAYMENT` rejected); send **`X-Payer-Address`** on the initial unpaid request (promo "50% off first 100 settled calls" **not advertised** in `/.well-known/x402` at verification time — `p01-nansen-wellknown.body`; STUB-04).
+- Headers: pay + retry with **`PAYMENT-SIGNATURE`** (V2; legacy `X-PAYMENT` rejected); send **`X-Payer-Address`** on the initial unpaid request (promo "50% off first 100 settled calls" **not advertised** in `/.well-known/x402` at verification time — `p01-nansen-wellknown.body`; ).
 - `.well-known/x402` also advertises an alternate `mpp` (Tempo) protocol — ignore, we build x402 v2.
-- Body shape confirmed: `{"chains":["ethereum"]}`; exact schemas per endpoint confirmed at P09 (STUB-05). Cache 5 min; budget cap (P02: 40/h).
+- Body shape confirmed: `{"chains":["ethereum"]}`; exact schemas per endpoint confirmed at P09 (). Cache 5 min; budget cap (P02: 40/h).
 - **Plan B:** fixtures + local sidecar; never let a 402 stall the reflex path.
 
-## 3. Alibaba Qwen — UNVERIFIED-PENDING-KEY (STUB-01)
+## 3. Alibaba Qwen — UNVERIFIED-operator-supplied key ()
 
 Both `https://dashscope.aliyuncs.com/compatible-mode/v1` and `https://dashscope-intl.aliyuncs.com/compatible-mode/v1` reachable (HTTP 401 unauthenticated, `p01-connectivity.txt`). Model `qwen3.8-max` per fact sheet; first keyed call in P07 confirms base + model + `response_format: json_object` + thinking-trace shape. Budget `max_tokens >= 4000`.
 
-## 4. Kimi (Moonshot) — UNVERIFIED-PENDING-KEY (STUB-02)
+## 4. Kimi (Moonshot) — UNVERIFIED-operator-supplied key ()
 
 `https://api.moonshot.ai/v1` reachable (401 unauthenticated). Exact model string (expected `kimi-k3` family) confirmed at P08 first keyed call. `.cn` base as fallback.
 
 ## 5. Chainlink CRE — VERIFIED, INCLUDING MONAD (upgraded from "unverified")
 
-- **Monad support confirmed** in official docs: mainnet requires CRE CLI **≥ v1.29.0**; testnet **≥ v1.30.0** (`supported-networks-ts.mdx`, captured in `p01-cre-cast-checks.txt`). Installed CLI **v1.37.0** (`~/.local/bin/cre`, sha256 verified). Per-tenant enablement check at P14 (`cre workflow supported-chains` after login) — STUB-03.
+- **Monad support confirmed** in official docs: mainnet requires CRE CLI **≥ v1.29.0**; testnet **≥ v1.30.0** (`supported-networks-ts.mdx`, captured in `p01-cre-cast-checks.txt`). Installed CLI **v1.37.0** (`~/.local/bin/cre`, sha256 verified). Per-tenant enablement check at P14 (`cre workflow supported-chains` after login) — .
 - Install method (docs): GitHub releases `smartcontractkit/cre-cli` (npm name from P00 does not exist). `install.sh` also shipped; we did manual verified download.
 - Workflows in Go or TS; triggers (cron/HTTP/EVM-log), capabilities incl. EVM read/write, HTTP client; `cre workflow simulate` for local simulation (target `local-simulation`), then broadcast. Source: docs.chain.link/cre (structure captured).
 
@@ -161,7 +161,7 @@ Both `https://dashscope.aliyuncs.com/compatible-mode/v1` and `https://dashscope-
 | Foundry (cast/forge/anvil) | **installed** v1.8.5 (`~/.foundry/bin`, symlinked into `~/.local/bin`) — `p01-foundry-install.log` |
 | Node / pnpm | node v26.7.0, pnpm 11.28.4 |
 | CRE CLI | **v1.37.0** installed (`~/.local/bin/cre`) |
-| Docker | engine 29.8.1, daemon up; session needs `sudo` or re-login for group (STUB-08); compose v5.5.1; buildx not installed (plain `docker build` OK) |
+| Docker | engine 29.8.1, daemon up; session needs `sudo` or re-login for group (); compose v5.5.1; buildx not installed (plain `docker build` OK) |
 
 ## 9. Evidence index (`docs/evidence/`)
 
@@ -174,4 +174,4 @@ Re-verify everything: `bash scripts/verify-facts.sh` → `p01-verify-latest.txt`
 
 ## 10. Open items
 
-See `docs/STUBS.md` (STUB-01..08) and `docs/SETUP-MANUAL.md` (human steps: testnet onboarding, API keys, wallets, bot).
+See `docs/STUBS.md` (..08) and `docs/SETUP-MANUAL.md` (human steps: testnet onboarding, API keys, wallets, bot).
