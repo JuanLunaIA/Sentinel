@@ -80,6 +80,8 @@ fn parse_args(args: &[String]) -> Invocation {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Install ring as the default crypto provider for rustls (TLS).
+    sentinel::telemetry::install_crypto_provider();
     let args: Vec<String> = std::env::args().skip(1).collect();
     match parse_args(&args) {
         Invocation::Help => {

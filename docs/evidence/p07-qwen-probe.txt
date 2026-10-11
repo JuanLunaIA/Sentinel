@@ -1,1 +1,19 @@
-Add the real key to .env (docs/SETUP-MANUAL.md) and re-run.
+== Qwen probe 2026-10-11T11:46:10-03:00 ==
+model: qwen3.8-max
+-- https://maas.qwencloudapi.com/compatible-mode/v1 --
+{"id":"chatcmpl-c7fa6857-cc72-923e-be53-2d425f9296c3","object":"chat.completion","created":1791729959,"model":"qwen3.8-max","choices":[{"index":0,"message":{"role":"assistant","reasoning_content":"We need to respond to user: \"Reply with one json object: ok\". Need output one JSON object: ok. Probably {\"ok\": true} or {\"ok\":\"ok\"}? User says one json object: ok. Likely just {\"ok\": true}. Ensure valid JSON only. Final only JSON.","content":"{\n  \"ok\": true\n}"},"finish_reason":"stop","logprobs":null}],"usage":{"prompt_tokens":70,"total_tokens":143,"completion_tokens":73,"prompt_tokens_details":{"cached_tokens":0,"text_tokens":70},"completion_tokens_details":{"reasoning_tokens":61,"text_tokens":73}}}
+HTTP:200 time:5.095776s
+
+-- https://dashscope-intl.aliyuncs.com/compatible-mode/v1 --
+{"choices":[{"finish_reason":"stop","index":0,"message":{"content":"{\"ok\":true}","reasoning_content":"We need respond to user: \"Reply with one json object: ok\". Need final only JSON object. Need likely {\"ok\": true}? They said one json object: ok. Could be just {\"ok\":true} or {\"ok\":\"ok\"}. Need satisfy. Final only JSON. Ensure valid.","role":"assistant"}}],"created":1791729964,"id":"chatcmpl-2a69e90e-9d1b-954b-9357-71c19f78a0a4","model":"qwen3.8-max","object":"chat.completion","usage":{"completion_tokens":69,"completion_tokens_details":{"reasoning_tokens":61,"text_tokens":69},"prompt_tokens":70,"prompt_tokens_details":{"cached_tokens":0,"text_tokens":70},"total_tokens":139}}
+HTTP:200 time:5.312386s
+
+-- https://dashscope.aliyuncs.com/compatible-mode/v1 --
+{"error":{"message":"Incorrect API key provided. For details, see: https://help.aliyun.com/zh/model-studio/error-code#apikey-error","type":"invalid_request_error","param":null,"code":"invalid_api_key"},"request_id":"64416102-03b9-9107-8253-e71ebb0072de"}
+HTTP:401 time:1.319954s
+
+== Kimi probe 2026-10-11T11:46:22-03:00 ==
+{"error":{"message":"Invalid Authentication","type":"invalid_authentication_error"}}
+HTTP:401 time:0.410473s
+
+Next: cargo run --bin brain_eval -- --out docs/evidence/p07-brain-eval.txt

@@ -315,6 +315,13 @@ fn mock_exhausted() -> BrainError {
 /// back to the default client with a warning instead of panicking here; any
 /// resulting per-call transport failure is reported by [`ProviderHttp`].
 ///
+/// Idle connections are never pooled (`pool_max_idle_per_host(0)`). These
+/// endpoints close quiet keep-alive sockets; reusing one to send the next
+/// consult makes the call fail instantly with a transport error that the
+/// single retry then repeats on the same dead socket. Opening a fresh
+/// connection per call costs a few hundred milliseconds and removes the
+/// whole failure class.
+///
 /// [`ProviderHttp`]: BrainError::ProviderHttp
 fn build_client() -> reqwest::Client {
     match reqwest::Client::builder().timeout(REQUEST_TIMEOUT).build() {

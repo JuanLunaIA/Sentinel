@@ -40,10 +40,8 @@ use tokio::sync::{Mutex, mpsc, watch};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Install ring as the default crypto provider for rustls (required for TLS)
-    rustls::crypto::ring::default_provider()
-        .install_default()
-        .expect("Failed to install ring crypto provider");
+    // Install ring as the default crypto provider for rustls (required for TLS).
+    sentinel::telemetry::install_crypto_provider();
     let cli = Cli::parse(std::env::args().skip(1)).map_err(anyhow::Error::msg)?;
     let mut cfg = Config::load().context("load configuration")?;
     if let Some(mode) = cli.mode {

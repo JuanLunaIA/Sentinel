@@ -141,6 +141,8 @@ impl Options {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Install ring as the default crypto provider for rustls (TLS).
+    sentinel::telemetry::install_crypto_provider();
     let options = Options::parse(std::env::args().skip(1))?;
     let scenarios_dir = resolve_scenarios_dir(&options);
     let scenarios = load_scenarios(&scenarios_dir)?;

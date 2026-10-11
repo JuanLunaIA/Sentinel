@@ -15,6 +15,16 @@ use tracing_subscriber::{EnvFilter, fmt};
 
 use crate::config::{Config, LogFormat};
 
+/// Install `ring` as the process-wide rustls crypto provider.
+///
+/// Any binary that opens a TLS connection (the daemon, the live brain eval,
+/// the Nansen probe, the anchor verifier) must call this once before its first
+/// handshake; without it rustls has no provider and the connection cannot be
+/// established. Idempotent — a second call is a no-op.
+pub fn install_crypto_provider() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+}
+
 /// Initialize global tracing subscribers and return the file-writer guard.
 ///
 /// # Errors

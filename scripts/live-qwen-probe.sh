@@ -35,14 +35,20 @@ fi
 
 : > "$OUT"
 echo "== Qwen probe $(date -Is) ==" | tee -a "$OUT"
-for base in \
-  "https://dashscope-intl.aliyuncs.com/compatible-mode/v1" \
-  "https://dashscope.aliyuncs.com/compatible-mode/v1"; do
+echo "model: ${QWEN_MODEL:-qwen3.8-max}" | tee -a "$OUT"
+# Configured base first, then the public fallbacks.
+BASES=()
+[ -n "${QWEN_BASE_URL:-}" ] && BASES+=("$QWEN_BASE_URL")
+BASES+=("https://dashscope-intl.aliyuncs.com/compatible-mode/v1")
+BASES+=("https://dashscope.aliyuncs.com/compatible-mode/v1")
+for base in "${BASES[@]}"; do
   echo "-- $base --" | tee -a "$OUT"
+  # `response_format: json_object` requires the literal word "json" in the
+  # messages (DashScope enforces this), so the probe message says it.
   curl -sS --max-time 60 "$base/chat/completions" \
     -H "Authorization: Bearer $QWEN" \
     -H 'Content-Type: application/json' \
-    -d '{"model":"qwen3.8-max","messages":[{"role":"user","content":"Reply with exactly: ok"}],"max_tokens":16,"temperature":0.1,"response_format":{"type":"json_object"}}' \
+    -d "{\"model\":\"${QWEN_MODEL:-qwen3.8-max}\",\"messages\":[{\"role\":\"user\",\"content\":\"Reply with one json object: ok\"}],\"max_tokens\":32,\"temperature\":0.1,\"response_format\":{\"type\":\"json_object\"}}" \
     -w '\nHTTP:%{http_code} time:%{time_total}s\n' | tee -a "$OUT" | tail -c 500
   echo | tee -a "$OUT"
 done

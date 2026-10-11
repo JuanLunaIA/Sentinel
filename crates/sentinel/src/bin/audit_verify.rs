@@ -54,6 +54,8 @@ const SEQ_OFFSET: u64 = 1;
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
+    // Install ring as the default crypto provider for rustls (TLS).
+    sentinel::telemetry::install_crypto_provider();
     let cli = match Cli::parse(std::env::args().skip(1)) {
         Ok(cli) => cli,
         Err(message) => {

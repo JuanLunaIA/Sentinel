@@ -20,17 +20,18 @@ The consult task (`crates/sentinel/src/consult.rs`) reacts to three triggers (`c
 - **Post-reflex review.** A reflex reduce executed at Orange or Red. The focus is that market, and the trigger is dropped unless the live tier is still Orange or higher (`consult.rs`, `trigger_focus`).
 - **Periodic review.** A timer every `STRATEGY_REVIEW_INTERVAL_SECS` (default 1800 seconds) picks the riskiest position at or above Yellow.
 
-A replay run of the daemon shows the loop end to end:
+A replay run of the daemon shows the loop end to end. With a key present the consult reaches the provider and the model answers:
 
 ```
 INFO sentinel: strategy consult task spawned review_interval_secs=1800
 INFO sentinel::consult: consult task started review_interval_secs=1800
 INFO sentinel::alert: alert kind="consult_scheduled" market_id=32 text=🧠 ETH#32 YELLOW · consult scheduled · distance 24.10%
-INFO sentinel::brain::providers: provider attempt failed; not retryable provider="qwen" model=qwen3.8-max latency_ms=1391 attempt=1 status=401 retried=false
-WARN sentinel::brain::engine: provider failed; failing over provider="qwen" failover_to="kimi" error_class="http"
+INFO sentinel::brain::providers: provider call succeeded provider="qwen" model=qwen3.8-max latency_ms=15141 attempt=1 status=200
 ```
 
-Reproduce it with `./target/debug/sentinel --replay tests/fixtures/perpl/crash-scenario.jsonl` and `grep -E 'consult'`. The run above exercises the resilience path on purpose: no secret is ever committed to a public repository, so the shipped config is unkeyed and the engine demonstrates its automatic failover to KIMI in the open. The `model=qwen3.8-max` field is the literal env value.
+![Qwen 3.8 Max, live consult](img/qwen-live-call.png)
+
+The same two paths run without a key. The shipped configuration carries no secret, so a fresh clone exercises the failover instead: `provider attempt failed ... model=qwen3.8-max ... status=401` followed by `failing over provider="qwen" failover_to="kimi"`. Reproduce either with `./target/release/sentinel --replay tests/fixtures/perpl/crash-scenario.jsonl` and `grep -E 'consult'`.
 
 ## What the model sees, and what it may return
 
