@@ -1,7 +1,7 @@
 //! Strategy engine — rate-limited, floor-gated LLM consults with a resilient
 //! provider chain.
 //!
-//! Frozen by `SPEC-P07.md` §6 (single-provider consult) and `SPEC-P08.md` §3
+//! Frozen by `P07` §6 (single-provider consult) and `P08` §3
 //! (provider + optional fallback, per-slot circuit breakers, consult/token
 //! budget guard). All timestamps are caller-supplied (`now_ms`) so the engine
 //! is fully testable offline:
@@ -32,13 +32,13 @@ use crate::brain::prompts::{
 use crate::brain::providers::{Provider, RawCompletion};
 use crate::error::{BrainError, Result, SentinelError};
 
-/// Sliding hour window of the consult budget, ms (`SPEC-P08.md` §3 step 2).
+/// Sliding hour window of the consult budget, ms (`P08` §3 step 2).
 const HOUR_MS: u64 = 3_600_000;
-/// Sliding day window of the token budget, ms (`SPEC-P08.md` §3 step 2).
+/// Sliding day window of the token budget, ms (`P08` §3 step 2).
 const DAY_MS: u64 = 86_400_000;
-/// Consecutive failures that open a slot's breaker (`SPEC-P08.md` §3).
+/// Consecutive failures that open a slot's breaker (`P08` §3).
 const BREAKER_THRESHOLD: u32 = 3;
-/// Breaker open window, ms (`SPEC-P08.md` §3).
+/// Breaker open window, ms (`P08` §3).
 const BREAKER_OPEN_MS: u64 = 300_000;
 /// Failure class: the slot was forced to fail by exact name; no call made.
 const CLASS_FORCED: &str = "forced";
@@ -96,7 +96,7 @@ pub struct ConsultOutcome {
 pub struct StrategyEngine<P: Provider, F: Provider = NoProvider> {
     /// Primary backend.
     provider: P,
-    /// Optional fallback attempted when the primary fails (`SPEC-P08.md` §3).
+    /// Optional fallback attempted when the primary fails (`P08` §3).
     fallback: Option<F>,
     /// One breaker per slot, `[primary, fallback]`.
     breakers: Mutex<[CircuitBreaker; 2]>,
@@ -140,7 +140,7 @@ impl<P: Provider> StrategyEngine<P> {
 
 impl<P: Provider, F: Provider> StrategyEngine<P, F> {
     /// Add a fallback provider, attempted when the primary fails
-    /// (`SPEC-P08.md` §3 step 4); the existing breaker/budget state is kept.
+    /// (`P08` §3 step 4); the existing breaker/budget state is kept.
     pub fn with_fallback<F2: Provider>(self, fallback: F2) -> StrategyEngine<P, F2> {
         let StrategyEngine {
             provider,
@@ -178,7 +178,7 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
         self
     }
 
-    /// Override the budget guard limits (`SPEC-P08.md` §3 step 2).
+    /// Override the budget guard limits (`P08` §3 step 2).
     pub fn with_budget(mut self, max_consults_per_hour: u32, max_tokens_per_day: u64) -> Self {
         self.max_consults_per_hour = max_consults_per_hour;
         self.max_tokens_per_day = max_tokens_per_day;
@@ -188,10 +188,10 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
 
 impl<P: Provider, F: Provider> StrategyEngine<P, F> {
     /// Run one consult (rate limit → budget guard → primary attempt →
-    /// fallback attempt → floor → audit log); see `SPEC-P08.md` §3 for the
+    /// fallback attempt → floor → audit log); see `P08` §3 for the
     /// exact sequence.
     ///
-    /// With no fallback configured this preserves `SPEC-P07.md` §6 semantics
+    /// With no fallback configured this preserves `P07` §6 semantics
     /// exactly: the provider's own errors are returned unchanged.
     ///
     /// # Errors
@@ -351,7 +351,7 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
         })
     }
 
-    /// Per-market rate-limit gate (`SPEC-P07.md` §6 step 1).
+    /// Per-market rate-limit gate (`P07` §6 step 1).
     ///
     /// A consult is allowed when `now_ms - last >= min_interval_secs * 1000`
     /// (equality included). A caller clock that moved backwards counts as zero
@@ -373,7 +373,7 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
         Ok(())
     }
 
-    /// Budget guard (`SPEC-P08.md` §3 step 2): prunes both sliding windows at
+    /// Budget guard (`P08` §3 step 2): prunes both sliding windows at
     /// `now_ms` and reports whether either limit is reached.
     fn budget_exhausted(&self, now_ms: u64) -> bool {
         let consults = {
@@ -390,7 +390,7 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
     }
 
     /// Synthetic `ESCALATE` returned when the budget guard refuses a consult
-    /// (`SPEC-P08.md` §3 step 2).
+    /// (`P08` §3 step 2).
     fn budget_outcome(&self, focus: MarketId) -> ConsultOutcome {
         ConsultOutcome {
             decision: Decision {
@@ -413,7 +413,7 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
     }
 }
 
-/// Outcome of one provider attempt (`SPEC-P08.md` §3 steps 3–4).
+/// Outcome of one provider attempt (`P08` §3 steps 3–4).
 enum Attempt {
     /// A validated decision; `est_tokens` accounts the winning call.
     Success {
@@ -436,10 +436,10 @@ enum Attempt {
     },
 }
 
-/// One provider attempt (`SPEC-P08.md` §3 steps 3–4): forced-fail check,
+/// One provider attempt (`P08` §3 steps 3–4): forced-fail check,
 /// breaker gate, one completion, at most one repair, and the slot's breaker
 /// bookkeeping. No lock is held across an `await`.
-#[allow(clippy::too_many_arguments)] // attempt context is explicit by design (SPEC-P08 §3)
+#[allow(clippy::too_many_arguments)] // attempt context is explicit by design (P08 §3)
 async fn attempt_provider<Pr: Provider>(
     provider: &Pr,
     forced_fail: Option<&str>,
@@ -454,7 +454,7 @@ async fn attempt_provider<Pr: Provider>(
 
     if forced_fail == Some(name) {
         // Forced failures skip the call but still feed the slot's breaker
-        // (`SPEC-P08.md` §8).
+        // (`P08` §8).
         lock(breakers)[slot].record_failure(now_ms);
         return Attempt::Failure {
             class: CLASS_FORCED,
@@ -535,7 +535,7 @@ fn slot_error(name: &str, class: &str) -> SentinelError {
 }
 
 /// Failure class of a `complete()` error: `transport` when no HTTP response
-/// was received (`status: 0`), `http` otherwise (`SPEC-P08.md` §3 step 3).
+/// was received (`status: 0`), `http` otherwise (`P08` §3 step 3).
 fn classify_error(error: &SentinelError) -> &'static str {
     match error {
         SentinelError::Brain(BrainError::ProviderHttp { status: 0, .. }) => CLASS_TRANSPORT,
@@ -543,7 +543,7 @@ fn classify_error(error: &SentinelError) -> &'static str {
     }
 }
 
-/// Token estimate of a call (`SPEC-P08.md` §3 step 7): reported usage when
+/// Token estimate of a call (`P08` §3 step 7): reported usage when
 /// present, else ~4 bytes per token.
 fn estimated_tokens(system: &str, user: &str, raw: &RawCompletion) -> u64 {
     let prompt = match raw.prompt_tokens {
@@ -557,7 +557,7 @@ fn estimated_tokens(system: &str, user: &str, raw: &RawCompletion) -> u64 {
     prompt + completion
 }
 
-/// Map a final parse failure onto the engine error surface (`SPEC-P07.md` §6).
+/// Map a final parse failure onto the engine error surface (`P07` §6).
 fn map_parse_error(provider: &str, error: ParseError) -> SentinelError {
     match error {
         ParseError::NoObject | ParseError::Json { .. } => BrainError::InvalidJson {
@@ -568,7 +568,7 @@ fn map_parse_error(provider: &str, error: ParseError) -> SentinelError {
     }
 }
 
-/// Audit-style record of one successful consult (`SPEC-P07.md` §6 step 4;
+/// Audit-style record of one successful consult (`P07` §6 step 4;
 /// P10 persists journals from these).
 fn log_consult(
     provider: &str,

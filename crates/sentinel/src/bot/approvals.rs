@@ -1,4 +1,4 @@
-//! Approval queue — TTL'd pending approvals (`SPEC-P11.md` §7).
+//! Approval queue — TTL'd pending approvals (`P11` §7).
 //!
 //! Pure (injected `now_ms`); journaling of EXPIRED outcomes happens in the
 //! handler layer that consumes [`ApprovalQueue::expire_due`].

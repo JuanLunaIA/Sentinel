@@ -116,7 +116,7 @@ cast call --from $WALLET $EXCHANGE "getAccountByAddr(address)(uint256)" $WALLET 
   `ENVIO_GRAPHQL_ENDPOINT` (the Rust client feature-degrades to off while unset).
 - **CRE**: `cre login` -> `cd workflow-cre && cre workflow simulate sentinel-deadman --non-interactive --trigger-index 0 --target local-simulation`
   (stale emulator at `sentinel-deadman/tools/stale-breaker-emulator.ts`); then
-  `cre workflow supported-chains` + registration per SPEC-P14 §6.
+  `cre workflow supported-chains` + registration per P14 §6.
 - **Railway**: `railway login` -> link repo -> add volume at `/app/data` -> vars from
   `.env.example` -> `railway up` -> verify `/healthz` + dashboard (RUNBOOK §7).
 

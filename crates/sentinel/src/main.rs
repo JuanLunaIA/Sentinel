@@ -4,7 +4,7 @@
 //! `--replay <fixture.jsonl>` runs the deterministic golden path offline
 //! (DRY_RUN executor, `MockPerpl` feed, logical clock). Health surface:
 //! `GET /healthz` on `PORT` (default 8080) in live modes; replay runs it out
-//! ([`SPEC-P06.md`] §3 — determinism without ports). SIGINT/SIGTERM drain the
+//! ([`P06`] §3 — determinism without ports). SIGINT/SIGTERM drain the
 //! pipeline and flush telemetry.
 
 use std::path::{Path, PathBuf};
@@ -67,7 +67,7 @@ async fn main() -> anyhow::Result<()> {
     let state = Arc::new(Mutex::new(LiveState::new()));
     let health = Arc::new(HealthState::new(cfg.execution.mode));
 
-    // Audit journal (SPEC-P10): open/create data/audit; degrade loudly.
+    // Audit journal (P10): open/create data/audit; degrade loudly.
     let journal = match AuditJournal::open("data/audit") {
         Ok(journal) => {
             tracing::info!(
@@ -83,19 +83,19 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    // Policy overlay + kill switch (SPEC-P11 §6).
+    // Policy overlay + kill switch (P11 §6).
     let policy = Arc::new(SharedPolicy::load_with_defaults(
         POLICY_OVERLAY_PATH,
         (cfg.risk.soft_pct, cfg.risk.warn_pct, cfg.risk.hard_pct),
     ));
     let kill = Arc::new(AtomicBool::new(false));
 
-    // ---- Strategy engine (SPEC-P20 §2): built ONCE and shared by the bot
+    // ---- Strategy engine (P20 §2): built ONCE and shared by the bot
     // and the consult task; `None` (feature off / placeholder key) keeps
     // every pre-P20 path.
     let strategy_engine = build_strategy_engine(&cfg);
 
-    // ---- Consult channels (SPEC-P20 §2–§3): triggers flow pipeline ->
+    // ---- Consult channels (P20 §2–§3): triggers flow pipeline ->
     // consult task, approved orders flow back. Created only when an engine
     // exists; otherwise the pipeline is built with `None` channels and stays
     // byte-identical.
@@ -132,7 +132,7 @@ async fn main() -> anyhow::Result<()> {
         let bot_kill = Arc::clone(&kill);
         let bot_token = token.clone();
         let bot_engine = strategy_engine.clone();
-        // Supervised (SPEC-P16 §2): a bot panic/exit is caught, logged with the
+        // Supervised (P16 §2): a bot panic/exit is caught, logged with the
         // task name + restart counter, and retried with backoff; the context is
         // rebuilt per attempt because the executors/engines are not `Clone`.
         sentinel::supervisor::spawn("telegram-bot", bot_watch.clone(), move || {
@@ -315,7 +315,7 @@ struct ConsultChannels {
 
 /// Deterministic replay: `MockPerpl` fixture + unguarded DRY_RUN executor
 /// (nothing hits a venue, and the guard's post-verify cannot confirm fills in
-/// a fixture — `SPEC-P06.md` §4).
+/// a fixture — `P06` §4).
 #[allow(clippy::too_many_arguments)]
 async fn run_replay<S>(
     cfg: Config,
@@ -606,7 +606,7 @@ fn spawn_health(
         paths: sentinel::api::DashboardPaths::default(),
     };
     let app = sentinel::health::router(health).merge(sentinel::api::dashboard_router(dashboard));
-    // Supervised (SPEC-P16 §2): an early exit (e.g. a transient bind failure)
+    // Supervised (P16 §2): an early exit (e.g. a transient bind failure)
     // is retried with backoff; the graceful drain on shutdown stops the loop.
     sentinel::supervisor::spawn("health-api", shutdown.clone(), move || {
         let app = app.clone();
@@ -669,7 +669,7 @@ fn spawn_anchor(
     }
     let cfg = cfg.clone();
     let watch = shutdown.clone();
-    // Supervised (SPEC-P16 §2): an anchor stop/error is caught, logged and
+    // Supervised (P16 §2): an anchor stop/error is caught, logged and
     // retried with backoff; the shutdown drain stops the loop.
     sentinel::supervisor::spawn("anchor", watch, move || {
         let cfg = cfg.clone();
@@ -692,7 +692,7 @@ fn spawn_anchor(
 /// Consult channel capacity (triggers / approved orders each).
 pub const CONSULT_QUEUE_CAPACITY: usize = 32;
 
-/// Build the strategy engine ONCE (SPEC-P20 §2): active only when
+/// Build the strategy engine ONCE (P20 §2): active only when
 /// `ENABLE_STRATEGY` is set AND the Qwen key looks real. `None` keeps every
 /// pre-P20 path (bot `/risk` degrades honestly, no consult task is spawned,
 /// the pipeline runs unchanged).
@@ -737,7 +737,7 @@ fn provider_key_present(key: &str) -> bool {
 }
 
 /// `STRATEGY_REVIEW_INTERVAL_SECS` (default
-/// [`DEFAULT_REVIEW_INTERVAL_SECS`], `SPEC-P20` §2c).
+/// [`DEFAULT_REVIEW_INTERVAL_SECS`], `P20` §2c).
 fn review_interval_secs() -> u64 {
     std::env::var("STRATEGY_REVIEW_INTERVAL_SECS")
         .ok()
@@ -773,10 +773,10 @@ fn build_nansen_client(cfg: &Config, engine_active: bool) -> Option<Arc<NansenCl
     }
 }
 
-/// Spawn the supervised consult task (SPEC-P20 §2) in every run mode, active
+/// Spawn the supervised consult task (P20 §2) in every run mode, active
 /// only when a strategy engine exists; the sink factory rebuilds the alert
 /// destination per attempt (the daemon sinks are not `Clone`).
-#[allow(clippy::too_many_arguments)] // daemon wiring is explicit by design (SPEC-P20 §2)
+#[allow(clippy::too_many_arguments)] // daemon wiring is explicit by design (P20 §2)
 fn spawn_consult<S, M>(
     engine: Option<Arc<StrategyEngine<QwenProvider, KimiProvider>>>,
     cfg: Config,

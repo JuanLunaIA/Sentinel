@@ -1,11 +1,11 @@
 //! Supervised pipeline — the golden path: feed → state → risk → policy →
 //! executor → alerts, with a deterministic replay mode.
 //!
-//! Frozen by `SPEC-P06.md`: [`PipelineEvent`] is the replay-determinism
+//! Frozen by `P06`: [`PipelineEvent`] is the replay-determinism
 //! contract (same fixture ⇒ identical JSONL of events); the logical clock in
 //! replay is the latest applied event timestamp.
 //!
-//! P20 adds two optional channels around the existing path (SPEC-P20 §2–§3):
+//! P20 adds two optional channels around the existing path (P20 §2–§3):
 //! a `ConsultTrigger` sender toward the consult task (Yellow-entry and
 //! post-reflex-review triggers) and an `ApprovedOrder` receiver carrying
 //! policy-allowed strategy orders into the **existing** executor/event/alert
@@ -235,7 +235,7 @@ impl LiveState {
 
     /// Apply one feed event; returns what changed.
     ///
-    /// Frozen rules (`SPEC-P06.md` §4): mark updates revalue every position of
+    /// Frozen rules (`P06` §4): mark updates revalue every position of
     /// that market (`unrealized_pnl = (mark − entry) × size`,
     /// `equity = base_balance + Σ uPnL`); snapshots replace the account and
     /// recompute `base_balance`; updates patch balances; any event clears
@@ -362,21 +362,21 @@ pub struct Pipeline<F, E, S> {
     seq: u64,
     /// Last tier per market (for transition detection).
     last_tier: std::collections::HashMap<MarketId, RiskTier>,
-    /// Optional audit journal (SPEC-P10 §8): intents before execution,
+    /// Optional audit journal (P10 §8): intents before execution,
     /// outcomes after; `None` keeps the pipeline journal-free (P06 tests).
     journal: Option<Arc<Mutex<sentinel_core::audit::AuditJournal>>>,
     /// Base configuration (policy overlay applies on top).
     base_cfg: Config,
-    /// Shared policy overlay (SPEC-P11 §6); `None` keeps the static config.
+    /// Shared policy overlay (P11 §6); `None` keeps the static config.
     policy: Option<Arc<crate::bot::policy_admin::SharedPolicy>>,
     /// Kill switch shared with the bot.
     kill: Arc<std::sync::atomic::AtomicBool>,
     /// Last applied overlay version.
     last_policy_version: u64,
-    /// Trigger sender toward the consult task (SPEC-P20 §2); `None` keeps
+    /// Trigger sender toward the consult task (P20 §2); `None` keeps
     /// the pre-P20 path (no triggers, no events — determinism preserved).
     consult_tx: Option<mpsc::Sender<ConsultTrigger>>,
-    /// Approved strategy orders inbound from the consult task (SPEC-P20 §2.4);
+    /// Approved strategy orders inbound from the consult task (P20 §2.4);
     /// `None` keeps the pre-P20 path.
     strategy_rx: Option<mpsc::Receiver<ApprovedOrder>>,
 }
@@ -415,7 +415,7 @@ impl<F, E, S> Pipeline<F, E, S> {
         }
     }
 
-    /// Attach the trigger sender toward the consult task (SPEC-P20 §2):
+    /// Attach the trigger sender toward the consult task (P20 §2):
     /// Yellow entries and executed Orange/Red reduces queue [`ConsultTrigger`]s
     /// for the consult task. `None` (tests, replay without an engine) keeps
     /// the pipeline's event stream byte-identical.
@@ -424,7 +424,7 @@ impl<F, E, S> Pipeline<F, E, S> {
         self
     }
 
-    /// Attach the approved-order receiver (SPEC-P20 §2.4): orders are polled
+    /// Attach the approved-order receiver (P20 §2.4): orders are polled
     /// in the event loop and submitted through the existing executor/event/
     /// alert path. `None` keeps the pre-P20 path.
     pub fn with_strategy_rx(mut self, rx: Option<mpsc::Receiver<ApprovedOrder>>) -> Self {
@@ -432,21 +432,21 @@ impl<F, E, S> Pipeline<F, E, S> {
         self
     }
 
-    /// Attach the audit journal (SPEC-P10 §8): every intent-bearing decision
+    /// Attach the audit journal (P10 §8): every intent-bearing decision
     /// is journaled before execution and its outcome right after.
     pub fn with_journal(mut self, journal: Arc<Mutex<sentinel_core::audit::AuditJournal>>) -> Self {
         self.journal = Some(journal);
         self
     }
 
-    /// Attach the shared policy overlay (SPEC-P11 §6): `/policy set` edits
+    /// Attach the shared policy overlay (P11 §6): `/policy set` edits
     /// are picked up on the next evaluation via the version counter.
     pub fn with_policy(mut self, policy: Arc<crate::bot::policy_admin::SharedPolicy>) -> Self {
         self.policy = Some(policy);
         self
     }
 
-    /// Attach the kill switch shared with the bot (SPEC-P11 §6).
+    /// Attach the kill switch shared with the bot (P11 §6).
     pub fn with_kill_switch(mut self, kill: Arc<std::sync::atomic::AtomicBool>) -> Self {
         self.kill = kill;
         self
@@ -709,7 +709,7 @@ where
         Ok(outcome)
     }
 
-    /// One deterministic evaluation pass (SPEC-P06 §4.5–§4.6).
+    /// One deterministic evaluation pass (P06 §4.5–§4.6).
     ///
     /// Emits one [`PipelineEvent::Decision`] per planned action, tracks tier
     /// transitions (per market) into [`PipelineEvent::TierChanged`] /
@@ -799,7 +799,7 @@ where
                         tier: action.tier,
                     });
                     // P20: per-market Yellow-ENTRY trigger for the consult
-                    // task (SPEC-P07 §5a); a no-op without a trigger channel.
+                    // task (P07 §5a); a no-op without a trigger channel.
                     self.send_consult_trigger(ConsultTrigger::YellowEntry {
                         market_id: action.market_id,
                     });
@@ -868,7 +868,7 @@ where
                         )
                         .await;
                         // P20: an executed Orange/Red reduce schedules a
-                        // post-reflex strategy review (SPEC-P07 §5b); a
+                        // post-reflex strategy review (P07 §5b); a
                         // no-op without a trigger channel.
                         if action.tier >= RiskTier::Orange {
                             self.send_consult_trigger(ConsultTrigger::PostReflexReduce {
@@ -981,7 +981,7 @@ where
         }
     }
 
-    /// Queue one consult trigger (no-op without a channel, SPEC-P20 §2).
+    /// Queue one consult trigger (no-op without a channel, P20 §2).
     /// Best-effort by design: a full or closed channel costs a warning, never
     /// a stalled evaluation pass.
     fn send_consult_trigger(&self, trigger: ConsultTrigger) {
@@ -994,7 +994,7 @@ where
     }
 
     /// Submit one approved strategy order through the existing executor /
-    /// event / alert path (SPEC-P20 §2.4), journaling the STRATEGY outcome
+    /// event / alert path (P20 §2.4), journaling the STRATEGY outcome
     /// with the execution status. The matching STRATEGY intent was journaled
     /// by the consult task (audit-before-action).
     async fn submit_strategy_order(
@@ -1098,7 +1098,7 @@ where
     }
 
     /// Journal the STRATEGY outcome of an approved order with its execution
-    /// status (SPEC-P20 §2.4); no-op without a journal.
+    /// status (P20 §2.4); no-op without a journal.
     async fn journal_strategy_outcome(
         &self,
         approved: &ApprovedOrder,
@@ -1143,7 +1143,7 @@ where
     }
 }
 
-/// Default live evaluation throttle (`SPEC-P06` §4): at most one decision
+/// Default live evaluation throttle (`P06` §4): at most one decision
 /// pass per this interval in live mode; every event in replay.
 pub const LIVE_EVAL_INTERVAL: Duration = Duration::from_secs(1);
 
@@ -1263,7 +1263,7 @@ fn alert_kind_text(kind: &AlertKind) -> &'static str {
 }
 
 /// Tier-change alert: symbol, `#market`, FROM→TO and the rendered distance
-/// (`SPEC-P06.md` §3). Yellow entries announce the scheduled consult too.
+/// (`P06` §3). Yellow entries announce the scheduled consult too.
 fn tier_change_alert(
     market_id: MarketId,
     symbol: &str,
@@ -1349,7 +1349,7 @@ fn reflex_alert(
     }
 }
 
-/// Strategy-order execution alert (SPEC-P20 §2.4–§2.5): mirrors the reflex
+/// Strategy-order execution alert (P20 §2.4–§2.5): mirrors the reflex
 /// alert shape for orders that entered through the consult task.
 fn strategy_execution_alert(
     approved: &ApprovedOrder,
@@ -1706,7 +1706,7 @@ mod tests {
     #[tokio::test]
     async fn fixture_replay_emits_ordered_events() {
         // Replay must be instantaneous: the pace divisor exceeds the fixture
-        // span, so every inter-message delta rounds to zero (SPEC-P06 §7).
+        // span, so every inter-message delta rounds to zero (P06 §7).
         // SAFETY: `set_var` is `unsafe` in edition 2024 (it races concurrent
         // env reads); this test writes the variable *before* any `MockPerpl`
         // replay starts and nothing else in this binary touches it.

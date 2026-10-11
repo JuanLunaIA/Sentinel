@@ -1,6 +1,6 @@
 //! Nansen x402 client — cache-first, budget-capped, ledger-audited.
 //!
-//! Frozen by `SPEC-P09.md` §3.5: the self-paying agent. Cache hits cost
+//! Frozen by `P09` §3.5: the self-paying agent. Cache hits cost
 //! nothing; the spend ledger is the budget source of truth; failures degrade
 //! to `SmartMoneyContext::unavailable` and never stall the caller.
 //!
@@ -36,7 +36,7 @@ const HTTP_TIMEOUT_SECS: u64 = 30;
 
 /// Honesty note attached to every successful smart-money context: Nansen
 /// coverage is cross-venue, so the netflow is a directional proxy only
-/// (`SPEC-P09.md` §3.5).
+/// (`P09` §3.5).
 pub const SMART_MONEY_PROXY_NOTE: &str =
     "cross-venue smart-money signal as directional proxy (Nansen coverage is not Perpl-specific)";
 
@@ -114,7 +114,7 @@ impl NansenClient {
 
     /// Cache-first paid call to `endpoint` with `body`.
     ///
-    /// Order (`SPEC-P09.md` §3.5): cache hit ⇒ free; else the sliding-hour
+    /// Order (`P09` §3.5): cache hit ⇒ free; else the sliding-hour
     /// budget is checked against the ledger **before** any HTTP; else the x402
     /// flow runs, the settled entry is appended and the response cached.
     ///
@@ -213,7 +213,7 @@ impl NansenClient {
     /// Best-effort smart-money context for `asset` (**never fails**).
     ///
     /// Fills `netflow_24h`/`fetched_at_ms`/`total_cost_usd` and always sets
-    /// the cross-venue proxy `note` (SPEC-P09 §3.5 honesty requirement).
+    /// the cross-venue proxy `note` (P09 §3.5 honesty requirement).
     /// On any error the caller gets [`SmartMoneyContext::unavailable`] and a
     /// `warn!` — the reasoning loop must never stall on paid data.
     pub async fn smart_money_context(

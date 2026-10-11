@@ -1,6 +1,6 @@
 //! On-chain anchoring service — journal head → `SentinelAuditAnchor`.
 //!
-//! Implemented per `SPEC-P10.md` §5. The journal is the source of truth; RPC
+//! Implemented per `P10` §5. The journal is the source of truth; RPC
 //! failures back off and retry, never losing entries.
 //!
 //! # Seq domains
@@ -27,7 +27,7 @@
 //!   (keeping the same `from_seq`) and heartbeat retries; nothing is dropped
 //!   (the journal stays the source of truth).
 //!
-//! # Heartbeat status file (`SPEC-P16` §2)
+//! # Heartbeat status file (`P16` §2)
 //!
 //! After every successful beat **and** batch anchor the service writes
 //! `data/heartbeat.json` (`HEARTBEAT_PATH` overrides the location) —
@@ -87,7 +87,7 @@ pub mod abi {
     }
 }
 
-/// Seconds between periodic batch passes (`SPEC-P10` §5).
+/// Seconds between periodic batch passes (`P10` §5).
 const BATCH_INTERVAL_SECS: u64 = 60;
 
 /// How often the un-anchored tail is polled for a REFLEX entry (§5).
@@ -99,14 +99,14 @@ const BATCH_MAX_ENTRIES: usize = 64;
 /// First retry delay after a sink failure.
 const BACKOFF_MIN: Duration = Duration::from_secs(1);
 
-/// Retry delay ceiling (`SPEC-P10` §5: 1 s → 30 s).
+/// Retry delay ceiling (`P10` §5: 1 s → 30 s).
 const BACKOFF_MAX: Duration = Duration::from_secs(30);
 
 /// Risk tier committed by heartbeats until P14 wires real breaker inputs.
 const HEARTBEAT_MAX_TIER: u8 = 3;
 
 /// Consecutive heartbeat/batch failures before the degraded alert fires
-/// (STUB-19 partial, `SPEC-P20.md` §4). One alert per degraded streak; the
+/// (STUB-19 partial, `P20` §4). One alert per degraded streak; the
 /// matching recovery alert fires once when anchoring succeeds again.
 const ANCHOR_DEGRADE_THRESHOLD: u32 = 3;
 
@@ -125,7 +125,7 @@ pub struct AnchorRunReport {
 
 /// Consecutive-failure streak shared by batch attempts and heartbeats.
 ///
-/// `SPEC-P20.md` §4 (STUB-19 partial): after [`ANCHOR_DEGRADE_THRESHOLD`]
+/// `P20` §4 (STUB-19 partial): after [`ANCHOR_DEGRADE_THRESHOLD`]
 /// consecutive failures the service emits one [`crate::notify::Alert`] of
 /// kind `anchoring_degraded` (and logs); the first success after a degraded
 /// streak emits the recovery alert, once. Works against the same alert
@@ -166,7 +166,7 @@ impl AnchoringHealth {
     }
 }
 
-/// The `SPEC-P20.md` §4 anchoring alert (degradation or recovery).
+/// The `P20` §4 anchoring alert (degradation or recovery).
 fn anchoring_degraded_alert(consecutive_failures: u32, recovering: bool, at_ms: u64) -> Alert {
     let text = if recovering {
         "✅ anchoring recovered — heartbeats and batch anchors are landing again".to_string()
@@ -270,7 +270,7 @@ impl AlloyAnchorSink {
             Some(value) if !is_placeholder(value) => value,
             _ => {
                 return Err(pending_wallet(
-                    "ANCHOR_CONTRACT_ADDRESS (deploy SentinelAuditAnchor, SPEC-P10 §4)",
+                    "ANCHOR_CONTRACT_ADDRESS (deploy SentinelAuditAnchor, P10 §4)",
                 ));
             }
         };
@@ -386,7 +386,7 @@ impl AnchorSink for AlloyAnchorSink {
     }
 }
 
-/// Pairwise sha256 Merkle root over hex hashes (`SPEC-P10` §5).
+/// Pairwise sha256 Merkle root over hex hashes (`P10` §5).
 ///
 /// Each level hashes the 32 decoded bytes of neighbouring leaves
 /// (`sha256(left ‖ right)`); an odd node is promoted unchanged; a single leaf
@@ -429,10 +429,10 @@ pub fn risk_state_hash(canonical_summary: &str, max_tier: u8) -> String {
 /// else 0. Journal read errors are logged and retried on the next tick;
 /// in-flight sink calls are awaited to completion (never abandoned), so
 /// shutdown never loses a possibly-landed transaction. Successful beats and
-/// batch anchors update the heartbeat status file (`SPEC-P16` §2) at
+/// batch anchors update the heartbeat status file (`P16` §2) at
 /// `HEARTBEAT_PATH` (default `data/heartbeat.json`). Degraded/recovered
 /// anchoring emits `anchoring_degraded` alerts through the shared
-/// [`AlertSink`] plumbing (`SPEC-P20` §4); this entry point logs them
+/// [`AlertSink`] plumbing (`P20` §4); this entry point logs them
 /// through [`TracingSink`], exactly like a daemon without a Telegram sink.
 ///
 /// # Errors
@@ -485,7 +485,7 @@ async fn run_with_status_path<S: AnchorSink, A: AlertSink + Sync>(
     // Heartbeat scheduler: the first interval tick arms the first beat
     // immediately (tokio fires it right away), then on the cadence; a failed
     // beat is retried with the shared 1 s → 30 s backoff schedule
-    // (`SPEC-P16` §2).
+    // (`P16` §2).
     let mut beat_due = false;
     let mut beat_attempt_at = Instant::now();
     let mut beat_backoff = BACKOFF_MIN;
@@ -557,7 +557,7 @@ async fn run_with_status_path<S: AnchorSink, A: AlertSink + Sync>(
         }
 
         // Attempt a due heartbeat: the first beat fires immediately, then on
-        // the cadence; a failed beat retries with backoff (`SPEC-P16` §2).
+        // the cadence; a failed beat retries with backoff (`P16` §2).
         if beat_due && Instant::now() >= beat_attempt_at {
             let last_seq = journal.lock().await.seq();
             let summary = format!(
@@ -704,7 +704,7 @@ async fn sleep_until(deadline: Option<Instant>) {
     }
 }
 
-/// Default heartbeat status file (`SPEC-P16` §2).
+/// Default heartbeat status file (`P16` §2).
 const HEARTBEAT_STATUS_DEFAULT: &str = "data/heartbeat.json";
 
 /// Status file path: `HEARTBEAT_PATH` when set (non-empty), else the default.
@@ -718,7 +718,7 @@ fn heartbeat_status_path() -> PathBuf {
 }
 
 /// Write the heartbeat status file after a successful beat/batch anchor:
-/// `{"ts_ms":u64,"tx_hash":str|null,"seq":u64}` (`SPEC-P16` §2). `seq` is the
+/// `{"ts_ms":u64,"tx_hash":str|null,"seq":u64}` (`P16` §2). `seq` is the
 /// journal cursor that success confirms (see the module docs). Failures are
 /// logged and never disturb anchoring.
 fn write_heartbeat_status(path: &Path, seq: u64, tx_hash: Option<&str>) {
@@ -771,7 +771,7 @@ fn unix_ms() -> u64 {
 fn pending_wallet(what: &str) -> SentinelError {
     SentinelError::Internal(format!(
         "PENDING-WALLET: {what} is not configured (or is a placeholder); \
-         deploy/fund per SPEC-P10 §4 and set it in the environment — \
+         deploy/fund per P10 §4 and set it in the environment — \
          live anchors stay offline until then (STUB-17)"
     ))
 }

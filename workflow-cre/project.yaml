@@ -1,5 +1,5 @@
 # ==========================================================================
-# CRE PROJECT SETTINGS FILE — Sentinel dead-man's-switch (SPEC-P14 §6)
+# CRE PROJECT SETTINGS FILE — Sentinel dead-man's-switch (P14 §6)
 # ==========================================================================
 # Targets referenced by `--target <name>` in `cre workflow` commands.
 #

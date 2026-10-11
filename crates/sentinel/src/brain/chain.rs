@@ -1,11 +1,11 @@
 //! Circuit breakers + `NoProvider` for the resilient provider chain.
 //!
-//! Frozen by `SPEC-P08.md` §2. "ProviderChain" semantics are implemented
+//! Frozen by `P08` §2. "ProviderChain" semantics are implemented
 //! inside `StrategyEngine` (provider + optional fallback + one breaker per
 //! slot); this module exports the primitives. All clocks are caller-supplied
 //! (`now_ms`) so the breaker is fully testable offline.
 //!
-//! **Status (P08):** interfaces frozen (`SPEC-P08.md` §2); implemented by the
+//! **Status (P08):** interfaces frozen (`P08` §2); implemented by the
 //! P08 wave.
 
 use std::sync::Mutex;
@@ -49,7 +49,7 @@ impl CircuitBreaker {
         }
     }
 
-    /// State at `now_ms` (`SPEC-P08.md` §2 semantics).
+    /// State at `now_ms` (`P08` §2 semantics).
     ///
     /// While `now_ms < until_ms` the breaker is `Open { until_ms }`; at
     /// `now_ms >= until_ms` the window has elapsed and a single probe is

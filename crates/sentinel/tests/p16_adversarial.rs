@@ -1,22 +1,22 @@
-//! P16 adversarial verifier suite (agent M) — SPEC-P16.
+//! P16 adversarial verifier suite (agent M) — P16.
 //!
 //! Written against the frozen SPEC text only; exercises the writers' public
 //! surfaces as a black box:
 //!
-//! 1. **secret scan** (SPEC-P16 §3): the evidence corpus, data/log samples and
+//! 1. **secret scan** (P16 §3): the evidence corpus, data/log samples and
 //!    a generated sample log must never contain non-placeholder `.env` secret
 //!    values, Bearer tokens, `sk-`-style keys, or 64-hex key material in
 //!    key context — while redaction markers, hash digests and the one
 //!    documented public anvil dev key stay tolerated. A negative control
 //!    proves the scanner is not vacuous.
-//! 2. **audit degrade** (SPEC-P16 §2, L): read-only dir AND a 64 KiB tmpfs
+//! 2. **audit degrade** (P16 §2, L): read-only dir AND a 64 KiB tmpfs
 //!    disk-full path; the in-flight entry must never be lost and the next
 //!    append must persist BOTH entries with the chain intact.
-//! 3. **supervisor** (SPEC-P16 §2, K): panic ⇒ restart + survive; shutdown ⇒
+//! 3. **supervisor** (P16 §2, K): panic ⇒ restart + survive; shutdown ⇒
 //!    restarts stop and the supervising loop exits (no zombie loop).
-//! 4. **telegram queue** (SPEC-P16 §2, K): 500s never reach the caller,
+//! 4. **telegram queue** (P16 §2, K): 500s never reach the caller,
 //!    retries are bounded, overflow drops OLDEST (newest always delivered).
-//! 5. **P15 regression gate** (SPEC-P15 §2/§4): admin-key 503/401/200 chain,
+//! 5. **P15 regression gate** (P15 §2/§4): admin-key 503/401/200 chain,
 //!    rate-limit 429 with /healthz exempt, frozen endpoint shapes + CORS.
 
 use std::collections::BTreeSet;
@@ -62,7 +62,7 @@ struct SecretValue {
 /// redacted form.
 const REDACTED_MARKER: &str = "[REDACTED]";
 
-/// Public, well-documented Foundry/anvil dev keys. SPEC-P16 §3 allows the
+/// Public, well-documented Foundry/anvil dev keys. P16 §3 allows the
 /// known public anvil dev key; these carry zero secrecy by construction and
 /// appear verbatim in runbooks (`--private-key 0xac09…`).
 const ANVIL_DEV_KEYS: &[&str] = &[
@@ -91,7 +91,7 @@ fn name_is_secretish(name: &str) -> bool {
     MARKERS.iter().any(|m| upper.contains(m)) && !EXCLUDED.iter().any(|m| upper.contains(m))
 }
 
-/// SPEC-P16 §3: placeholders (`replace-me` prefixes, `1234567890…`, all-zero
+/// P16 §3: placeholders (`replace-me` prefixes, `1234567890…`, all-zero
 /// hex) are exempt from the verbatim scan.
 fn is_placeholder_value(value: &str) -> bool {
     let lower = value.to_ascii_lowercase();
@@ -331,7 +331,7 @@ fn scan_path(label: &str, path: &Path, secrets: &[SecretValue], violations: &mut
 }
 
 // ---------------------------------------------------------------------------
-// (1) secret scan — SPEC-P16 §3
+// (1) secret scan — P16 §3
 // ---------------------------------------------------------------------------
 
 #[test]
@@ -528,7 +528,7 @@ fn anvil_dev_key_exemption_only_covers_the_public_dev_key() {
 }
 
 // ---------------------------------------------------------------------------
-// (2) audit degrade — SPEC-P16 §2 (L): persistence failures (disk full /
+// (2) audit degrade — P16 §2 (L): persistence failures (disk full /
 //     read-only dir) degrade to in-memory, retry on the next append, and the
 //     in-flight entry is never lost.
 // ---------------------------------------------------------------------------
@@ -584,7 +584,7 @@ fn audit_degrade_readonly_dir_keeps_inflight_entry_and_persists_on_next_append()
     let seq_before = journal.seq();
 
     // Read-only directory: persistence must fail, the record must survive in
-    // memory instead (SPEC-P16 §2).
+    // memory instead (P16 §2).
     set_dir_mode(&audit_dir, 0o555);
     let record_a = journal.record_intent(&degrade_intent(0xA), degrade_ts(10));
     let degraded_after_a = journal.degraded();
@@ -678,7 +678,7 @@ impl Drop for MountGuard {
 
 #[test]
 fn audit_degrade_tmpfs_disk_full_persists_both_entries_after_recovery() {
-    // Precondition: passwordless sudo for the SPEC-P16 §2 64 KiB tmpfs
+    // Precondition: passwordless sudo for the P16 §2 64 KiB tmpfs
     // disk-full simulation.
     let sudo_ok = Command::new("sudo")
         .args(["-n", "true"])
@@ -757,7 +757,7 @@ fn audit_degrade_tmpfs_disk_full_persists_both_entries_after_recovery() {
 }
 
 // ---------------------------------------------------------------------------
-// (3) supervisor — SPEC-P16 §2 (K): panics are caught and restarted with
+// (3) supervisor — P16 §2 (K): panics are caught and restarted with
 //     backoff; shutdown stops restarts (no zombie loop).
 // ---------------------------------------------------------------------------
 
@@ -839,7 +839,7 @@ async fn supervisor_shutdown_stops_restarts_no_zombie_loop() {
 }
 
 // ---------------------------------------------------------------------------
-// (4) telegram queue — SPEC-P16 §2 (K): failures never propagate; bounded
+// (4) telegram queue — P16 §2 (K): failures never propagate; bounded
 //     retry; overflow drops the OLDEST entry (never the newest).
 // ---------------------------------------------------------------------------
 
@@ -938,7 +938,7 @@ async fn telegram_queue_overflow_drops_oldest_not_newest() {
         .await;
     let sink = p16_sink(&server);
 
-    // 40 alerts > queue capacity 32 (SPEC-P16 §2), worker deliberately slow.
+    // 40 alerts > queue capacity 32 (P16 §2), worker deliberately slow.
     // The burst must complete promptly: overflow drops, it never blocks.
     tokio::time::timeout(Duration::from_secs(20), async {
         for i in 0..40u32 {
@@ -1009,7 +1009,7 @@ async fn telegram_queue_overflow_drops_oldest_not_newest() {
 
 // ---------------------------------------------------------------------------
 // (5) P15 regression gate — rate limit (429), admin key (503/401/200) and the
-//     frozen endpoint shapes (SPEC-P15 §2/§4; "M re-verifies 429/401/503").
+//     frozen endpoint shapes (P15 §2/§4; "M re-verifies 429/401/503").
 // ---------------------------------------------------------------------------
 
 struct DashboardHarness {
@@ -1193,7 +1193,7 @@ async fn p15_frozen_endpoint_shapes_and_cors() {
     let harness = start_dashboard().await;
     let client = reqwest::Client::new();
 
-    // GET /api/state — frozen top-level shape (SPEC-P15 §2).
+    // GET /api/state — frozen top-level shape (P15 §2).
     let response = client
         .get(format!("{}/api/state", harness.base))
         .send()

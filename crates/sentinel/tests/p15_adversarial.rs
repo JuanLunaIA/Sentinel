@@ -1,7 +1,7 @@
-//! P15 dashboard adversarial verification — independent black-box corpus (`SPEC-P15.md`
+//! P15 dashboard adversarial verification — independent black-box corpus (`P15`
 //! §1–§4).
 //!
-//! Written from `SPEC-P15.md` only: the API implementation
+//! Written from `P15` only: the API implementation
 //! (`crates/sentinel/src/api.rs`) and the dashboard artifact are treated as black
 //! boxes. The router is exercised over a real localhost listener
 //! (`health::router(...).merge(api::dashboard_router(...))`, mirroring `main.rs`);
@@ -1729,7 +1729,7 @@ async fn api_cors_preflight_options() {
 }
 
 // ===========================================================================
-// (10) HTML artifact — static analysis only (SPEC-P15 §1/§4)
+// (10) HTML artifact — static analysis only (P15 §1/§4)
 // ===========================================================================
 
 fn html_path() -> PathBuf {
@@ -1824,7 +1824,7 @@ fn html_size_within_limit() {
 #[test]
 fn html_eight_section_hooks_present() {
     let html = load_html();
-    // SPEC-P15 §1 freezes eight sections; §4 requires their markers/data hooks.
+    // P15 §1 freezes eight sections; §4 requires their markers/data hooks.
     // The section-hook vocabulary below mirrors the section names in §1.
     let required = [
         "header",
@@ -1884,7 +1884,7 @@ fn html_no_external_urls_outside_comments() {
     }
     assert!(
         violations.is_empty(),
-        "no external URL may appear outside comments (SPEC-P15 §1/§4): {violations:?}"
+        "no external URL may appear outside comments (P15 §1/§4): {violations:?}"
     );
 }
 

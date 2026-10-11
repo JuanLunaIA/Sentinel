@@ -1,4 +1,4 @@
-//! Spend ledger — the money-shot audit trail (SPEC-P09 §3.4).
+//! Spend ledger — the money-shot audit trail (P09 §3.4).
 //!
 //! One JSON line per settled paid call at `data/nansen-spend.jsonl`; the
 //! ledger doubles as the single source of truth for the sliding-hour budget.

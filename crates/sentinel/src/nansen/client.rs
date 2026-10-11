@@ -1,6 +1,6 @@
 //! Typed Nansen endpoint bodies + tolerant response parsers.
 //!
-//! Frozen by `SPEC-P09.md` §3.2. `smart-money` bodies are FACTS-confirmed
+//! Frozen by `P09` §3.2. `smart-money` bodies are FACTS-confirmed
 //! (`{"chains":["<chain>"]}`); the other two are STUB-05 best-effort shapes —
 //! pinned by tests and adjustable at the first paid call.
 //!

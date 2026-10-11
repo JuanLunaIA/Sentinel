@@ -1,7 +1,7 @@
 # Sentinel — pitch video script (2:00 max)
 
-Status: scripts phase (SPEC-P18 §2). Owner: agent Q. Recording: Oct 12, operator.
-Voiceover sentences ≤ 20 words; timing marks every 15 s. Numbers follow the SPEC-P17 §1 fact sheet —
+Status: scripts phase (P18 §2). Owner: agent Q. Recording: Oct 12, operator.
+Voiceover sentences ≤ 20 words; timing marks every 15 s. Numbers follow the P17 §1 fact sheet —
 sources listed in the appendix. PENDING items are labeled everywhere they are spoken.
 
 | Mark | Section |
@@ -64,7 +64,7 @@ No invented market stats — this is a thesis segment.
 timeline card (heartbeat → stale → fire) → backtest bars (`p15-dashboard-audit-resilience.png`).
 
 *(The five pillars in plain words: Speed / Judgment / Trust / Resilience / Evidence — the same five
-the demo video walks through, framed per SPEC-P17 §2 pt 3.)*
+the demo video walks through, framed per P17 §2 pt 3.)*
 
 ---
 

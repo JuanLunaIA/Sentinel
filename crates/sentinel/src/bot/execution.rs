@@ -1,4 +1,4 @@
-//! Human-approved order execution (`SPEC-P11.md` §7).
+//! Human-approved order execution (`P11` §7).
 //!
 //! A concrete, guarded executor for the human path (the pipeline owns the
 //! reflex path). Both variants share the same probe as the pipeline.

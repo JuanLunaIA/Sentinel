@@ -17,13 +17,13 @@ use serde_json::{Value, json};
 
 use crate::error::{Result, SentinelError};
 
-/// Request timeout for every indexer call (SPEC-P12: 15 s).
+/// Request timeout for every indexer call (P12: 15 s).
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Maximum characters of free text kept in an error message (bounded excerpt).
 const MAX_ERROR_EXCERPT_CHARS: usize = 200;
 
-/// `SentinelAnchor` rows with `seq >= $from`, ascending (frozen by SPEC-P12).
+/// `SentinelAnchor` rows with `seq >= $from`, ascending (frozen by P12).
 const ANCHORS_QUERY: &str = "query($from: BigInt!){ SentinelAnchor(where:{seq:{_gte:$from}}, order_by:{seq:asc}){ seq entry_hash root account ts tx_hash } }";
 
 /// Latest `SentinelHeartbeat` rows, newest first.
@@ -38,7 +38,7 @@ const LIQUIDATIONS_BY_MARKET_QUERY: &str = "query($market: BigInt!, $limit: Int!
 /// `SentinelAnchor` entity (`SPEC` P12 §2 field names verbatim).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SentinelAnchor {
-    /// Journal sequence (on-chain = journal seq + 1, per SPEC-P10 §13b).
+    /// Journal sequence (on-chain = journal seq + 1, per P10 §13b).
     pub seq: u64,
     /// Anchored entry hash.
     pub entry_hash: String,
@@ -236,7 +236,7 @@ struct GraphQlEnvelope {
     errors: Option<Value>,
 }
 
-/// Build the shared HTTP client (15 s timeout, SPEC-P12).
+/// Build the shared HTTP client (15 s timeout, P12).
 ///
 /// The frozen `new` signature returns `Self`, not a `Result`, so a client
 /// build failure (possible only when the TLS backend cannot initialise) falls
@@ -392,7 +392,7 @@ mod tests {
     use wiremock::matchers::{method, path};
     use wiremock::{Mock, MockServer, Request, ResponseTemplate};
 
-    /// Frozen anchors query text (must match SPEC-P12 verbatim).
+    /// Frozen anchors query text (must match P12 verbatim).
     const EXPECTED_ANCHORS_QUERY: &str = "query($from: BigInt!){ SentinelAnchor(where:{seq:{_gte:$from}}, order_by:{seq:asc}){ seq entry_hash root account ts tx_hash } }";
 
     /// Mount a `200 OK` GraphQL response carrying `data`.

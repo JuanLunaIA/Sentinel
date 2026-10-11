@@ -1,4 +1,4 @@
-//! P16 resilience checkpoint (SPEC-P16 §2–§3).
+//! P16 resilience checkpoint (P16 §2–§3).
 //!
 //! Covers:
 //! - `supervisor::spawn` restart-on-panic / stop-on-shutdown semantics with
@@ -126,7 +126,7 @@ async fn wait_for_requests(server: &MockServer, wanted: usize, timeout: Duration
 }
 
 // ---------------------------------------------------------------------------
-// Supervisor (SPEC-P16 §2)
+// Supervisor (P16 §2)
 // ---------------------------------------------------------------------------
 
 #[tokio::test(flavor = "current_thread")]
@@ -223,7 +223,7 @@ async fn supervisor_stops_restarting_once_shutdown_is_set() {
 }
 
 // ---------------------------------------------------------------------------
-// Telegram delivery queue (SPEC-P16 §2)
+// Telegram delivery queue (P16 §2)
 // ---------------------------------------------------------------------------
 
 #[tokio::test(flavor = "current_thread")]
@@ -357,7 +357,7 @@ async fn telegram_queue_overflow_drops_oldest_and_never_fails_callers() {
 }
 
 // ---------------------------------------------------------------------------
-// Debug redaction audit (SPEC-P16 §3)
+// Debug redaction audit (P16 §3)
 // ---------------------------------------------------------------------------
 
 mod redaction {

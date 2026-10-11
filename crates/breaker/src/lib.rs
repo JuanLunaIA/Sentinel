@@ -1,11 +1,11 @@
-//! Sentinel breaker — the independent dead-man's-switch guardian (`SPEC-P14`).
+//! Sentinel breaker — the independent dead-man's-switch guardian (`P14`).
 //!
 //! The breaker is a **process-independent** guardian that watches the
 //! Sentinel daemon's on-chain heartbeats and, when they go stale while risk is
 //! critical, performs a bounded, pre-authorized defensive reduce. It never
 //! increases exposure. Module map:
 //!
-//! - [`config`] — exact env keys + fail-fast validation (`SPEC-P14` §2);
+//! - [`config`] — exact env keys + fail-fast validation (`P14` §2);
 //! - [`watcher`] — alloy `eth_getLogs` polling of `Heartbeat` events on the
 //!   anchor contract, latest event tracked per guardian (§3);
 //! - [`trigger`] — staleness boundaries, criticality and the persisted

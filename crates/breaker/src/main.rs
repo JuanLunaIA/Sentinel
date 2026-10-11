@@ -1,4 +1,4 @@
-//! Sentinel breaker — binary entry point (`SPEC-P14`).
+//! Sentinel breaker — binary entry point (`P14`).
 //!
 //! Wires the parts together and owns shutdown:
 //!
@@ -21,7 +21,6 @@ use std::sync::Arc;
 use anyhow::Context as _;
 use tokio::sync::watch;
 use tracing::{info, warn};
-use rustls::crypto::ring::default_provider;
 use tracing_subscriber::EnvFilter;
 
 use breaker::armed::{ArmedState, serve};
@@ -82,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
         tokio::spawn(async move { watcher.run(watched, shutdown).await })
     };
 
-    // The automatic trigger path (SPEC-P14 §3/§7): one local pass every 5 s,
+    // The automatic trigger path (P14 §3/§7): one local pass every 5 s,
     // sharing the persisted epoch gate with the armed POST path.
     let trigger_task = tokio::spawn(run_auto(
         Arc::clone(&cfg),

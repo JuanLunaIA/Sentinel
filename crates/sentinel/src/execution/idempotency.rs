@@ -1,10 +1,10 @@
 //! Idempotency store — duplicate suppression with restart safety.
 //!
-//! In-memory map keyed by the SPEC-P05 §5 idempotency key, JSON-persisted to
+//! In-memory map keyed by the P05 §5 idempotency key, JSON-persisted to
 //! disk on every record (`data/idempotency.json`) and reloaded on
 //! construction. The window is the callers' TTL (IDEMPOTENCY_WINDOW_SECS).
 //!
-//! **P05 status:** implemented; interfaces frozen per `SPEC-P05.md` §5.
+//! **P05 status:** implemented; interfaces frozen per `P05` §5.
 
 use std::collections::HashMap;
 use std::path::PathBuf;

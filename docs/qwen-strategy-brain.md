@@ -6,7 +6,7 @@
 
 ## The Short Version
 
-Qwen (`qwen3.5-omni-plus`) is Sentinel's **primary strategic provider**. Every time a position crosses YELLOW (25% distance to liquidation), every post-reflex review at ORANGE/RED, every 30-minute portfolio review—the prompt goes to Qwen first. It sees the market snapshot, the policy summary, the recent reflex history, and optional Nansen smart-money context. It returns a structured decision: `Reduce`, `Close`, `Hedge`, or `Hold`, with confidence, reasoning, and urgency.
+Qwen (`qwen3.8-max`) is Sentinel's **primary strategic provider**. Every time a position crosses YELLOW (25% distance to liquidation), every post-reflex review at ORANGE/RED, every 30-minute portfolio review—the prompt goes to Qwen first. It sees the market snapshot, the policy summary, the recent reflex history, and optional Nansen smart-money context. It returns a structured decision: `Reduce`, `Close`, `Hedge`, or `Hold`, with confidence, reasoning, and urgency.
 
 When it works, it's the brain. When it doesn't, KIMI takes over seamlessly.
 
@@ -16,7 +16,7 @@ When it works, it's the brain. When it doesn't, KIMI takes over seamlessly.
 
 ### 1. Multimodal Context Window
 
-`qwen3.5-omni-plus` handles text + structured data natively. Our prompts pack:
+`qwen3.8-max` handles text + structured data natively. Our prompts pack:
 - Position table (size, entry, mark, liq distance, collateral, uPnL)
 - Policy thresholds (soft/warn/hard, reflex fractions, cooldowns)
 - Reflex history (last 10 actions with timestamps, amounts, tiers)
@@ -35,7 +35,7 @@ Our prompt demands **exact JSON schema compliance**:
   "confidence": 0.0-1.0,
   "reason": "string",
   "urgency": "Low|Medium|High|Critical",
-  "provider": "qwen3.5-omni-plus"
+  "provider": "qwen3.8-max"
 }
 ```
 
@@ -77,7 +77,7 @@ When Qwen *does* respond (valid API key), the trace looks like:
 
 ```
 2026-10-11T05:XX:XX.XXXZ  provider attempt succeeded
-    provider="qwen" model=qwen3.5-omni-plus latency_ms=1180 attempt=1
+    provider="qwen" model=qwen3.8-max latency_ms=1180 attempt=1
     action="Reduce" amount="2.5" confidence=0.78 urgency="High"
     reason="ETH funding turning negative, OI dropping 12%/4h, Nansen netflow -$2.3M/24h. Reduce 25% preserves margin buffer."
 ```

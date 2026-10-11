@@ -1,6 +1,6 @@
 //! x402 v2 payment flow — wire types, rail selection, EIP-3009 signing.
 //!
-//! Frozen by `SPEC-P09.md` §3.1 from the recorded live challenges
+//! Frozen by `P09` §3.1 from the recorded live challenges
 //! (`docs/evidence/p01-nansen-402*.json`) plus the v2 specification. Money is
 //! decimal strings as returned on the wire; the payer key is never logged.
 //!

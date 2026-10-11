@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==========================================================================
-# `cre workflow simulate` attempt wrapper for sentinel-deadman (SPEC-P14 §6).
+# `cre workflow simulate` attempt wrapper for sentinel-deadman (P14 §6).
 #
 # Records the exact command + verbatim output + exit code. In this environment
 # the command is expected to fail at the authentication gate (no CRE account;

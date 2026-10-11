@@ -1,7 +1,7 @@
 # Sentinel — Architecture
 
 **Status:** v1.0 — full rewrite of the P02 v0 skeleton (v0 preserved in spirit), frozen
-outline per [SPEC-P17](../SPEC-P17.md) §3. Architecture as shipped through P16, 2026-10-06.
+outline per [P17](../P17) §3. Architecture as shipped through P16, 2026-10-06.
 **Number rule:** every measured value below links its `docs/evidence/` file; live-status
 labels (`PENDING-KEY`, `PENDING-WALLET`, `PENDING-ACCOUNT`, `PENDING-TOKEN`) follow
 [STUBS.md](STUBS.md) and are never upgraded speculatively.
@@ -124,20 +124,20 @@ delivers it and the evidence that proves it today.
 ## 3. Architecture invariants (never violated)
 
 1. **The reflex never calls an LLM.** The risk core is pure (no I/O, no clock reads —
-   `now_ms` is caller-supplied, SPEC-P04 §1); `reflex::decide` is synchronous and has no
+   `now_ms` is caller-supplied, P04 §1); `reflex::decide` is synchronous and has no
    network types in scope. The crash demo runs its full tier cascade with no provider
    keys at all — [p06-crash-demo.clean.txt](evidence/p06-crash-demo.clean.txt).
 2. **The LLM never bypasses the policy gate.** `PolicyEngine::evaluate`
-   (`crates/sentinel-core/src/policy.rs`, SPEC-P05 §3) runs on every planned action,
+   (`crates/sentinel-core/src/policy.rs`, P05 §3) runs on every planned action,
    reflex- or strategy-sourced (`PolicySource::{Reflex, Strategy, Manual}`). The single
    documented asymmetry — a Red reflex action may bypass the *approval threshold*, never
    the notional cap or the daily cap — is explicit and tested
-   ([SPEC-P05](../SPEC-P05.md) §3 rule 7, §8).
+   ([P05](../P05) §3 rule 7, §8).
 3. **Audit-before-action, hash-chained journal.** The pipeline journals the *intent*
    (`execution: {"status":"pending"}`) **before** any submission and the outcome after;
    no-order paths journal immediately (denied / needs_approval / none). Journal failure
    logs and proceeds — a rescue action outranks audit availability — and P16 adds an
-   in-memory degrade mode with recovery flush (SPEC-P10 §8; [SPEC-P16](../SPEC-P16.md) §2).
+   in-memory degrade mode with recovery flush (P10 §8; [P16](../P16) §2).
 4. **All external I/O behind mockable async traits + first-class `DRY_RUN`.** The seams:
    `PerplFeed` (`crates/sentinel/src/perpl/mod.rs`), `Executor` + `PositionProbe`
    (`crates/sentinel/src/execution/mod.rs`), `AnchorSink` (`crates/sentinel/src/anchor.rs`),
@@ -145,8 +145,8 @@ delivers it and the evidence that proves it today.
    recording/dry-run; `--replay` runs the whole pipeline offline with zero keys.
 5. **`sentinel-core` has ZERO network dependencies.** The pure core (domain types, risk
    math, policy, audit chaining) has no network stack and no async runtime; `std::fs` is
-   allowed only for journal persistence (SPEC-P10 §3). This is why the backtester lives in
-   the app crate (`sentinel::sim`, SPEC-P13 §0), not the core.
+   allowed only for journal persistence (P10 §3). This is why the backtester lives in
+   the app crate (`sentinel::sim`, P13 §0), not the core.
 6. **Secrets never logged; `SecretString` redaction.** Config secrets are wrapped in
    `config::SecretString` with hand-written redacted `Debug`; `ApiKeySigner` (Perpl auth)
    and `PayerSigner` (x402) implement `Debug` by hand; the P16 audit proves `Debug` of
@@ -169,13 +169,13 @@ Sentinel needs two decision timescales:
   ("is this a wick or a trend?"), smart-money context, escalation calls — and is
   strictly bounded: schema-validated output, one repair nudge, confidence floor below
   which the decision is rewritten to `ESCALATE`, and consult/token budget guards whose
-  breach also returns a synthetic `ESCALATE` (SPEC-P07 §6, SPEC-P08 §3).
+  breach also returns a synthetic `ESCALATE` (P07 §6, P08 §3).
 
 **The numbers, honestly labeled.** Live LLM latency is **unmeasured — PENDING-KEY**
 (the operator's Qwen/Kimi keys are placeholders; the mock harness rows record `(0ms)`
 because they are mock runs — [p07-brain-eval-mock.txt](evidence/p07-brain-eval-mock.txt);
 live `brain_eval` is STUB-01/02). The design bound is the **60 s provider timeout**
-(SPEC-P07 §3): the guard can never wait on a provider longer than that per attempt, and
+(P07 §3): the guard can never wait on a provider longer than that per attempt, and
 the reflex path must never wait on it at all. That bound is ~2.2 × 10^8 times the
 measured 0.271 µs classification per iteration — the entire reason the dual brain is
 split at compile time: reflex decisions cannot depend on the LLM's availability,
@@ -234,7 +234,7 @@ pure reflex, then the policy gate, then journals the intent; the guarded executo
 deduplicates, submits, and post-verifies against a position probe; the outcome is
 journaled and alerts fan out; the anchor task independently batches new journal entries.
 The replay variant of this path is byte-deterministic (same fixture + config ⇒ identical
-`PipelineOutcome::to_jsonl()`, SPEC-P06 §6; determinism gate
+`PipelineOutcome::to_jsonl()`, P06 §6; determinism gate
 [p06-validate-test.txt](evidence/p06-validate-test.txt)).
 
 ### 5.2 Reflex save — the crash scenario (no LLM anywhere in the path)
@@ -460,7 +460,7 @@ against `eth_getLogs`. Verified on a local anvil end-to-end run: "✅ journal co
 
 - **One `sentinel` daemon** runs the pipeline plus supervised auxiliary tasks
   (`supervisor::spawn` — panics are caught, logged, and restarted with backoff; no single
-  auxiliary task death kills the daemon; `crates/sentinel/src/supervisor.rs`, SPEC-P16 §2)
+  auxiliary task death kills the daemon; `crates/sentinel/src/supervisor.rs`, P16 §2)
   and serves `/healthz` + the dashboard/API surface on `PORT` (default 8080).
 - **One `breaker` process** (`crates/breaker`) watches the anchor contract over RPC and
   serves the armed surface on `BREAKER_PORT` (default 9090).
@@ -514,7 +514,7 @@ guard **shardable by account**:
 - **Trait seams for future scale-out and venue swaps**: `PerplFeed` (venue in/out),
   `Executor` + `PositionProbe` (order out / truth back), `AnchorSink` (chain), `Provider`
   (LLM). All are generic async traits without `dyn` — a second venue or a remote executor
-  is an implementation, not a rewrite (SPEC.md (P03) §4, SPEC-P05 §5).
+  is an implementation, not a rewrite (SPEC.md (P03) §4, P05 §5).
 
 ### 6.3 Cost model per guarded account (modeled estimate — assumptions listed)
 
@@ -567,11 +567,11 @@ propose; the deterministic core disposes, and the human stays in every dangerous
 |---|---|---|---|
 | 1 | Stolen API/LLM/signer keys | Secrets live only in env (`.env` gitignored — [.gitignore](../.gitignore); excluded from image/compose context); no hot reload, rotate = restart ([RUNBOOK.md](RUNBOOK.md) §3); redacted `Debug` everywhere; secret-scan + redaction-audit test suites | Proven (scan "73 files clean"; redaction tests green) — [p16-verify.txt](evidence/p16-verify.txt) §5; mainnet tier planned (below) |
 | 2 | Prompt injection via market data, SM context, or venue strings | LLM output is schema-validated and grounded: numbers in `reason` must appear in the prompt; market ids restricted to the allowlist; unknown fields tolerated but required fields typed; the LLM cannot reach the executor — only the policy gate can | Injection scenarios (rows 13/14) schema-valid + grounded; core accuracy 12/12 — [p07-brain-eval-mock.txt](evidence/p07-brain-eval-mock.txt), [p08-failover.txt](evidence/p08-failover.txt); live eval PENDING-KEY |
-| 3 | Rogue or wrong LLM decision | Every strategy decision passes `PolicyEngine` + reduce-only sizing (quantize-down, never exceeds position); confidence floor downgrades low-confidence output to `ESCALATE`; budget guard → synthetic `ESCALATE`; one repair nudge, then failover | SPEC-P05 §3-4, SPEC-P07 §6, SPEC-P08 §3; adversarial suites ([chain_adversarial](../crates/sentinel/tests/chain_adversarial.rs), [brain_adversarial](../crates/sentinel/tests/brain_adversarial.rs)) |
-| 4 | Stale/absent/wrong feed data | Edge-triggered staleness detector; `stale_reduce=false` default ⇒ stale Orange/Red alerts humans instead of acting blind; reconnect with backoff ≤ 30 s; every decision carries its data-quality class | SPEC-P04 §3.4, SPEC.md (P03) §4; WS storm test (10 kill cycles) green — [p16-verify.txt](evidence/p16-verify.txt) |
+| 3 | Rogue or wrong LLM decision | Every strategy decision passes `PolicyEngine` + reduce-only sizing (quantize-down, never exceeds position); confidence floor downgrades low-confidence output to `ESCALATE`; budget guard → synthetic `ESCALATE`; one repair nudge, then failover | P05 §3-4, P07 §6, P08 §3; adversarial suites ([chain_adversarial](../crates/sentinel/tests/chain_adversarial.rs), [brain_adversarial](../crates/sentinel/tests/brain_adversarial.rs)) |
+| 4 | Stale/absent/wrong feed data | Edge-triggered staleness detector; `stale_reduce=false` default ⇒ stale Orange/Red alerts humans instead of acting blind; reconnect with backoff ≤ 30 s; every decision carries its data-quality class | P04 §3.4, SPEC.md (P03) §4; WS storm test (10 kill cycles) green — [p16-verify.txt](evidence/p16-verify.txt) |
 | 5 | Total daemon failure (process death, host loss) | Independent dead-man's switch: on-chain Heartbeat cadence watched by `crates/breaker`; fires once per epoch, dry-run by default, capped notional; CRE workflow drives the same HMAC-gated endpoint | [p14-breaker-demo.txt](evidence/p14-breaker-demo.txt); HMAC spec vector independently reproduced — [p14-validate.txt](evidence/p14-validate.txt); CRE simulate PENDING-ACCOUNT |
 | 6 | Operator misuse (Telegram / dashboard) | Bot is allowed-user-only; `/pause` requires typed `PAUSE` confirmation; dashboard mutations require `DASHBOARD_ADMIN_KEY` (constant-time compare; unset ⇒ 503); approval queue TTL 5 min; policy overlay is whitelist-validated with atomic writes | [p16-verify.txt](evidence/p16-verify.txt) §3 ("rate limit probe: ok=120 limited=90"; 503/401/200 matrix); [p11_adversarial](../crates/sentinel/tests/p11_adversarial.rs) |
-| 7 | Journal tampering or loss | Hash chain detects any edit (tamper matrix catches the exact seq); anchors make the chain externally checkable; degrade mode keeps in-flight order flow alive and flushes on recovery; `kill -9` rehearsal proves resume | SPEC-P10; [p10-crash-safety.txt](evidence/p10-crash-safety.txt), [p16-verify.txt](evidence/p16-verify.txt) §2 |
+| 7 | Journal tampering or loss | Hash chain detects any edit (tamper matrix catches the exact seq); anchors make the chain externally checkable; degrade mode keeps in-flight order flow alive and flushes on recovery; `kill -9` rehearsal proves resume | P10; [p10-crash-safety.txt](evidence/p10-crash-safety.txt), [p16-verify.txt](evidence/p16-verify.txt) §2 |
 | 8 | x402 spend abuse / payer drain | Payer key isolation (below); hourly call budget as the single gate; spend ledger is the source of truth; 300 s cache; dashboard spend panel | [p09-x402-check.txt](evidence/p09-x402-check.txt); low-balance alert deferred (STUB-25, needs the live wallet) |
 
 **Key custody tiers (what protects what, today vs mainnet).**
@@ -587,7 +587,7 @@ propose; the deterministic core disposes, and the human stays in every dangerous
   rotation procedure).
 - **Tier 2 — in-memory redaction.** `SecretString` and the hand-written `Debug` impls
   (`ApiKeySigner`, `PayerSigner`, `AlloyAnchorSink`); the redaction-audit test proves no
-  `Debug` output leaks values (SPEC-P16 §3).
+  `Debug` output leaks values (P16 §3).
 - **anvil-dev vs real keys.** Demos and tests (breaker demo, anvil e2e, P09 oracles) use
   the well-known **public Foundry dev keys** — the secret scanner explicitly exempts
   "the two documented public Foundry dev keys" while still flagging non-public 64-hex
@@ -602,7 +602,7 @@ kill switch → market allowlist → position resolution → reduce-only invaria
 bounds, flat-position close denial, positive collateral) → notional cap
 (`MAX_ORDER_SIZE_USD`) → approval threshold (`REQUIRE_APPROVAL_ABOVE_USD`, with the
 narrow Red-reflex asymmetry) → daily action cap. Sizing is a pure function that can only
-shrink a position (quantize-down to lot grid, clamp to position; SPEC-P05 §4). No intent
+shrink a position (quantize-down to lot grid, clamp to position; P05 §4). No intent
 variant can increase exposure or flip a side — by construction, advertised and tested.
 
 **Prompt-injection results (from the fact sheet).** The eval suite carries 14 scenarios
@@ -619,7 +619,7 @@ PENDING-WALLET wallet) — never the Perpl trading key and never the anchor sign
 worst-case exposure per request is one EIP-3009 authorization bounded by
 `validBefore = now + maxTimeoutSeconds` (+60 s clock skew) and a random 32-byte nonce;
 the spend ledger records every settlement; nothing in the flow logs key material or
-signature bytes beyond what the tests race adversarially (SPEC-P09 §3, §7). The EIP-712
+signature bytes beyond what the tests race adversarially (P09 §3, §7). The EIP-712
 digest `0xab74a1066d05d2a495f2d5938ba4db686a7039cbf63cd6e456a2f11c641c0951` is pinned in
 `crates/sentinel/tests/nansen_adversarial.rs` and produced by the independent ethers-6.17
 oracle `tests/fixtures/nansen/eip712_oracle.js` (test

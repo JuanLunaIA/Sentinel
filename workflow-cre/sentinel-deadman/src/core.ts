@@ -9,12 +9,12 @@
  * globals: only `@noble/hashes` (bundled in the CRE WASM runtime) and `zod`
  * (a pinned dependency of the CRE SDK) may be used here.
  *
- * The sequence it encodes is the frozen SPEC-P14 §6 definition step by step:
+ * The sequence it encodes is the frozen P14 §6 definition step by step:
  *   cron trigger -> GET /api/heartbeat-status -> condition (any guardian
  *   stale && critical) -> [optional on-chain corroboration read] -> POST
  *   /breaker/trigger with the HMAC-SHA256 signature -> [optional Telegram alert].
  *
- * The HMAC construction matches the frozen SPEC-P14 §5 test vector:
+ * The HMAC construction matches the frozen P14 §5 test vector:
  *   secret  b"spec-test-secret"
  *   body    {"guardian":"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266","reason":"spec-vector","requested_at_ms":1791200000000}
  *   header  X-Breaker-Signature: sha256=af9a4a973355861bf340577feca0cd2079325849014faaccc98b22d115d5da04
@@ -46,9 +46,9 @@ export const DEFAULT_SCHEDULE = '0 */2 * * * *'
 const breakerConfigSchema = z.object({
   /** Base URL of the breaker service, e.g. http://127.0.0.1:9090 */
   baseUrl: z.string(),
-  /** GET path returning the frozen heartbeat-status JSON (SPEC-P14 §5). */
+  /** GET path returning the frozen heartbeat-status JSON (P14 §5). */
   statusPath: z.string().default('/api/heartbeat-status'),
-  /** POST path that accepts the dead-man's-switch trigger (SPEC-P14 §5). */
+  /** POST path that accepts the dead-man's-switch trigger (P14 §5). */
   triggerPath: z.string().default('/breaker/trigger'),
   /** Secret ID (CRE `runtime.getSecret`) / env var name (local runner) of the HMAC key. */
   armSecretId: z.string().default('BREAKER_ARM_SECRET'),
@@ -94,7 +94,7 @@ export type OnchainConfig = z.infer<typeof onchainConfigSchema>
 export type TelegramConfig = z.infer<typeof telegramConfigSchema>
 
 // ---------------------------------------------------------------------------
-// Heartbeat status (frozen breaker surface, SPEC-P14 §5)
+// Heartbeat status (frozen breaker surface, P14 §5)
 // ---------------------------------------------------------------------------
 
 export const guardianStatusSchema = z.object({
@@ -129,18 +129,18 @@ export function selectFiring(status: HeartbeatStatus, allowlist: string[] = []):
 }
 
 // ---------------------------------------------------------------------------
-// Trigger body + HMAC signature (frozen, SPEC-P14 §5)
+// Trigger body + HMAC signature (frozen, P14 §5)
 // ---------------------------------------------------------------------------
 
 /**
- * Body bytes exactly as frozen in SPEC-P14 §5 (key order matters: it is signed).
+ * Body bytes exactly as frozen in P14 §5 (key order matters: it is signed).
  * `{"guardian":"0x…","reason":"…","requested_at_ms":n}`
  */
 export function buildTriggerBody(guardian: string, reason: string, requestedAtMs: number): string {
   return JSON.stringify({ guardian, reason, requested_at_ms: requestedAtMs })
 }
 
-/** `sha256=<hex HMAC_SHA256(secret, raw request body bytes)>` (SPEC-P14 §5). */
+/** `sha256=<hex HMAC_SHA256(secret, raw request body bytes)>` (P14 §5). */
 export function signTriggerBody(secret: string, body: string): string {
   const mac = hmac(sha256, new TextEncoder().encode(secret), new TextEncoder().encode(body))
   return `sha256=${bytesToHex(mac)}`

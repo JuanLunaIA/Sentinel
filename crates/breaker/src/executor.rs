@@ -1,4 +1,4 @@
-//! Defensive reduce execution (`SPEC-P14.md` §4).
+//! Defensive reduce execution (`P14` §4).
 //!
 //! # Plan
 //!
@@ -53,7 +53,7 @@ use crate::snapshot::{LivePerplSource, SourcedSnapshot};
 use crate::trigger::{guardian_key, unix_ms};
 
 /// Frozen alert literal; the message starts with an emoji prefix followed by
-/// this text (`SPEC-P14` §4).
+/// this text (`P14` §4).
 pub const ALERT_PREFIX: &str = "BREAKER: Sentinel unresponsive";
 
 /// Emoji prefixed to every breaker alert message.
@@ -107,7 +107,7 @@ impl ActionStatus {
     }
 }
 
-/// One breaker-journal line (`SPEC-P14` §4). Decimals serialize as JSON
+/// One breaker-journal line (`P14` §4). Decimals serialize as JSON
 /// numbers (`fraction`, `size`, `notional_usd`) so plain readers can compare
 /// them arithmetically; `null` only when genuinely unknown.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

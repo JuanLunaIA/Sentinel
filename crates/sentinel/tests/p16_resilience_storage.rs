@@ -1,4 +1,4 @@
-//! SPEC-P16 §2 resilience: audit-journal degrade mode, anchor heartbeat
+//! P16 §2 resilience: audit-journal degrade mode, anchor heartbeat
 //! status file + RPC-outage drain, and websocket reconnect storms
 //! (agent L, storage+feed).
 //!
@@ -303,7 +303,7 @@ async fn deploy_contract(client: &reqwest::Client, url: &str) -> String {
 }
 
 // ===========================================================================
-// (a) AuditJournal degrade mode (`SPEC-P16` §2)
+// (a) AuditJournal degrade mode (`P16` §2)
 // ===========================================================================
 
 /// Minimal `MakeWriter` for `tracing_subscriber` that collects formatted
@@ -484,7 +484,7 @@ fn audit_degrade_persist_failure_keeps_flow_recovers_in_order_and_alarms_once() 
 }
 
 // ===========================================================================
-// (b) Anchor heartbeat status file + RPC outage drain (`SPEC-P16` §2)
+// (b) Anchor heartbeat status file + RPC outage drain (`P16` §2)
 // ===========================================================================
 
 /// Minimal config pointed at a local anvil (all `Config` invariants
@@ -728,7 +728,7 @@ async fn anchor_survives_rpc_outage_then_drains_after_restore_and_writes_status(
 }
 
 // ===========================================================================
-// (c) WebSocket reconnect storm (`SPEC-P16` §2)
+// (c) WebSocket reconnect storm (`P16` §2)
 // ===========================================================================
 
 /// Minimal core `Market` for socket-layer tests (SPEC v1.0.1 §11c).

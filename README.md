@@ -409,7 +409,7 @@ export function selectFiring(status: HeartbeatStatus, allowlist: string[] = []):
     .sort((a, b) => b.age_secs - a.age_secs || a.address.localeCompare(b.address))
 }
 
-/** `sha256=<hex HMAC_SHA256(secret, raw request body bytes)>` (SPEC-P14 §5). */
+/** `sha256=<hex HMAC_SHA256(secret, raw request body bytes)>` (P14 §5). */
 export function signTriggerBody(secret: string, body: string): string {
   const mac = hmac(sha256, new TextEncoder().encode(secret), new TextEncoder().encode(body))
   return `sha256=${bytesToHex(mac)}`

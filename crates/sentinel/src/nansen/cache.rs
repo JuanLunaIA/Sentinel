@@ -1,6 +1,6 @@
 //! TTL cache for paid Nansen responses (cost control).
 //!
-//! Frozen by `SPEC-P09.md` §3.3 — hand-rolled (no moka), fully deterministic
+//! Frozen by `P09` §3.3 — hand-rolled (no moka), fully deterministic
 //! with caller-supplied `now_ms`.
 //!
 //! **P09 status:** implemented (`endpoints` agent); interfaces frozen.

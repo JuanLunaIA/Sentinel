@@ -1,4 +1,4 @@
-//! Position snapshot sourcing, in the frozen order (`SPEC-P14.md` §4):
+//! Position snapshot sourcing, in the frozen order (`P14` §4):
 //!
 //! 1. **live Perpl REST** when `PERPL_API_KEY`/`PERPL_API_URL` are present
 //!    (signed `GET /v1/trading/positions` + public context/ticker for the

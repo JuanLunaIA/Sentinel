@@ -3,7 +3,7 @@
 //! scenario's decision reason must cite that netflow while staying grounded.
 //!
 //! This is the "SM context visibly changes a strategy decision" artifact from
-//! SPEC-P09 §1: `nansen::smart_money_context` produces the same
+//! P09 §1: `nansen::smart_money_context` produces the same
 //! `SmartMoneyContext` consumed here — the linkage is type-checked by the
 //! constructor and asserted end-to-end by this test.
 

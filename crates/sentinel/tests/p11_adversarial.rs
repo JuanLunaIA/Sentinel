@@ -1,8 +1,8 @@
 //! P11 adversarial verification — verifier-owned, black box over the frozen
-//! public API (`SPEC-P11.md` §10, verifier column).
+//! public API (`P11` §10, verifier column).
 //!
 //! This file never inspects the writers' implementation bodies; every
-//! assertion is derived from `SPEC-P11.md` plus deterministic probing of the
+//! assertion is derived from `P11` plus deterministic probing of the
 //! public API. No network, no git, independent clock, no new dependencies.
 //!
 //! Coverage:
@@ -48,7 +48,7 @@ use sentinel_core::types::{AccountState, ExecutionMode, Market, MarketId, Positi
 /// Independent wall clock for every handler/queue call (epoch ms).
 const NOW_MS: u64 = 1_764_000_000_000;
 
-/// Telegram MarkdownV2 reserved set, `SPEC-P11.md` §4 (19 characters,
+/// Telegram MarkdownV2 reserved set, `P11` §4 (19 characters,
 /// including the backslash itself).
 const RESERVED: &[char] = &[
     '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!', '\\',
@@ -184,7 +184,7 @@ async fn test_ctx(dir: &Path) -> BotContext {
 }
 
 /// Independent expectation for MarkdownV2 escaping: prefix every reserved
-/// char with one backslash (`SPEC-P11.md` §4).
+/// char with one backslash (`P11` §4).
 fn escape_expected(input: &str) -> String {
     let mut out = String::new();
     for c in input.chars() {
@@ -343,7 +343,7 @@ fn parse_policy_set_spacing() {
 
 #[test]
 fn parse_close_fraction_zero_shape() {
-    // SPEC-P11 verifier corpus: `/close 32 0` may parse; if it does, it must
+    // P11 verifier corpus: `/close 32 0` may parse; if it does, it must
     // be exactly this shape (downstream validation rejects it, see
     // `handler_close_fraction_zero_rejected_downstream`).
     let parsed = parse("/close 32 0");
@@ -368,7 +368,7 @@ fn parse_close_fraction_zero_shape() {
 #[test]
 fn parse_whitespace_edges_pinned() {
     // PINNED (probed): leading whitespace before `/` is tolerated (treated as
-    // "extra whitespace", SPEC-P11 §3) and trailing whitespace is ignored;
+    // "extra whitespace", P11 §3) and trailing whitespace is ignored;
     // `//status` is NOT a command.
     assert_eq!(parse("  /status"), Some(Command::Status));
     assert_eq!(parse("/status  "), Some(Command::Status));

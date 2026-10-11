@@ -2,7 +2,7 @@
 # ==========================================================================
 # Sentinel P06 — crash rehearsal (the golden-path demo).
 #
-# Replays tests/fixtures/perpl/crash-scenario.jsonl (SPEC-P06.md §7): an ETH
+# Replays tests/fixtures/perpl/crash-scenario.jsonl (P06 §7): an ETH
 # long sliding 30 % → 6 % distance to liquidation in ~80 s of wall time
 # (600 s of logical market time), DRY_RUN executor, zero manual steps.
 #

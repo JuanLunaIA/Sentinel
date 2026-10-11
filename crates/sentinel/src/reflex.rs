@@ -6,7 +6,7 @@
 //! actions; the pipeline executes them.
 //!
 //! Determinism: given the same state, config and `now_ms`, [`decide`] returns
-//! the same plan — the replay contract in `SPEC-P06.md` §7 relies on this.
+//! the same plan — the replay contract in `P06` §7 relies on this.
 
 use rust_decimal::Decimal;
 use sentinel_core::order::{OrderRequest, reduce_by_fraction};
@@ -93,7 +93,7 @@ pub fn intent_fraction(intent: &Intent) -> Option<Decimal> {
 /// `quality` is the feed freshness at evaluation time. Positions without a
 /// market entry or without a derivable distance are skipped with a warning
 /// (they cannot be classified safely).
-#[allow(clippy::too_many_arguments)] // decision context is explicit by design (SPEC-P06 §4)
+#[allow(clippy::too_many_arguments)] // decision context is explicit by design (P06 §4)
 pub fn decide(
     state: &AccountState,
     markets: &[Market],

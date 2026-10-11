@@ -1,14 +1,14 @@
 //! P13 adversarial verification — independent black-box corpus for the P13
-//! backtester (`crates/sentinel/src/sim/*`), written from SPEC-P13 only.
+//! backtester (`crates/sentinel/src/sim/*`), written from P13 only.
 //!
 //! The verifier never read the writer's engine sources. Oracle of record:
 //! `tests/fixtures/p13/oracle.py` (Python `decimal`, hand-verified pins),
-//! which recomputes the frozen SPEC-P13 §5 accounting from the scenario
+//! which recomputes the frozen P13 §5 accounting from the scenario
 //! files; the pinned expectations in `tests/fixtures/p13/expected/*.json`
 //! are live-reproduced by that script from inside this suite.
 //!
 //! Coverage:
-//! - **Conservation** (SPEC-P13 §5): `capital_saved_usd == baseline_loss_usd
+//! - **Conservation** (P13 §5): `capital_saved_usd == baseline_loss_usd
 //!   - sentinel_loss_usd` EXACT Decimal on every scenario of the verifier
 //!   corpus, plus the sibling corpus in `tests/scenarios/` when present.
 //! - **Oracle pins**: three+ hand-built mini-scenarios re-computed by the
@@ -17,7 +17,7 @@
 //!   scenario are byte-identical after dropping `metrics`.
 //! - **Cooldown** (§4): a retest strictly inside `cooldown_ms` stays silent;
 //!   a gap exactly EQUAL to `cooldown_ms` counts as elapsed and fires
-//!   (SPEC-P04 §3.4 step 2, pinned against the implementation).
+//!   (P04 §3.4 step 2, pinned against the implementation).
 //! - **Label honesty** (§3/§8): `tests/scenarios/*.json` — recorded/
 //!   reconstructed carry a note naming an existing source fixture; synthetic
 //!   files never cite fixtures.
@@ -124,7 +124,7 @@ fn run(path: &Path) -> SimReport {
     engine::run(&scenario).unwrap_or_else(|e| panic!("engine::run {}: {e}", path.display()))
 }
 
-/// The report with `metrics` removed (SPEC-P13 §6 determinism section).
+/// The report with `metrics` removed (P13 §6 determinism section).
 fn report_value(report: &SimReport) -> Value {
     let mut value = serde_json::to_value(report).expect("SimReport serializes");
     if let Value::Object(map) = &mut value {
@@ -171,11 +171,11 @@ fn check_conservation(report: &SimReport, tag: &str) {
     assert_eq!(
         report.capital_saved_usd,
         report.baseline_loss_usd - report.sentinel_loss_usd,
-        "{tag}: conservation identity capital_saved == baseline_loss - sentinel_loss (SPEC-P13 §5)"
+        "{tag}: conservation identity capital_saved == baseline_loss - sentinel_loss (P13 §5)"
     );
     assert_eq!(
         report.policy_violations, 0,
-        "{tag}: policy_violations must be 0 (SPEC-P13 §6)"
+        "{tag}: policy_violations must be 0 (P13 §6)"
     );
 }
 
@@ -222,7 +222,7 @@ fn conservation_identity_on_own_corpus() {
             "{name}: scenario_id must match the file stem"
         );
         assert_eq!(report.label, "synthetic", "{name}: corpus label");
-        // liquidations_avoided is pinned to the definition (SPEC-P13 §5).
+        // liquidations_avoided is pinned to the definition (P13 §5).
         assert_eq!(
             report.liquidations_avoided,
             report.baseline_liquidations - report.sentinel_liquidations,
@@ -524,13 +524,13 @@ fn label_honesty_scenarios_dir() {
     let dir = repo_root().join("tests/scenarios");
     assert!(
         dir.is_dir(),
-        "tests/scenarios/ (sibling corpus, SPEC-P13 §2/§8) is missing — pending sibling artifact"
+        "tests/scenarios/ (sibling corpus, P13 §2/§8) is missing — pending sibling artifact"
     );
     let names = json_files(&dir);
     assert_eq!(
         names.len(),
         14,
-        "SPEC-P13 §8 fixes 14 scenario files; found {} in {}",
+        "P13 §8 fixes 14 scenario files; found {} in {}",
         names.len(),
         dir.display()
     );
@@ -614,7 +614,7 @@ fn tamper_extra_tick_changes_report() {
 
     // The base path never liquidates; the extra tick at 2450 crosses the
     // 2500 liquidation price, so the baseline must lose the whole collateral
-    // (SPEC-P13 §5) and every derived number must follow — no constant report.
+    // (P13 §5) and every derived number must follow — no constant report.
     assert_eq!(base.ticks, 1, "base: one tick");
     assert_eq!(extra.ticks, 2, "extra: two ticks");
     assert_eq!(base.baseline_liquidations, 0, "base: no liquidation");
@@ -874,15 +874,15 @@ fn aggregate_and_render_md_frozen_literal() {
     let md = report::render_md(&reports, &agg);
     assert!(
         md.contains("Across 3 scenarios representing $"),
-        "frozen literal (SPEC-P13 §6) missing its opening; md was:\n{md}"
+        "frozen literal (P13 §6) missing its opening; md was:\n{md}"
     );
     assert!(
         md.contains("notional, Sentinel preserved $") && md.contains("); baseline liquidations: "),
-        "frozen literal (SPEC-P13 §6) shape changed; md was:\n{md}"
+        "frozen literal (P13 §6) shape changed; md was:\n{md}"
     );
     assert!(
         md.contains(" -> with Sentinel: "),
-        "frozen literal (SPEC-P13 §6) arrow missing; md was:\n{md}"
+        "frozen literal (P13 §6) arrow missing; md was:\n{md}"
     );
     for report in &reports {
         assert!(
@@ -902,10 +902,10 @@ fn repo_scenarios_conservation_and_acceptance() {
     let dir = repo_root().join("tests/scenarios");
     assert!(
         dir.is_dir(),
-        "tests/scenarios/ (sibling corpus, SPEC-P13 §2/§8) is missing — pending sibling artifact"
+        "tests/scenarios/ (sibling corpus, P13 §2/§8) is missing — pending sibling artifact"
     );
     let names = json_files(&dir);
-    assert_eq!(names.len(), 14, "SPEC-P13 §8 fixes 14 scenarios");
+    assert_eq!(names.len(), 14, "P13 §8 fixes 14 scenarios");
 
     let mut reports: Vec<SimReport> = Vec::new();
     let mut seen_ids = BTreeSet::new();
@@ -927,7 +927,7 @@ fn repo_scenarios_conservation_and_acceptance() {
     assert_eq!(agg.scenarios, 14);
     assert!(
         agg.total_saved_usd > Decimal::ZERO,
-        "aggregate saved must be > 0 across the 14 scenarios (SPEC-P13 §8), got {}",
+        "aggregate saved must be > 0 across the 14 scenarios (P13 §8), got {}",
         agg.total_saved_usd
     );
     assert_eq!(
@@ -949,7 +949,7 @@ fn backtest_bin_all_scenarios_under_60s() {
     );
     let out = tempfile::tempdir().expect("tempdir");
     // `--out` is a file stem: the bin writes `<stem>.json` + `<stem>.md`
-    // (SPEC-P13 §7: `--out docs/backtest-report` writes `.json` + `.md`).
+    // (P13 §7: `--out docs/backtest-report` writes `.json` + `.md`).
     let stem = out.path().join("p13-verify");
     let start = Instant::now();
     let status = Command::new(env!("CARGO_BIN_EXE_backtest"))
@@ -962,7 +962,7 @@ fn backtest_bin_all_scenarios_under_60s() {
     assert!(status.success(), "backtest --scenario all must exit 0");
     assert!(
         elapsed.as_secs_f64() < 60.0,
-        "SPEC-P13 §7 acceptance: all scenarios must run in < 60 s, took {:?}",
+        "P13 §7 acceptance: all scenarios must run in < 60 s, took {:?}",
         elapsed
     );
     let json_path = stem.with_extension("json");

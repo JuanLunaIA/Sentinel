@@ -1,5 +1,5 @@
 /**
- * Sentinel dead-man's-switch — CRE workflow entry point (SPEC-P14 §6).
+ * Sentinel dead-man's-switch — CRE workflow entry point (P14 §6).
  *
  * `cre workflow simulate .` / `cre workflow deploy` compile this file plus the
  * modules it imports into a WASM binary and run it:

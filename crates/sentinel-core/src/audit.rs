@@ -4,12 +4,12 @@
 //! **before** the action it authorizes and appended with its outcome after
 //! (P00 invariant #2: audit-before-action). Entries form a SHA-256 hash
 //! chain whose head is periodically anchored on Monad by the
-//! `SentinelAuditAnchor` contract. Format frozen in `SPEC-P10.md` §2/§3.
+//! `SentinelAuditAnchor` contract. Format frozen in `P10` §2/§3.
 //!
 //! `std::fs` is used here deliberately (journal persistence); the crate
 //! still has **zero network dependencies** (P00 invariant #4).
 //!
-//! # Degrade mode (`SPEC-P16` §2)
+//! # Degrade mode (`P16` §2)
 //!
 //! Persistence failures (disk full, read-only directory) never block the
 //! decision flow: [`AuditJournal`] keeps the entry in memory, sets
@@ -22,7 +22,7 @@
 //! [`verify_chain`] are unchanged.
 //!
 //! **Status (P10):** implemented by agent `journal-core`; format frozen in
-//! `SPEC-P10.md` §2/§3. Degrade mode added by agent L (P16).
+//! `P10` §2/§3. Degrade mode added by agent L (P16).
 
 use std::fs;
 use std::fs::OpenOptions;
@@ -88,7 +88,7 @@ pub enum Trigger {
     System,
 }
 
-/// One entry of the tamper-evident decision journal (`SPEC-P10` §2).
+/// One entry of the tamper-evident decision journal (`P10` §2).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AuditEntry {
     /// Monotonically increasing sequence number (per journal).
@@ -147,7 +147,7 @@ impl AuditEntry {
         entry
     }
 
-    /// Recompute this entry's hash from its contents (`SPEC-P10` §2):
+    /// Recompute this entry's hash from its contents (`P10` §2):
     ///
     /// `hex(sha256(raw32(prev_hash) ++ canonical_json(entry minus
     /// {prev_hash, entry_hash})))`.
@@ -379,15 +379,15 @@ pub struct OutcomeRecord {
     pub execution: Value,
 }
 
-/// Stateful append-only journal with crash-safe resume (`SPEC-P10` §3) and
-/// in-memory degrade mode on persistence failure (`SPEC-P16` §2).
+/// Stateful append-only journal with crash-safe resume (`P10` §3) and
+/// in-memory degrade mode on persistence failure (`P16` §2).
 #[derive(Debug)]
 pub struct AuditJournal {
     dir: PathBuf,
     seq: u64,
     last_hash: String,
     /// Entries accepted while persistence was failing, in seq order — they
-    /// live only in memory until a later append flushes them (`SPEC-P16` §2).
+    /// live only in memory until a later append flushes them (`P16` §2).
     pending: Vec<AuditEntry>,
     /// True while `pending` holds unpersisted entries (degraded); one
     /// `tracing::error!` is raised per false→true transition.
@@ -430,7 +430,7 @@ impl AuditJournal {
     }
 
     /// True while persistence is failing and entries are queued in memory
-    /// only (`SPEC-P16` §2). Cleared by the next fully successful append.
+    /// only (`P16` §2). Cleared by the next fully successful append.
     pub fn degraded(&self) -> bool {
         self.degraded
     }
@@ -439,7 +439,7 @@ impl AuditJournal {
     ///
     /// The entry lands in the day file named by `ts` (UTC). On a persistence
     /// failure the journal degrades instead of failing the caller
-    /// (`SPEC-P16` §2): the entry is kept in memory, [`Self::degraded`] is
+    /// (`P16` §2): the entry is kept in memory, [`Self::degraded`] is
     /// set, and the next append retries the write — see [`Self::commit_entry`].
     ///
     /// # Errors
@@ -468,7 +468,7 @@ impl AuditJournal {
     /// Journal the outcome of a previously recorded intent.
     ///
     /// Degrades like [`Self::record_intent`] on persistence failure
-    /// (`SPEC-P16` §2).
+    /// (`P16` §2).
     ///
     /// # Errors
     /// `JournalError::Format` only when the sequence space is exhausted;
@@ -497,7 +497,7 @@ impl AuditJournal {
     ///
     /// Reads the journal's current day file (the latest `journal-*.jsonl`)
     /// and only it; blank/unparseable lines are skipped. When the journal is
-    /// degraded (`SPEC-P16` §2), the in-memory tail that has not reached
+    /// degraded (`P16` §2), the in-memory tail that has not reached
     /// disk yet is appended after the persisted entries, so readers always
     /// see the complete journal.
     ///
@@ -541,7 +541,7 @@ impl AuditJournal {
     /// Append `entry` to the day file for `ts` and advance the head.
     ///
     /// Persistence failures **degrade** the journal instead of failing the
-    /// caller (`SPEC-P16` §2): the entry is queued in memory (with one
+    /// caller (`P16` §2): the entry is queued in memory (with one
     /// `tracing::error!` on the transition), the in-memory head still
     /// advances, and the next append retries persisting the queued entries
     /// first — in seq order — before the new one. A later fully successful
@@ -1291,7 +1291,7 @@ mod tests {
         assert!(matches!(err, Err(JournalError::Io(_))), "{err:?}");
     }
 
-    // ---- degrade mode (SPEC-P16 §2) --------------------------------------
+    // ---- degrade mode (P16 §2) --------------------------------------
 
     /// chmod `dir` to `mode` (unix-only; the degrade tests need EACCES).
     #[cfg(unix)]
@@ -1325,7 +1325,7 @@ mod tests {
 
     /// Persistence failure degrades to memory (flag set, flow unblocked,
     /// reads complete); the next append retries and both the degraded
-    /// entries and the new one land on disk, in order (`SPEC-P16` §2).
+    /// entries and the new one land on disk, in order (`P16` §2).
     ///
     /// The read-only directory only blocks *creating* a day file (appending
     /// to an existing one needs no directory write bit — POSIX), so the

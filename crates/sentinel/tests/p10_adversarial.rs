@@ -1,7 +1,7 @@
-//! P10 adversarial verification — independent black-box corpus (SPEC-P10.md
+//! P10 adversarial verification — independent black-box corpus (P10
 //! §2–§10).
 //!
-//! Written from `SPEC-P10.md` + the frozen public API only: the sibling
+//! Written from `P10` + the frozen public API only: the sibling
 //! implementations (`sentinel-core/src/audit.rs`,
 //! `sentinel/src/{anchor,api,bin/audit_verify}.rs`) are treated as black
 //! boxes. Coverage:
@@ -29,7 +29,7 @@
 //!   top of the range refuses to increment.
 //! - **anchor surface**: `merkle_root` (0/1/2/3/4 leaves, odd-tail
 //!   promotion) and `risk_state_hash` pinned against independently
-//!   precomputed python `hashlib` vectors (SPEC-P10 §5).
+//!   precomputed python `hashlib` vectors (P10 §5).
 //!
 //! The python oracle requires `python3` on PATH (or `$PYTHON`).
 
@@ -51,7 +51,7 @@ use serde_json::{Value, json};
 const ACCOUNT: &str = "0x0000000000000000000000000000000000000007";
 
 /// Pinned fixture vector, precomputed with python `hashlib` from a direct
-/// model of SPEC-P10 §2 (fixture: intent i=0 @02:00Z, outcome i=0 @02:00Z,
+/// model of P10 §2 (fixture: intent i=0 @02:00Z, outcome i=0 @02:00Z,
 /// intent i=2 @02:10Z; parts `{"account":…}` + `{"now_ms":1700000000000+i}`).
 const PINNED_IH_0: &str = "68bb2ea649fc047d7d8b28b9ab3af758e26c1855ab872c502ad38a3c5f3285d1";
 const PINNED_IH_2: &str = "82d7b95c25d9c8e638fb3f78509a0113bb669b9537cbbdfec5f511244e770799";
@@ -72,7 +72,7 @@ fn ts(rfc3339: &str) -> DateTime<Utc> {
         .with_timezone(&Utc)
 }
 
-/// The input parts fed to a decision for fixture index `i` (SPEC-P10 §8 shape).
+/// The input parts fed to a decision for fixture index `i` (P10 §8 shape).
 fn parts_for(i: i64) -> Vec<Value> {
     vec![
         json!({"account": ACCOUNT}),
@@ -753,7 +753,7 @@ fn u64_max_seq_boundary_guard() {
 #[test]
 fn anchor_merkle_root_and_risk_state_hash_pin_independent_vectors() {
     // merkle_root: pairwise sha256(left‖right) over raw digests, odd tail
-    // promoted, single ⇒ itself, empty ⇒ 64 zeros (SPEC-P10 §5). Vectors
+    // promoted, single ⇒ itself, empty ⇒ 64 zeros (P10 §5). Vectors
     // precomputed with python hashlib from the pinned fixture hashes.
     assert_eq!(merkle_root(&[]), "0".repeat(64), "empty root");
     assert_eq!(

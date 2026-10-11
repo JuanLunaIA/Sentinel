@@ -1,11 +1,11 @@
 //! Minimal health surface — `GET /healthz` on `PORT` (default 8080).
 //!
-//! Frozen by `SPEC-P06.md` §3: JSON `{uptime_s, feed_age_s, mode, version}`;
+//! Frozen by `P06` §3: JSON `{uptime_s, feed_age_s, mode, version}`;
 //! `feed_age_s` is `null` until the first feed event. The pipeline touches
 //! [`HealthState::touch_feed`] on every applied event; the dashboard (P15)
 //! extends this server.
 //!
-//! **P06 status:** implemented; interfaces frozen per `SPEC-P06.md` §3.
+//! **P06 status:** implemented; interfaces frozen per `P06` §3.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};

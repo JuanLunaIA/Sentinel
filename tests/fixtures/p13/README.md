@@ -1,13 +1,13 @@
 # P13 verifier corpus (`tests/fixtures/p13/`)
 
-Owned by the P13 verifier (Agent C). Written from `SPEC-P13.md` only; the
+Owned by the P13 verifier (Agent C). Written from `P13` only; the
 writer's engine sources were not read. Everything here is offline and
 deterministic.
 
 ## Layout
 
 - `oracle.py` — independent Python-`decimal` recomputation of the frozen
-  SPEC-P13 §5 accounting (baseline liquidation walk, sentinel loss,
+  P13 §5 accounting (baseline liquidation walk, sentinel loss,
   conservation). Implements the P04 §3.4 reflex state machine and the P05 §3
   policy precedence the P13 spec defers to. Emits JSON per scenario:
   `python3 oracle.py scenarios/<name>.json`.
@@ -17,7 +17,7 @@ deterministic.
     `o3-short-orange-red-blocked` — the three oracle checkpoints (long
     defense cost, recorded CLOSE before liquidation, short buy-to-close).
   - `cd1-cooldown-inside` / `cd2-cooldown-boundary` — cooldown window and
-    the exact-equality boundary (equality elapses per SPEC-P04 §3.4 step 2).
+    the exact-equality boundary (equality elapses per P04 §3.4 step 2).
   - `dust-below-min-size`, `zero-size-position` — sizing/flat boundaries.
   - `policy-notional-cap`, `policy-approval-skip`, `policy-daily-cap` —
     policy gate skip/deny recording.

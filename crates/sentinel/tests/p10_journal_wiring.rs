@@ -1,6 +1,6 @@
 //! P10 wiring test (parent-owned): the crash-fixture replay journals an
 //! intent/outcome PAIR for every intent-bearing decision, and the resulting
-//! file is a valid hash chain (audit-before-action, SPEC-P10 §8).
+//! file is a valid hash chain (audit-before-action, P10 §8).
 
 use std::path::PathBuf;
 use std::sync::Arc;

@@ -1,6 +1,6 @@
 //! Extract and validate a [`Decision`] from raw LLM output.
 //!
-//! Frozen by `SPEC-P07.md` §4: strip the thinking trace, string-aware balanced
+//! Frozen by `P07` §4: strip the thinking trace, string-aware balanced
 //! `{…}` scan, tolerant serde parse, schema validation — plus the single
 //! repair nudge text.
 //!
@@ -145,7 +145,7 @@ pub fn parse_decision(raw: &str, allowed_markets: &[MarketId]) -> Result<Decisio
     Ok(decision)
 }
 
-/// The single repair follow-up message (`SPEC-P07.md` §4).
+/// The single repair follow-up message (`P07` §4).
 pub fn repair_nudge(bad_raw: &str) -> String {
     format!(
         "Return ONLY the JSON object matching this schema: {SCHEMA_DOC}. Previous output was: {bad_raw}"

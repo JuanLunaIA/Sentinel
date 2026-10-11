@@ -65,7 +65,7 @@ function selfTest(): boolean {
   const wantSig = 'sha256=af9a4a973355861bf340577feca0cd2079325849014faaccc98b22d115d5da04'
   const okBody = body === wantBody
   const okSig = signature === wantSig
-  process.stdout.write(`[self-test] frozen SPEC-P14 §5 HMAC vector\n`)
+  process.stdout.write(`[self-test] frozen P14 §5 HMAC vector\n`)
   process.stdout.write(`[self-test] body      match=${okBody}\n`)
   process.stdout.write(`[self-test] signature match=${okSig} (${signature})\n`)
   return okBody && okSig

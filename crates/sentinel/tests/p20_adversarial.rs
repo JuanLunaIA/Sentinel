@@ -1,11 +1,11 @@
-//! P20 adversarial verification — verifier-owned (SPEC-P20 §5), black box over
+//! P20 adversarial verification — verifier-owned (P20 §5), black box over
 //! the landed P20 public surface.
 //!
-//! Every expectation below is derived from `SPEC-P20.md` and the frozen
+//! Every expectation below is derived from `P20` and the frozen
 //! interfaces it consumes (`brain::engine`, the policy gate, the audit chain,
 //! the notify kinds); the writers' implementation bodies are never inspected.
 //!
-//! Coverage map (test -> SPEC-P20 clause):
+//! Coverage map (test -> P20 clause):
 //! - §0/§3 engine absent ⇒ zero consult activity: `engine_none_*`,
 //!   `pipeline_engine_none_*`;
 //! - §2a Yellow entry / §2 rate limit (suppression inside, re-admission past
@@ -394,7 +394,7 @@ fn fast_pacing() {
 // ---------------------------------------------------------------------------
 
 /// An engine-less task must be inert: it returns immediately, consumes no
-/// queued trigger, emits no order and no alert (SPEC-P20 §0/§3).
+/// queued trigger, emits no order and no alert (P20 §0/§3).
 #[tokio::test]
 async fn engine_none_consult_task_is_inert_and_consumes_nothing() {
     let (trigger_tx, trigger_rx) = mpsc::channel::<ConsultTrigger>(4);
@@ -454,7 +454,7 @@ async fn engine_none_consult_task_is_inert_and_consumes_nothing() {
 /// Two YellowEntry triggers for market 32 inside `STRATEGY_MIN_INTERVAL_SECS`
 /// must produce exactly one consult; markets 20/26 are independent and each
 /// fire once. Trailing firms act as FIFO sentinels proving the duplicate was
-/// processed and suppressed (SPEC-P20 §2/§5).
+/// processed and suppressed (P20 §2/§5).
 #[tokio::test]
 async fn yellow_entry_fires_exactly_one_consult_per_market_and_window() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -587,7 +587,7 @@ async fn yellow_entry_fires_exactly_one_consult_per_market_and_window() {
 
 /// The window is only a window: inside `STRATEGY_MIN_INTERVAL_SECS` repeats
 /// are refused, and once the interval elapses the next YellowEntry admits
-/// again (SPEC-P20 §2). The interval is shortened to 1 s here; the wall-clock
+/// again (P20 §2). The interval is shortened to 1 s here; the wall-clock
 /// window is exercised with real sleeps.
 #[tokio::test]
 async fn yellow_entry_suppresses_inside_and_readmits_after_the_window() {
@@ -663,7 +663,7 @@ async fn yellow_entry_suppresses_inside_and_readmits_after_the_window() {
 
 /// With the hourly budget lowered via the engine seam, the over-budget consult
 /// returns the engine's synthetic ESCALATE: the task alerts it, never emits an
-/// order, and never calls the provider (SPEC-P20 §2, SPEC-P08 §3).
+/// order, and never calls the provider (P20 §2, P08 §3).
 #[tokio::test]
 async fn budget_breach_escalates_with_alert_and_no_order() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -758,8 +758,8 @@ async fn budget_breach_escalates_with_alert_and_no_order() {
 // ---------------------------------------------------------------------------
 
 /// An allowed reduce decision must reach the pipeline as a reduce-only
-/// `ApprovedOrder` sized by truncation to the lot grid (SPEC-P20 §2.4,
-/// SPEC-P05 §4): 1.7777 base units → 1.777 at size_decimals 3.
+/// `ApprovedOrder` sized by truncation to the lot grid (P20 §2.4,
+/// P05 §4): 1.7777 base units → 1.777 at size_decimals 3.
 #[tokio::test]
 async fn allowed_reduce_sends_reduce_only_quantized_approved_order() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -830,7 +830,7 @@ async fn allowed_reduce_sends_reduce_only_quantized_approved_order() {
 }
 
 /// The same allowed reduce on a SHORT position closes the short leg
-/// (SPEC-P20 §2.4 via the frozen reduce-only sizing, SPEC-P05 §4).
+/// (P20 §2.4 via the frozen reduce-only sizing, P05 §4).
 #[tokio::test]
 async fn allowed_reduce_on_a_short_closes_the_short_leg() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -942,7 +942,7 @@ async fn approved_orders_carry_distinct_decision_ids() {
 
 /// A reduce above `REQUIRE_APPROVAL_ABOVE_USD` must journal + alert without a
 /// keyboard from the daemon path and must NOT emit an ApprovedOrder
-/// (SPEC-P20 §2.4). Notional: 1.7 × 1900 = 3230 > 2500 threshold.
+/// (P20 §2.4). Notional: 1.7 × 1900 = 3230 > 2500 threshold.
 #[tokio::test]
 async fn needs_approval_alerts_without_order() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -992,7 +992,7 @@ async fn needs_approval_alerts_without_order() {
 }
 
 /// With the kill switch engaged every consult is policy-denied: alert + no
-/// order (SPEC-P20 §2.4 Deny branch).
+/// order (P20 §2.4 Deny branch).
 #[tokio::test]
 async fn kill_switch_denies_every_consult_without_order() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -1047,7 +1047,7 @@ async fn kill_switch_denies_every_consult_without_order() {
 
 /// A consulted decision journals a STRATEGY intent before the action and its
 /// outcome after; the pair sits on a chain `verify_chain` accepts
-/// (SPEC-P20 §2.3, SPEC-P10 §2).
+/// (P20 §2.3, P10 §2).
 #[tokio::test]
 async fn journal_strategy_pair_is_chain_verifiable() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -1148,7 +1148,7 @@ async fn journal_strategy_pair_is_chain_verifiable() {
 // ---------------------------------------------------------------------------
 
 /// With no Nansen client the consult still runs end-to-end and the prompt
-/// carries the frozen unavailable line (SPEC-P20 §2.2, SPEC-P07 §5).
+/// carries the frozen unavailable line (P20 §2.2, P07 §5).
 #[tokio::test]
 async fn sm_unavailable_without_nansen_still_consults() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -1195,7 +1195,7 @@ async fn sm_unavailable_without_nansen_still_consults() {
 // ---------------------------------------------------------------------------
 
 /// A post-reflex Orange reduce review consults the market it targeted
-/// (SPEC-P20 §2b).
+/// (P20 §2b).
 #[tokio::test]
 async fn post_reflex_reduce_trigger_fires_a_consult() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -1237,14 +1237,14 @@ async fn post_reflex_reduce_trigger_fires_a_consult() {
     shutdown(&shutdown_tx, handle).await;
 }
 
-/// The periodic review cadence default is the frozen 1800 s (SPEC-P20 §2c).
+/// The periodic review cadence default is the frozen 1800 s (P20 §2c).
 #[test]
 fn review_interval_default_is_frozen() {
     assert_eq!(DEFAULT_REVIEW_INTERVAL_SECS, 1800);
 }
 
 /// While every position is Green, periodic ticks must not consult
-/// (SPEC-P20 §2c: review runs "while any position >= Yellow").
+/// (P20 §2c: review runs "while any position >= Yellow").
 #[tokio::test]
 async fn periodic_review_skips_a_fully_green_portfolio() {
     let mock = Arc::new(MockProvider::canned_named("mock", vec![]));
@@ -1274,7 +1274,7 @@ async fn periodic_review_skips_a_fully_green_portfolio() {
     shutdown(&shutdown_tx, handle).await;
 }
 
-/// A Yellow position makes the next periodic tick consult it (SPEC-P20 §2c).
+/// A Yellow position makes the next periodic tick consult it (P20 §2c).
 #[tokio::test]
 async fn periodic_review_consults_while_yellow() {
     let mock = Arc::new(MockProvider::canned_named(
@@ -1315,7 +1315,7 @@ async fn periodic_review_consults_while_yellow() {
 /// Pipeline replay with no strategy receiver (default and explicit `None`)
 /// must stay byte-identical to itself, keep the legacy `consult_scheduled`
 /// announcement for Yellow entries, and never show strategy activity
-/// (SPEC-P20 §0/§3, §5).
+/// (P20 §0/§3, §5).
 #[tokio::test]
 async fn pipeline_engine_none_keeps_legacy_path_byte_identical() {
     fast_pacing();
@@ -1472,7 +1472,7 @@ async fn run_pipeline_once(
 
 /// `scripts/judge-demo.sh` must exist, be executable, pass `bash -n`, and carry
 /// the trap-based cleanup plus the frozen default port / healthz wait
-/// (SPEC-P20 §4). The full behavioral run is executed separately (transcript).
+/// (P20 §4). The full behavioral run is executed separately (transcript).
 #[test]
 fn judge_demo_script_satisfies_static_contract() {
     let script = repo_root().join("scripts/judge-demo.sh");

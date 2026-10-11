@@ -1,4 +1,4 @@
-//! Backtester CLI (SPEC-P13 §7): replays scenario files through the real
+//! Backtester CLI (P13 §7): replays scenario files through the real
 //! decision path ([`sentinel::sim::engine`]) and writes the JSON + Markdown
 //! report pair.
 //!
@@ -13,16 +13,16 @@
 //! `--mode replay`, `--out docs/backtest-report` (writes `<base>.json` and
 //! `<base>.md`).
 //!
-//! Exit codes (SPEC-P13 §7): `0` ok; `2` missing key/config (e.g. live-brain
+//! Exit codes (P13 §7): `0` ok; `2` missing key/config (e.g. live-brain
 //! without `QWEN_API_KEY`, unreadable scenarios directory, unknown flag);
 //! `1` internal error (scenario load/run/report failure).
 //!
 //! Replay mode is fully offline and deterministic: it never reads the wall
 //! clock, never touches the network, and writes no timestamps — the artifact
-//! JSON carries the per-scenario determinism view (metrics zeroed, SPEC-P13
+//! JSON carries the per-scenario determinism view (metrics zeroed, P13
 //! §6 excludes the latency percentiles from the determinism byte-compare).
 //!
-//! `--mode live-brain` (SPEC-P13 §7) is reserved for the curated
+//! `--mode live-brain` (P13 §7) is reserved for the curated
 //! [`LIVE_BRAIN_CURATED`] subset driven through real Qwen consults at the
 //! engine's consult points; the `sentinel::sim` engine currently exposes only
 //! the deterministic replay entry point, so a keyed run reports the missing
@@ -34,11 +34,11 @@ use std::process::ExitCode;
 use sentinel::sim::report::SimReport;
 use sentinel::sim::{engine, report, scenario};
 
-/// Default scenarios directory (SPEC-P13 §7).
+/// Default scenarios directory (P13 §7).
 const DEFAULT_SCENARIOS_DIR: &str = "tests/scenarios";
-/// Default output base; the CLI appends `.json` + `.md` (SPEC-P13 §7).
+/// Default output base; the CLI appends `.json` + `.md` (P13 §7).
 const DEFAULT_OUT: &str = "docs/backtest-report";
-/// Curated 3-scenario subset for `--mode live-brain` (SPEC-P13 §7): a crash, a
+/// Curated 3-scenario subset for `--mode live-brain` (P13 §7): a crash, a
 /// recovery and a data-quality scenario.
 const LIVE_BRAIN_CURATED: [&str; 3] = ["flash-crash-30", "recovery-v", "stale-feed-outage"];
 
@@ -122,7 +122,7 @@ impl Cli {
     }
 }
 
-/// Fatal CLI failure, mapped to the SPEC-P13 §7 exit codes.
+/// Fatal CLI failure, mapped to the P13 §7 exit codes.
 #[derive(Debug)]
 enum Failure {
     /// Missing key/config; exit code 2.
@@ -187,7 +187,7 @@ fn run_replay(cli: &Cli) -> Result<(), Failure> {
     write_outputs(cli, &reports)
 }
 
-/// `--mode live-brain` (SPEC-P13 §7): requires `QWEN_API_KEY` (exit 2 when
+/// `--mode live-brain` (P13 §7): requires `QWEN_API_KEY` (exit 2 when
 /// absent); the actual consult hook in the sim engine is not wired yet, so a
 /// keyed run fails loudly instead of silently degrading to replay.
 fn run_live_brain(cli: &Cli) -> Result<(), Failure> {
@@ -196,7 +196,7 @@ fn run_live_brain(cli: &Cli) -> Result<(), Failure> {
         .unwrap_or(false);
     if !key_present {
         return Err(Failure::Config(
-            "live-brain requires QWEN_API_KEY (SPEC-P13 §7); replay mode stays offline".to_string(),
+            "live-brain requires QWEN_API_KEY (P13 §7); replay mode stays offline".to_string(),
         ));
     }
     // Resolve the curated subset so a misconfigured directory still fails as
@@ -287,7 +287,7 @@ fn write_outputs(cli: &Cli, reports: &[SimReport]) -> Result<(), Failure> {
             .map_err(|err| Failure::Internal(format!("create {}: {err}", parent.display())))?;
     }
 
-    // Artifact determinism (SPEC-P13 §6): metrics are timing-dependent and
+    // Artifact determinism (P13 §6): metrics are timing-dependent and
     // excluded from the byte-compare, so artifacts carry the determinism view.
     let scenarios_json: Vec<serde_json::Value> = reports
         .iter()

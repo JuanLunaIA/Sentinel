@@ -1,10 +1,10 @@
-//! P08 adversarial verification — independent black-box corpus (SPEC-P08.md
+//! P08 adversarial verification — independent black-box corpus (P08
 //! §2–§5).
 //!
-//! Written from `SPEC-P08.md` + the frozen public API only: the sibling
+//! Written from `P08` + the frozen public API only: the sibling
 //! implementations (chain/engine/providers/harness) are treated as black
 //! boxes. Log output is deliberately not asserted — the corpus pins
-//! observable fields (per SPEC-P08 §8). Coverage:
+//! observable fields (per P08 §8). Coverage:
 //!
 //! - **breaker (`chain.rs`)**: strike table re-derived (fresh `Closed`;
 //!   strikes 1–2 stay `Closed`; strike 3 opens at exactly `now + open_ms`),
@@ -254,7 +254,7 @@ fn solo_engine(
     StrategyEngine::new(SharedMock::new(mock), min_interval_secs, dec(floor))
 }
 
-/// The full frozen synthetic budget outcome body (SPEC-P08 §3 step 2).
+/// The full frozen synthetic budget outcome body (P08 §3 step 2).
 fn assert_budget_synthetic(outcome: &ConsultOutcome) {
     assert_eq!(
         outcome.decision.action,
@@ -267,7 +267,7 @@ fn assert_budget_synthetic(outcome: &ConsultOutcome) {
     assert_eq!(outcome.decision.urgency, Urgency::Critical);
     assert_eq!(
         outcome.decision.reason, "strategy budget exceeded — human review required",
-        "reason string is frozen by SPEC-P08 §3 step 2"
+        "reason string is frozen by P08 §3 step 2"
     );
     assert_eq!(outcome.provider_used, "budget");
     assert_eq!(outcome.failover_from, None);
@@ -276,7 +276,7 @@ fn assert_budget_synthetic(outcome: &ConsultOutcome) {
 }
 
 // ===========================================================================
-// Breaker (SPEC-P08 §2) — state machine table re-derived from the spec.
+// Breaker (P08 §2) — state machine table re-derived from the spec.
 // ===========================================================================
 
 #[test]
@@ -430,7 +430,7 @@ async fn no_provider_names_itself_none_and_always_fails() {
 }
 
 // ===========================================================================
-// Engine failover (SPEC-P08 §3) — fields, breaker skip, half-open probes.
+// Engine failover (P08 §3) — fields, breaker skip, half-open probes.
 // ===========================================================================
 
 #[tokio::test]
@@ -702,7 +702,7 @@ async fn half_open_probe_is_single_and_no_retry_happens_within_the_consult() {
 
     // At until + 1 the half-open probe runs ONCE. Its output is unparseable:
     // the attempt follows the frozen flow (original + one repair nudge per
-    // SPEC-P08 §3.3 — the spec's `retry` vocabulary covers provider-level
+    // P08 §3.3 — the spec's `retry` vocabulary covers provider-level
     // re-attempts, and the nudge is a `repair call`) and the primary is NOT
     // re-probed afterwards: exactly one probe attempt, no further calls.
     let probe = engine
@@ -756,7 +756,7 @@ async fn half_open_probe_is_single_and_no_retry_happens_within_the_consult() {
 }
 
 // ===========================================================================
-// No-fallback P07 error-shape regression (SPEC-P08 §3 step 5).
+// No-fallback P07 error-shape regression (P08 §3 step 5).
 // ===========================================================================
 
 #[tokio::test]
@@ -792,7 +792,7 @@ async fn no_fallback_validation_failure_is_invalid_decision() {
         other => panic!("expected InvalidDecision, got {other:?}"),
     }
     // PROBED behavior: a validation failure burns the repair nudge like any
-    // parse error (repair, then re-validate) — exactly 2 calls. SPEC-P08
+    // parse error (repair, then re-validate) — exactly 2 calls. P08
     // does not freeze the count; pinned here so drift either way fails loudly.
     assert_eq!(
         mock.calls().len(),
@@ -838,7 +838,7 @@ async fn primary_success_keeps_failover_from_none() {
 }
 
 // ===========================================================================
-// Budget (SPEC-P08 §3 step 2) — consult/hour and token/day boundaries.
+// Budget (P08 §3 step 2) — consult/hour and token/day boundaries.
 // ===========================================================================
 
 #[tokio::test]
@@ -1013,7 +1013,7 @@ async fn consult_budget_token_cap_boundary_blocks_at_the_cap_and_slides_daily() 
 }
 
 // ===========================================================================
-// Harness (SPEC-P08 §5) — the FORCE_PROVIDER_FAIL offline demonstration.
+// Harness (P08 §5) — the FORCE_PROVIDER_FAIL offline demonstration.
 // ===========================================================================
 
 /// Golden scenarios live at the repo root (`crates/sentinel/../../tests/golden`).

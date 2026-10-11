@@ -1,5 +1,5 @@
 //! Breaker configuration — exact env keys, defaults and fail-fast validation
-//! (`SPEC-P14.md` §2).
+//! (`P14` §2).
 //!
 //! | Key | Default | Notes |
 //! |---|---|---|
@@ -58,7 +58,7 @@ pub const DEFAULT_JOURNAL: &str = "data/breaker-journal.jsonl";
 /// Default Perpl signing chain id (Monad testnet).
 pub const DEFAULT_PERPL_CHAIN_ID: u64 = 10143;
 
-/// Execution mode of the breaker (`SPEC-P14` §2).
+/// Execution mode of the breaker (`P14` §2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BreakerMode {
     /// Reuse the sentinel DRY_RUN executor; nothing leaves the process.
@@ -187,7 +187,7 @@ impl fmt::Debug for BreakerConfig {
 }
 
 impl BreakerConfig {
-    /// Load and validate from the process environment (`SPEC-P14` §2).
+    /// Load and validate from the process environment (`P14` §2).
     ///
     /// # Errors
     /// [`ConfigError`] for any missing required or malformed value.

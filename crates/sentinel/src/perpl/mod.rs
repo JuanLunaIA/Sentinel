@@ -48,7 +48,7 @@ const MOCK_PACE_DIVISOR: u64 = 50;
 const MOCK_PACE_CAP_MS: u64 = 100;
 
 /// `SENTINEL_MOCK_PACE` overrides the replay divisor at runtime (crash demo
-/// slows down, determinism tests speed up; see `SPEC-P06.md` §7).
+/// slows down, determinism tests speed up; see `P06` §7).
 fn mock_pace_divisor() -> u64 {
     std::env::var("SENTINEL_MOCK_PACE")
         .ok()

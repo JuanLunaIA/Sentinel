@@ -2,11 +2,11 @@
 //!
 //! Everything here is pure: same input, same output, no I/O, no clock reads
 //! (callers pass `now_ms`), no randomness. The rules and formulas are frozen
-//! in `SPEC-P04.md`; ground truth for the liquidation math is `docs/FACTS.md`
+//! in `P04`; ground truth for the liquidation math is `docs/FACTS.md`
 //! §1.7 (Perpl SDK formula + unit vectors, `vendor/dex-sdk` @ `01b9910`).
 //!
 //! **P04 status:** the bodies are implemented and property-tested in this
-//! module; the public signatures are frozen per `SPEC-P04.md` §4.
+//! module; the public signatures are frozen per `P04` §4.
 
 use std::collections::HashMap;
 
@@ -73,7 +73,7 @@ pub type MarginRatio = Decimal;
 /// `mark <= 0`, or when neither an exchange nor a derived liquidation price
 /// is available.
 pub fn distance_to_liq_pct(pos: &Position, market: &Market) -> Option<Decimal> {
-    // No notional to protect (SPEC-P04 §3.4 edge case).
+    // No notional to protect (P04 §3.4 edge case).
     if pos.size.is_zero() {
         return None;
     }
@@ -82,7 +82,7 @@ pub fn distance_to_liq_pct(pos: &Position, market: &Market) -> Option<Decimal> {
         return None;
     }
     // Exchange value preferred, first-principles derivation as fallback
-    // (SPEC-P04 §3.1, v1.0.1).
+    // (P04 §3.1, v1.0.1).
     let liq = effective_liq_price(pos, market)?.price;
     Some((mark - liq).abs() / mark * Decimal::ONE_HUNDRED)
 }
@@ -110,7 +110,7 @@ pub fn implied_liq_price(pos: &Position, market: &Market) -> Option<Decimal> {
 /// the derived one; `None` when neither is available.
 pub fn effective_liq_price(pos: &Position, market: &Market) -> Option<LiqPrice> {
     // No notional to protect: a flat position reports no effective price,
-    // exchange-provided or not (SPEC-P04 §3.4 edge case).
+    // exchange-provided or not (P04 §3.4 edge case).
     if pos.size.is_zero() {
         return None;
     }
@@ -257,7 +257,7 @@ fn stale_result(tier: RiskTier, stale_secs: Option<u64>, cfg: &ReflexConfig) -> 
     }
 }
 
-/// Stateless intent rules (see the table in `SPEC-P04.md` §3.4).
+/// Stateless intent rules (see the table in `P04` §3.4).
 ///
 /// Returns `None` for Green/Yellow regardless of collateral size, and for any
 /// tier when no rule applies. Never proposes increasing exposure.
@@ -267,7 +267,7 @@ pub fn reflex_intent(
     quality: DataQuality,
     cfg: &ReflexConfig,
 ) -> Option<Intent> {
-    // No notional to protect (SPEC-P04 §3.4 edge case).
+    // No notional to protect (P04 §3.4 edge case).
     if pos.size.is_zero() {
         return None;
     }
@@ -299,7 +299,7 @@ struct MarketReflex {
 ///
 /// Pure: the caller supplies `now_ms`, so sequences are fully deterministic in
 /// tests. Recovery (`tier <= Yellow`) resets the market's bookkeeping, so a
-/// new breach starts with a Reduce again. See `SPEC-P04.md` §3.4.
+/// new breach starts with a Reduce again. See `P04` §3.4.
 #[derive(Debug, Clone, Default)]
 pub struct ReflexState {
     markets: HashMap<MarketId, MarketReflex>,
@@ -313,7 +313,7 @@ impl ReflexState {
         }
     }
 
-    /// One deterministic decision step (see `SPEC-P04.md` §3.4 steps 1–6).
+    /// One deterministic decision step (see `P04` §3.4 steps 1–6).
     pub fn advance(
         &mut self,
         pos: &Position,
@@ -322,7 +322,7 @@ impl ReflexState {
         cfg: &ReflexConfig,
         now_ms: u64,
     ) -> Option<Intent> {
-        // No notional to protect: no decision, no bookkeeping (SPEC-P04 §3.4).
+        // No notional to protect: no decision, no bookkeeping (P04 §3.4).
         if pos.size.is_zero() {
             return None;
         }
@@ -632,7 +632,7 @@ mod tests {
 
     #[test]
     fn distance_requires_mark_and_derives_without_liq() {
-        // v1.0.1 fallback order (SPEC-P04 §3.1): exchange price when present,
+        // v1.0.1 fallback order (P04 §3.1): exchange price when present,
         // else the derived one; `None` when `mark` is missing or `mark <= 0`.
         let market = eth_market();
         let mut pos = position(dec!(10), dec!(100), None, dec!(100));

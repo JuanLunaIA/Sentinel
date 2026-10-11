@@ -1,4 +1,4 @@
-//! Heartbeat watcher over the anchor contract (`SPEC-P14.md` §3).
+//! Heartbeat watcher over the anchor contract (`P14` §3).
 //!
 //! Polls `eth_getLogs` every [`POLL_INTERVAL`] (15 s) over a rolling lookback
 //! window (default [`DEFAULT_LOOKBACK_BLOCKS`] = 7200 blocks) for

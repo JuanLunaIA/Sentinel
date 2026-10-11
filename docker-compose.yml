@@ -1,4 +1,4 @@
-# Sentinel — docker compose (SPEC-P16 §1).
+# Sentinel — docker compose (P16 §1).
 #
 # Build the image first (see docs/RUNBOOK.md §Docker):
 #   docker build \

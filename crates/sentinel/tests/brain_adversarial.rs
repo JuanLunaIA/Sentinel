@@ -1,7 +1,7 @@
-//! P07 adversarial verification — independent black-box corpus (SPEC-P07.md
+//! P07 adversarial verification — independent black-box corpus (P07
 //! §3/§4/§6/§7).
 //!
-//! Written from `SPEC-P07.md` + the frozen public API only: the sibling
+//! Written from `P07` + the frozen public API only: the sibling
 //! implementations are treated as black boxes. Beyond the writers' own suites:
 //!
 //! - **parser**: `</THINKING>`/`</think >`/mixed-case closers, two closing
@@ -143,7 +143,7 @@ fn consult_input(focus: u32) -> ConsultInput {
 }
 
 // ===========================================================================
-// Parser (SPEC-P07 §4) — adversarial extras beyond the writer corpus.
+// Parser (P07 §4) — adversarial extras beyond the writer corpus.
 // ===========================================================================
 
 #[test]
@@ -316,7 +316,7 @@ fn repair_nudge_quotes_schema_and_previous_output() {
 }
 
 // ===========================================================================
-// Providers (SPEC-P07 §3) — wiremock on localhost only.
+// Providers (P07 §3) — wiremock on localhost only.
 // ===========================================================================
 
 /// Qwen config pointed at a mock server.
@@ -626,7 +626,7 @@ async fn mock_provider_pops_in_order_records_calls_and_exhausts() {
 }
 
 // ===========================================================================
-// Engine (SPEC-P07 §6) — boundaries re-derived, observed via calls().
+// Engine (P07 §6) — boundaries re-derived, observed via calls().
 // ===========================================================================
 
 /// `MockProvider` behind a shared handle so the verifier keeps `calls()`
@@ -807,7 +807,7 @@ async fn repair_still_invalid_maps_to_invalid_json() {
 }
 
 // ===========================================================================
-// Eval (SPEC-P07 §7) — grounding, scoring, and the real harness binary.
+// Eval (P07 §7) — grounding, scoring, and the real harness binary.
 // ===========================================================================
 
 #[test]

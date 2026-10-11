@@ -1,6 +1,6 @@
 //! Policy overlay admin — whitelisted mutations of `data/policy.json`.
 //!
-//! Frozen by `SPEC-P11.md` §5: bounded keys, validated ranges, atomic write,
+//! Frozen by `P11` §5: bounded keys, validated ranges, atomic write,
 //! version-bumped [`SharedPolicy`] the pipeline reloads from.
 //!
 //! **Status (P11):** implemented by agent `bot-admin`.
@@ -700,7 +700,7 @@ mod tests {
         assert_eq!(load(&path), first);
         assert!(!dir.path().join("policy.json.tmp").exists());
 
-        // Cross-field failure: version and file untouched (SPEC-P11 §10).
+        // Cross-field failure: version and file untouched (P11 §10).
         let raw_before = std::fs::read_to_string(&path).expect("file must exist");
         let err = policy
             .set_key("risk_hard_pct", "30")

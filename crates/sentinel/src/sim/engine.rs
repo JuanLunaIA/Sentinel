@@ -1,4 +1,4 @@
-//! Tick-by-tick engine (SPEC-P13 §4).
+//! Tick-by-tick engine (P13 §4).
 //!
 //! One scenario is replayed as a synchronous tick loop that calls the exact
 //! production decision path:
@@ -168,7 +168,7 @@ struct Sim<'a> {
 }
 
 impl Sim<'_> {
-    /// Apply every price-path entry in order (the tick loop, SPEC-P13 §4).
+    /// Apply every price-path entry in order (the tick loop, P13 §4).
     fn walk(&mut self) {
         for index in 0..self.scenario.price_path.len() {
             let (ts_ms, market_id, mark) = {
@@ -215,7 +215,7 @@ impl Sim<'_> {
             if crossed(position, mark, liq) {
                 self.notes.push(format!(
                     "sentinel position crossed its liq price at {ts_ms} ms \
-                     (formula-only accounting, SPEC-P13 §5)"
+                     (formula-only accounting, P13 §5)"
                 ));
             }
         }
@@ -242,7 +242,7 @@ impl Sim<'_> {
         };
         let tier = risk::tier(distance, &self.thresholds);
 
-        // (a) Yellow-entry transition per market (`Green -> Yellow`, SPEC-P13
+        // (a) Yellow-entry transition per market (`Green -> Yellow`, P13
         // §4). The consult runs after the reflex pass, like the production
         // pipeline's post-risk strategy review.
         let entered_yellow =
@@ -275,7 +275,7 @@ impl Sim<'_> {
         self.states[index].prev_tier = Some(tier);
     }
 
-    /// Replay a recorded strategy decision at a consult point (SPEC-P13 §4).
+    /// Replay a recorded strategy decision at a consult point (P13 §4).
     ///
     /// A trace entry applies only when `at_ms` == the consult tick's `ts_ms`
     /// and its market matches; entries at other ticks are not consulted.
@@ -443,7 +443,7 @@ impl Sim<'_> {
     /// and the daily action counter. `counts_as_reduce` marks the fill as a
     /// reduce-family execution for the `false_positive_reduces` accounting
     /// (Close orders are not counted, mirroring the frozen oracle).
-    #[allow(clippy::too_many_arguments)] // explicit execution context by design (SPEC-P13 §4)
+    #[allow(clippy::too_many_arguments)] // explicit execution context by design (P13 §4)
     fn order_and_fill(
         &mut self,
         index: usize,
@@ -500,7 +500,7 @@ impl Sim<'_> {
                 state.position.size -= signed_fill;
                 state.fees_usd += fill.fee_usd;
                 if state.position.size.is_zero() {
-                    // Position removed at size 0 (SPEC-P13 §4).
+                    // Position removed at size 0 (P13 §4).
                     state.active = false;
                 }
                 if counts_as_reduce {
@@ -590,7 +590,7 @@ impl Sim<'_> {
             && order.is_some()
         {
             // Defensive: an executed action must never carry a non-Allow
-            // verdict (policy is the gate, SPEC-P13 §6).
+            // verdict (policy is the gate, P13 §6).
             self.policy_violations = self.policy_violations.saturating_add(1);
         }
         let state = &self.states[index];
@@ -606,12 +606,12 @@ impl Sim<'_> {
         });
     }
 
-    /// Assemble the report (SPEC-P13 §5–§6).
+    /// Assemble the report (P13 §5–§6).
     ///
     /// Sentinel-side liquidations are not part of the frozen §5 sentinel
     /// accounting (realized + final unrealized + fees only); crossings are
     /// recorded in `notes` and this field reports 0 for the current scenario
-    /// set. `liquidations_avoided` follows the SPEC-P13 §5 definition.
+    /// set. `liquidations_avoided` follows the P13 §5 definition.
     fn finish(mut self, baseline: BaselineOutcome) -> SimReport {
         let mut sentinel_loss = Decimal::ZERO;
         for state in &self.states {
@@ -622,7 +622,7 @@ impl Sim<'_> {
                 };
                 (-(state.realized_pnl + final_unrealized)).max(Decimal::ZERO)
             } else {
-                // Closed at size 0: realized PnL only (SPEC-P13 §5).
+                // Closed at size 0: realized PnL only (P13 §5).
                 (-state.realized_pnl).max(Decimal::ZERO)
             };
             sentinel_loss += term + state.fees_usd;
@@ -666,7 +666,7 @@ impl Sim<'_> {
 }
 
 /// Data quality at `ts_ms`: `Stale{secs}` inside a `feed_stale` window, else
-/// `Fresh` (SPEC-P13 §4). The window is closed on both ends and `secs` counts
+/// `Fresh` (P13 §4). The window is closed on both ends and `secs` counts
 /// whole elapsed seconds since the active window's start.
 fn quality_at(events: &[ScenarioEvent], ts_ms: i64) -> DataQuality {
     let mut window_start: Option<i64> = None;
@@ -858,7 +858,7 @@ mod tests {
         assert_eq!(
             report.capital_saved_usd,
             report.baseline_loss_usd - report.sentinel_loss_usd,
-            "conservation identity must hold exactly (SPEC-P13 §5)"
+            "conservation identity must hold exactly (P13 §5)"
         );
         assert_eq!(report.sim_fees_usd, d("0.0170604225"));
         assert_eq!(report.false_positive_reduces, 0, "baseline liquidates");

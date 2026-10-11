@@ -1,4 +1,4 @@
-//! Supervised task spawning (SPEC-P16 §2).
+//! Supervised task spawning (P16 §2).
 //!
 //! Every long-lived spawned task in the daemon goes through [`spawn`]: a
 //! panic (or an early clean exit) from the task's future never kills the
@@ -34,7 +34,7 @@ use tokio::task::JoinHandle;
 
 /// Delay before the first restart (doubles per consecutive restart).
 const INITIAL_BACKOFF_SECS: u64 = 1;
-/// Upper bound for the restart delay ("1s..30s cap", SPEC-P16 §2).
+/// Upper bound for the restart delay ("1s..30s cap", P16 §2).
 const MAX_BACKOFF_SECS: u64 = 30;
 
 /// Spawn a long-lived task under supervision.

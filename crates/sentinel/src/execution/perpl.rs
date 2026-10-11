@@ -1,5 +1,5 @@
 //! Gateway executor — signed reduce-only order submission via
-//! `POST /v1/trading/orders` (SPEC-P05 §5; gateway facts in `docs/FACTS.md` §1.6).
+//! `POST /v1/trading/orders` (P05 §5; gateway facts in `docs/FACTS.md` §1.6).
 //!
 //! One signed HTTP attempt per submission (never auto-retried). The batch body
 //! `{"d":[OrderSpec]}` is serialized once, signed byte-exactly and POSTed to
@@ -7,7 +7,7 @@
 //! `ExecutionStatus::Submitted` ("accepted for forwarding") and a non-zero
 //! per-order or batch code to `ExecutionStatus::Rejected`. HTTP 401/403 and
 //! transport / parse failures surface as `PerplError::Order` with a bounded
-//! excerpt of the response — never a retry (SPEC-P05 §5).
+//! excerpt of the response — never a retry (P05 §5).
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -43,7 +43,7 @@ pub struct PerplExecutor<P> {
     base_url: String,
     signer: ApiKeySigner,
     account_id: u64,
-    /// Retained for the guarded-executor wire-up (SPEC-P05 §5); submission
+    /// Retained for the guarded-executor wire-up (P05 §5); submission
     /// itself never consults it.
     #[allow(dead_code)]
     probe: P,
@@ -97,7 +97,7 @@ impl<P> PerplExecutor<P> {
         }
     }
 
-    /// Map an HTTP 200 `mt:31` batch ack onto a report (SPEC-P05 §5).
+    /// Map an HTTP 200 `mt:31` batch ack onto a report (P05 §5).
     ///
     /// A non-zero batch `status.code` refuses the request as a whole (nothing
     /// was acted on); a zero code defers to `statuses[0]`, answered by

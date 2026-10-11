@@ -1,5 +1,5 @@
 /**
- * Sentinel dead-man's-switch — CRE workflow definition (SPEC-P14 §6).
+ * Sentinel dead-man's-switch — CRE workflow definition (P14 §6).
  *
  * Trigger: cron every 2 minutes (config `schedule`).
  * Steps:

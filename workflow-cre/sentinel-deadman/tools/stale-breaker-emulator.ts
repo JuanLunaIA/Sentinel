@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * EMULATED breaker endpoint — the SPEC-P14 §6 fallback input path.
+ * EMULATED breaker endpoint — the P14 §6 fallback input path.
  *
  * NOT the real breaker (crates/breaker). This is a tiny, dependency-free HTTP
- * server implementing exactly the two frozen surfaces of SPEC-P14 §5:
+ * server implementing exactly the two frozen surfaces of P14 §5:
  *
  *   GET  /api/heartbeat-status  -> {"generated_at_ms":n,"guardians":[{...}]}
  *   POST /breaker/trigger       -> verifies `X-Breaker-Signature:

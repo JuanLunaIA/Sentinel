@@ -1,4 +1,4 @@
-//! P06 adversarial verification — independent, black-box corpus (SPEC-P06 §9).
+//! P06 adversarial verification — independent, black-box corpus (P06 §9).
 //!
 //! Runs against the verifier's own fixture
 //! (`tests/fixtures/perpl/p06-verifier-scenario.jsonl`): an ETH-like book
@@ -51,7 +51,7 @@ const RED_AT_MS: u64 = BASE_MS + 76_000;
 /// correct flip must cut the stream before this frame is emitted.
 const SHUTDOWN_CUT_MS: u64 = BASE_MS + 1_000_000_000;
 
-/// Pin the MockPerpl replay pacing for the whole test binary (SPEC-P06 §6):
+/// Pin the MockPerpl replay pacing for the whole test binary (P06 §6):
 /// a divisor of 100 000 makes the 25 s scenario gaps scale to zero sleeps,
 /// while the raised per-line cap keeps the shutdown fixture's late frames
 /// (~2 s wall each, > 3 s total) slow enough that a flip which is *not*
@@ -71,7 +71,7 @@ fn ensure_fast_replay() {
 
 const VALID_SECRET: &str = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-/// Config with the verifier's risk/replay switches (SPEC-P06 §9 corpus).
+/// Config with the verifier's risk/replay switches (P06 §9 corpus).
 fn verifier_config() -> Config {
     let base: &[(&str, &str)] = &[
         ("PERPL_ENV", "testnet"),
@@ -121,7 +121,7 @@ struct RunResult {
 }
 
 /// Replay one fixture with a `RecordingSink` + `DryRunExecutor` over a
-/// `StateProbe` (SPEC-P06 §5 replay row); optionally flip the shutdown watch
+/// `StateProbe` (P06 §5 replay row); optionally flip the shutdown watch
 /// after `flip_after`.
 async fn run_pipeline(path: &Path, tag: &str, flip_after: Option<Duration>) -> RunResult {
     let state = Arc::new(Mutex::new(LiveState::new()));
@@ -417,7 +417,7 @@ async fn determinism_two_runs_byte_equal_and_expected_sequence() {
         );
     }
 
-    // --- alert text contract (SPEC-P06 §3) ---
+    // --- alert text contract (P06 §3) ---
     let yellow_alert = a
         .alerts
         .iter()
@@ -458,7 +458,7 @@ async fn determinism_two_runs_byte_equal_and_expected_sequence() {
         .any(|alert| alert.text.to_lowercase().contains("consult"));
     assert!(
         announces_consult,
-        "the consult is announced (SPEC-P06 §3 example text)"
+        "the consult is announced (P06 §3 example text)"
     );
 
     for alert in &a.alerts {

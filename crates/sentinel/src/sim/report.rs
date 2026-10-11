@@ -1,6 +1,6 @@
-//! SimReport + rendering (SPEC-P13 §6).
+//! SimReport + rendering (P13 §6).
 //!
-//! Report shapes are frozen by SPEC-P13 §6. Everything except `metrics` is
+//! Report shapes are frozen by P13 §6. Everything except `metrics` is
 //! deterministic for a given scenario: no wall clock, no map iteration order,
 //! no timestamps. [`SimReport::canonical_json`] serializes with alphabetically
 //! sorted keys so reruns compare byte-for-byte (metrics excluded, see
@@ -54,7 +54,7 @@ pub struct LatencyPcts {
 }
 
 /// Report metrics, deliberately excluded from the determinism byte-compare
-/// (SPEC-P13 §6). The `reflex_eval_eval` key name is kept verbatim from the
+/// (P13 §6). The `reflex_eval_eval` key name is kept verbatim from the
 /// frozen spec.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SimMetrics {
@@ -75,7 +75,7 @@ impl SimMetrics {
     }
 }
 
-/// Per-scenario report (SPEC-P13 §6; fields frozen).
+/// Per-scenario report (P13 §6; fields frozen).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SimReport {
     /// Scenario id.
@@ -96,7 +96,7 @@ pub struct SimReport {
     pub baseline_loss_usd: Decimal,
     /// Sentinel USD loss.
     pub sentinel_loss_usd: Decimal,
-    /// Saved (may be negative; SPEC-P13 §5).
+    /// Saved (may be negative; P13 §5).
     pub capital_saved_usd: Decimal,
     /// Simulated taker fees, USD.
     pub sim_fees_usd: Decimal,
@@ -117,7 +117,7 @@ pub struct SimReport {
 impl SimReport {
     /// The determinism view: everything verbatim except `metrics`, which is
     /// zeroed. Reruns of the same scenario must be byte-identical on this view
-    /// (SPEC-P13 §6).
+    /// (P13 §6).
     pub fn determinism_view(&self) -> Self {
         let mut view = self.clone();
         view.metrics = SimMetrics::zeroed();
@@ -134,7 +134,7 @@ impl SimReport {
     }
 }
 
-/// Aggregate across scenarios (SPEC-P13 §6).
+/// Aggregate across scenarios (P13 §6).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Aggregate {
     /// Scenario count.
@@ -161,7 +161,7 @@ impl Aggregate {
     }
 }
 
-/// Aggregate the per-scenario reports (SPEC-P13 §6).
+/// Aggregate the per-scenario reports (P13 §6).
 pub fn aggregate(reports: &[SimReport]) -> Aggregate {
     let scenarios = u32::try_from(reports.len()).unwrap_or(u32::MAX);
     let total_notional_usd = reports
@@ -195,7 +195,7 @@ pub fn aggregate(reports: &[SimReport]) -> Aggregate {
     }
 }
 
-/// Render the markdown report (SPEC-P13 §6).
+/// Render the markdown report (P13 §6).
 ///
 /// The first paragraph is the frozen literal aggregate line:
 /// `"Across N scenarios representing $X notional, Sentinel preserved $Y (Z%);`

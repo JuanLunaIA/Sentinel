@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==========================================================================
-# Sentinel P14 — unattended dead-man's-switch demo (SPEC-P14 §7).
+# Sentinel P14 — unattended dead-man's-switch demo (P14 §7).
 #
 # Sequence (all local, no docker, no sudo, no external network):
 #   (0) build once: breaker --release + sentinel
@@ -311,7 +311,7 @@ echo "  guardian:          $GUARDIAN"
 echo "  heartbeats posted: $(cast logs --rpc-url "$RPC" --address "$ADDR" "Heartbeat(address,bytes32,uint32,uint8)" | grep -c 'blockNumber' || true) Heartbeat events on-chain"
 echo "  trigger:           HTTP ${CODE:-n/a} (the CRE hop's signed POST /breaker/trigger)"
 echo "  journal:           $LINE"
-echo "  mode:              dry_run (no live orders; SPEC-P14 §4)"
+echo "  mode:              dry_run (no live orders; P14 §4)"
 echo
 echo "--- breaker log tail ---"
 tail -n 25 "$WORK/breaker.log" || true

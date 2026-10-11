@@ -1,4 +1,4 @@
-//! MarkdownV2 escaping + message builders (`SPEC-P11.md` §4).
+//! MarkdownV2 escaping + message builders (`P11` §4).
 //!
 //! [`escape_md2`] escapes every Telegram MarkdownV2 reserved character with
 //! a backslash, backslash included. Builders construct cards from plain
@@ -10,7 +10,7 @@
 use sentinel_core::audit::AuditEntry;
 use sentinel_core::types::RiskTier;
 
-/// Every MarkdownV2 reserved character (`SPEC-P11.md` §4).
+/// Every MarkdownV2 reserved character (`P11` §4).
 const RESERVED: &[char] = &[
     '_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!', '\\',
 ];
@@ -225,7 +225,7 @@ pub fn closeconfirm_card(market_id: u32, symbol: &str, size: &str, notional: &st
     .join("\n")
 }
 
-/// Tier emoji for the reflex tiers (`SPEC-P11.md` §3 status card).
+/// Tier emoji for the reflex tiers (`P11` §3 status card).
 pub fn tier_emoji(tier: &RiskTier) -> &'static str {
     match tier {
         RiskTier::Green => "🟢",

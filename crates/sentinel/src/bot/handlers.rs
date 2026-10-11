@@ -1,17 +1,17 @@
-//! Pure command handlers — no teloxide types (`SPEC-P11.md` §2).
+//! Pure command handlers — no teloxide types (`P11` §2).
 //!
 //! Every handler is deterministic given `now_ms`; the teloxide layer only
 //! converts [`Reply`] into bot API calls.
 //!
 //! **Status (P11):** implemented by agent `bot-handlers`.
 //!
-//! Behaviour highlights (`SPEC-P11.md` §§6–7):
+//! Behaviour highlights (`P11` §§6–7):
 //!
 //! - `/close` runs the same [`PolicyEngine`] gate as every other intent
 //!   (`Manual` source); an admitted order is sized with
 //!   [`reduce_by_fraction`], queued for approval and journaled as a `pending`
 //!   human execution before the confirm keyboard goes out (audit-before-action,
-//!   SPEC-P10 invariant #2).
+//!   P10 invariant #2).
 //! - `/pause` plus a typed `PAUSE` flips both the shared kill-switch flag and
 //!   the policy overlay (`kill_switch`), so the pipeline denies everything.
 //! - Approve/Deny callbacks and the 5-minute expiry pass journal their
@@ -82,7 +82,7 @@ pub struct BotContext {
     pub approvals: Arc<ApprovalQueue>,
     /// Strategy engine (None when keys/features are unavailable). The daemon
     /// builds it ONCE and shares the same `Arc` with the consult task
-    /// (SPEC-P20 §2).
+    /// (P20 §2).
     pub engine: Option<Arc<StrategyEngine<QwenProvider, KimiProvider>>>,
     /// Executor for human-approved orders (None ⇒ orders cannot execute).
     pub executor: Option<HumanExecutor>,
@@ -329,7 +329,7 @@ async fn risk(ctx: &BotContext, market: Option<u32>, now_ms: u64) -> Reply {
 
 /// The consult half of `/risk`, generic over the engine's provider slots so
 /// tests can drive it with mock providers; the daemon always passes the
-/// shared concrete engine built in `main` (SPEC-P20 §2).
+/// shared concrete engine built in `main` (P20 §2).
 async fn consult_with_engine<P: Provider, F: Provider>(
     engine: &StrategyEngine<P, F>,
     ctx: &BotContext,
@@ -660,7 +660,7 @@ fn policy_summary(cfg: &Config) -> PolicySummary {
             .collect(),
         max_order_size_usd: cfg.risk.max_order_size_usd,
         require_approval_above_usd: cfg.risk.require_approval_above_usd,
-        // Documented approximation (SPEC-P11 §2): the configured daily cap
+        // Documented approximation (P11 §2): the configured daily cap
         // itself, not the remaining count — the bot holds no day-state handle.
         daily_actions_left: cfg.risk.max_daily_actions,
     }
@@ -689,7 +689,7 @@ fn policy_lines(ctx: &BotContext) -> Vec<String> {
 }
 
 /// The policy verdict of a consulted decision (display only): the implied
-/// intent (shared mapping with the consult task, SPEC-P20 §2.4) is evaluated
+/// intent (shared mapping with the consult task, P20 §2.4) is evaluated
 /// through the same gate a real action would face.
 fn consulted_verdict(
     ctx: &BotContext,

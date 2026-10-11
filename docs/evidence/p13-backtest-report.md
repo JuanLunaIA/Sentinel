@@ -81,7 +81,7 @@ Across 14 scenarios representing $60163.365 notional, Sentinel preserved $5972.1
 - liquidations: baseline 1; sentinel 0; avoided 1
 - false positive reduces: 0; policy violations: 0
 - note: ignored event 'funding' at 1791243600000 ms (unmodeled in v1.0)
-- note: event note: funding rate spike: longs pay; funding is not modeled in v1.0 (ignored per SPEC-P13 §3)
+- note: event note: funding rate spike: longs pay; funding is not modeled in v1.0 (ignored per P13 §3)
 - note: ignored event 'funding' at 1791250800000 ms (unmodeled in v1.0)
 - note: event note: second funding spike inside the squeeze; ignored
 

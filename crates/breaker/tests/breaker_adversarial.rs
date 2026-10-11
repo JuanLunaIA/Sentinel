@@ -1,11 +1,11 @@
-//! SPEC-P14 adversarial suite for the `breaker` binary (agent F / verifier).
+//! P14 adversarial suite for the `breaker` binary (agent F / verifier).
 //!
 //! BLACK-BOX: this file never imports the breaker crate. It spawns the real
 //! `breaker` binary (`CARGO_BIN_EXE_breaker`) with env configuration per
-//! SPEC-P14 §2, against a real anvil chain running the real
+//! P14 §2, against a real anvil chain running the real
 //! `SentinelAuditAnchor` contract (heartbeats are real `beat(...)` txs; the
 //! watcher's `eth_getLogs` intake is exercised end to end). All assertions are
-//! derived from SPEC-P14 text only (see per-test comments); the independent
+//! derived from P14 text only (see per-test comments); the independent
 //! Python oracles under `tests/fixtures/` cross-check the HMAC vector and the
 //! staleness/epoch arithmetic.
 //!

@@ -166,7 +166,7 @@
     {
       "ts_ms": 1791243600000,
       "kind": "funding",
-      "note": "funding rate spike: longs pay; funding is not modeled in v1.0 (ignored per SPEC-P13 \u00a73)"
+      "note": "funding rate spike: longs pay; funding is not modeled in v1.0 (ignored per P13 \u00a73)"
     },
     {
       "ts_ms": 1791250800000,

@@ -1,4 +1,4 @@
-# Railway config-as-code (SPEC-P16 §1).
+# Railway config-as-code (P16 §1).
 #
 # Deploy status: PENDING-ACCOUNT (STUB-24) — no Railway session is available
 # headless, so this file is the deploy contract; the exact dashboard/CLI

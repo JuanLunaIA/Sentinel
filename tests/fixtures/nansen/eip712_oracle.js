@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Independent EIP-712 oracle for the Sentinel P09 verifier (SPEC-P09 §7/§8).
+ * Independent EIP-712 oracle for the Sentinel P09 verifier (P09 §7/§8).
  *
  * Computes the EIP-3009 `TransferWithAuthorization` digest + signature for the
  * frozen verifier vector below with ethers (installed from npm — NOT the Rust
@@ -18,7 +18,7 @@
 
 const { ethers } = require("ethers");
 
-// Frozen vector — same shape as SPEC-P09 §7 (verifier-owned values; the
+// Frozen vector — same shape as P09 §7 (verifier-owned values; the
 // private key is a well-known public test key, never funded).
 const VECTOR = {
   key: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",

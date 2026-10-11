@@ -1,7 +1,7 @@
 # P13 scenario suite (`tests/scenarios/`)
 
-Frozen input suite for the SPEC-P13 backtester (`cargo run --release --bin backtest`).
-Every file is a self-contained scenario document in the SPEC-P13 §3 format:
+Frozen input suite for the P13 backtester (`cargo run --release --bin backtest`).
+Every file is a self-contained scenario document in the P13 §3 format:
 full `sentinel_core` Market/Position documents, a strictly increasing
 `price_path`, optional `events` / `reflex` / `policy` overrides and an optional
 recorded `decision_trace`. All timestamps are fixed logical milliseconds
@@ -48,7 +48,7 @@ caps, the description says so (`whale-vs-caps`, `reconstructed-testnet-eth`).
 |---|---|
 | `flash-crash-30` | Flash crash −30% in 5 min over 61 ticks (5 s), 10x long. Price path crosses the implied liq (2584) at tick 10; baseline liquidates. The scenario configures `reduce_fraction` 0.75 because at the 0.5 default the reduced position's liq (2312) would still sit inside the crash depth — the breach must be decisive; a re-entry trim follows when the tier resets through Yellow. |
 | `slow-bleed-15` | −15% over 24 h in coarse 2 h steps, 4x long. No liquidation on either path (min 2312 > liq 2176); one Orange trim at the Yellow→Orange transition. Demonstrates gradual de-risking against a bleed. |
-| `wick-both` | Two-sided wick: −16% spike through the long's liq (bottom 2290 ≤ liq 2312 → baseline liquidates), then a rebound to +7%. Sentinel trims at Orange, then again exactly at the cooldown boundary; carries a `decision_trace` with two post-review HOLDs (consult path (b), SPEC-P13 §4). |
+| `wick-both` | Two-sided wick: −16% spike through the long's liq (bottom 2290 ≤ liq 2312 → baseline liquidates), then a rebound to +7%. Sentinel trims at Orange, then again exactly at the cooldown boundary; carries a `decision_trace` with two post-review HOLDs (consult path (b), P13 §4). |
 | `funding-squeeze` | Steady −16% grind with funding-rate spikes over 12 h, 5x long. `funding` events are accepted and **ignored** in v1.0 (they surface in the report notes). Sentinel trims twice at Orange; baseline liquidates at 2298.33. |
 | `gap-through-liq` | Short (0.5 ETH, 5x): a single-tick +18% up-gap (2960 → 3200) jumps through the baseline liq (3128) in one tick — baseline liquidates. An Orange trim before the gap raises the reduced liq to 3309 and the sentinel survives: gap risk is contained by acting *before* the gap. |
 | `stale-feed-outage` | A `feed_stale` window (60 s → 600 s) during which the feed is `Stale{secs}`: with the production `stale_reduce: false` the reflex is alert-only — no reduce on stale data (the alert still stamps the cooldown). After the window the sentinel resumes and trims at the cooldown boundary; baseline liquidates at the 2310 bottom, sentinel survives. |

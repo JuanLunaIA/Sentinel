@@ -1,6 +1,6 @@
 # Sentinel — demo video script (3:00 max)
 
-Status: scripts phase (SPEC-P18 §1). Owner: agent Q. Frozen beats: SPEC-P18 §1. Recording: Oct 12, operator.
+Status: scripts phase (P18 §1). Owner: agent Q. Frozen beats: P18 §1. Recording: Oct 12, operator.
 Captions burned in; the video is muted-readable (every key value also appears as on-screen text).
 Voiceover sentences are ≤ 20 words. Any screen that could not be captured is labeled **storyboard**
 and names the existing still that stands in for it. Every quoted line/number below traces to a file in
@@ -62,7 +62,7 @@ open http://127.0.0.1:8091/
 - `EQUITY $-1,340.50 · FREE $5,000.00`
 
 **Storyboard still:** `docs/evidence/p15-dashboard-top.png`.
-*Note (open issue): SPEC-P18 §1 mentions a "32% distance" hook card; the captured P15 pass shows
+*Note (open issue): P18 §1 mentions a "32% distance" hook card; the captured P15 pass shows
 ETH#32 at 28.4% and BTC#16 at 35.0% — this script uses the captured values (never the unverifiable 32%).*
 
 ---
@@ -143,7 +143,7 @@ FORCE_PROVIDER_FAIL=qwen cargo run --bin brain_eval -- --mock
   Failover, from `docs/evidence/p08-failover.txt`: `…PASS 14-injection-note action=ESCALATE … provider=kimi (0ms)`
   — `action-class accuracy (core): 12/12` with **every** row carrying `provider=kimi`.
 - (c) dashboard Nansen panel (see still): `0 calls · $0.00 total spend` / `no purchases recorded`;
-  overlay (verbatim per SPEC-P18): **"payment rail verified; first paid call pending wallet"**.
+  overlay (verbatim per P18): **"payment rail verified; first paid call pending wallet"**.
   Free-leg proof, `docs/evidence/p09-x402-check.txt`: `selected Monad rail (eip155:143): asset=0x754704Bc059F8C67012fEd69BC8A327a5aafb603 amount=10000 payTo=0x93053f1e7A5eFEDa532Fe69CbbE43cBEc3A0F13f maxTimeoutSeconds=300 domain=USDC/2` + `check rc=0`. **Do not stage a purchase.**
 
 **Storyboard still:** `docs/evidence/p15-dashboard-positions-feed.png` — stands in for the Telegram consult
@@ -262,7 +262,7 @@ Bounty wall / end card: graphic cards (no still exists — must be rendered; nev
 
 ## Recording plan + dry-run results
 
-Per SPEC-P18 §3–4. Dry-runs executed 2026-10-06 by agent Q (this file's author), from `/home/luna/.hermes/Sentinel`,
+Per P18 §3–4. Dry-runs executed 2026-10-06 by agent Q (this file's author), from `/home/luna/.hermes/Sentinel`,
 `LC_ALL=C`. Requirement: both demos run clean twice before any recording — **satisfied: 4/4 exit 0** (plus one
 auxiliary verification run with the recording fix applied). Raw logs kept at
 `/home/luna/.hermes/cache/scratch/p18-*.log` (ephemeral, ~24 h); key observations are pinned below.
@@ -295,7 +295,7 @@ All runs reproduced the pinned outcomes exactly where they are deterministic (ti
    The breaker transcript's tx hash and `entries=` count depend on local journal state: the pinned transcript
    (`tx=0x390ac28d…`, `entries=4`) was replaced by the dry runs with `tx=0x65ca7441…` / `tx=0xad3a8ff3…`
    (`entries=57`, because `data/audit` had grown). **The pinned file was restored** (md5 `c470c0e2941cbba55b50ec58467a4f7c`)
-   so SPEC-P17's citation stays valid; the fresh transcripts are in the scratch logs. Recording day: either preserve/restore
+   so P17's citation stays valid; the fresh transcripts are in the scratch logs. Recording day: either preserve/restore
    the pinned file, or use the fresh run's values on screen consistently — **never mix numbers from two runs**.
    (`docs/evidence/p06-crash-demo.clean.txt` was never touched.)
 5. **Environment FYI:** a stale `target/debug/breaker` process (pid 11113, from a P14 scratch test, ports 18598/18599)
@@ -303,7 +303,7 @@ All runs reproduced the pinned outcomes exactly where they are deterministic (ti
 
 ### Recording day (Oct 12, operator)
 
-**Preconditions checklist** (SPEC-P18 §3):
+**Preconditions checklist** (P18 §3):
 - `.env` real keys: Perpl (testnet) · Qwen · Kimi · Telegram → the *live* beats below.
 - OBS scenes pre-built: terminal 14pt+ · dashboard fullscreen 1080p60 · Telegram desktop · explorer.
 - Record per beat (retry-friendly); captions burned in; upload unlisted YouTube; link into README + submission form.

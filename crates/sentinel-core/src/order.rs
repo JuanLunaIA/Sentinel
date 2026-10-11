@@ -2,11 +2,11 @@
 //!
 //! Orders produced here can never increase exposure: they close or reduce an
 //! existing position, respecting the market's lot grid and minimum size
-//! (`SPEC-P05.md` §4). Execution semantics (gateway fields, `CloseLong`/
+//! (`P05` §4). Execution semantics (gateway fields, `CloseLong`/
 //! `CloseShort`, `rq`, `lb`) live in `crates/sentinel/src/execution/`.
 //!
 //! **P05 status:** implemented and unit-tested in this module; the public
-//! signatures are frozen per `SPEC-P05.md` §4.
+//! signatures are frozen per `P05` §4.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn quantization_table() {
-        // SPEC-P05 §4: truncation towards zero at the lot grid 10^-d.
+        // P05 §4: truncation towards zero at the lot grid 10^-d.
         assert_eq!(quantize_size_down(dec!(0.1239), 3), dec!(0.123));
         assert_eq!(quantize_size_down(dec!(1.9999), 2), dec!(1.99));
         assert_eq!(quantize_size_down(dec!(7.654), 2), dec!(7.65));

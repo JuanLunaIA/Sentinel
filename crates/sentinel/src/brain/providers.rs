@@ -1,6 +1,6 @@
 //! LLM providers — Qwen (primary), Kimi (fallback), and the test mock.
 //!
-//! Frozen by `SPEC-P07.md` §3. No `dyn` dispatch (async-fn-in-trait);
+//! Frozen by `P07` §3. No `dyn` dispatch (async-fn-in-trait);
 //! everything is generic over [`Provider`].
 //!
 //! Both HTTP providers share one retry policy: the initial request plus
@@ -25,14 +25,14 @@ use serde_json::{Value, json};
 use crate::config::{KimiConfig, QwenConfig};
 use crate::error::{BrainError, Result};
 
-/// Timeout for provider HTTP requests (`SPEC-P07.md` §3).
+/// Timeout for provider HTTP requests (`P07` §3).
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Attempts per call: the initial request plus exactly one retry.
 const MAX_ATTEMPTS: u32 = 2;
 
 /// Fallback sampling temperature when a configured [`Decimal`] has no `f64`
-/// representation (`SPEC-P07.md` §3: default `0.1`).
+/// representation (`P07` §3: default `0.1`).
 ///
 /// [`Decimal`]: rust_decimal::Decimal
 const DEFAULT_TEMPERATURE: f64 = 0.1;
@@ -88,7 +88,7 @@ impl QwenProvider {
     ///
     /// `json_mode` defaults to `true`; the first live keyed run disables it
     /// with [`Self::with_json_mode`] if the endpoint rejects
-    /// `response_format` (`SPEC-P07.md` §3).
+    /// `response_format` (`P07` §3).
     pub fn new(cfg: &QwenConfig) -> Self {
         Self {
             api_key: cfg.api_key.clone(),
@@ -163,7 +163,7 @@ pub struct KimiProvider {
 }
 
 impl KimiProvider {
-    /// Output budget; `KimiConfig` carries no `max_tokens` (`SPEC-P07.md` §3).
+    /// Output budget; `KimiConfig` carries no `max_tokens` (`P07` §3).
     const MAX_TOKENS: u32 = 4000;
 
     /// Sampling temperature; `KimiConfig` carries no temperature.

@@ -1,7 +1,7 @@
 //! Execution layer — the [`Executor`] trait, reports, and the idempotency +
 //! post-fill-verification guard.
 //!
-//! Interfaces are frozen in `SPEC-P05.md` §5. Generics only: the async traits
+//! Interfaces are frozen in `P05` §5. Generics only: the async traits
 //! here are not `dyn`-compatible on purpose (no `dyn` dispatch needed).
 //!
 //! **P05 status:** implemented. [`GuardedExecutor`] suppresses duplicates via
@@ -133,7 +133,7 @@ pub fn idempotency_key(market_id: MarketId, action: &str, size: Decimal) -> Stri
 }
 
 /// Guarded wrapper: idempotency pre-check, then submit, then post-fill
-/// verification against the probe (SPEC-P05 §5).
+/// verification against the probe (P05 §5).
 ///
 /// The key is the reduce-order key (`{market}:reduce:{bucket}`); a duplicate
 /// inside the store's window is rejected with

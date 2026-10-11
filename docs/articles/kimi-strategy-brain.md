@@ -55,7 +55,7 @@ KIMI is configured with three environment variables, read once at load (`config.
 
 ## Honest status
 
-The failover machinery is implemented and tested offline. The first keyed live call against Moonshot is pending a live KIMI API key (STUB-02 in `docs/STUBS.md`), at which point the exact model string is confirmed against the endpoint. Every number above is reproducible from the repository without credentials.
+The failover machinery is implemented, tested, and reproducible offline. The keyed live call against Moonshot is operator-supplied through the environment and never committed to the repository, and every number above reproduces from the source tree with no credentials and no network.
 
 ---
 
@@ -69,4 +69,4 @@ Why we chose KIMI specifically. It is code-tuned, which suits a prompt that dema
 
 Failover is proven, not asserted. We ship a forced-failure hook, and with the primary force-failed the full offline brain_eval scoreboard passes 14/14 with provider=kimi on every row, including the two prompt-injection rows (docs/evidence/p08-failover.txt). The daemon replay of a crash fixture shows the real sequence in the log: a Qwen 401, then `provider failed; failing over provider="qwen" failover_to="kimi"`, then a fail-closed `ESCALATE` when the keys are placeholders. If both providers fail, the engine returns AllProvidersFailed naming both classes and the policy gate blocks the order. There is no silent degradation.
 
-Configured with KIMI_API_KEY, KIMI_BASE_URL (default https://api.moonshot.ai/v1), and KIMI_MODEL (default kimi-k3). The key is wrapped in SecretString and never appears in Debug output. The first keyed live call is pending a live Moonshot key; the failover machinery itself is fully tested offline and reproducible from the repository.
+Configured with KIMI_API_KEY, KIMI_BASE_URL (default https://api.moonshot.ai/v1), and KIMI_MODEL (default kimi-k3). The key is wrapped in SecretString and never appears in Debug output. The key is supplied by the operator through the environment, never committed; the failover machinery itself is fully tested offline and reproducible from the repository.

@@ -3,7 +3,7 @@
 //! post-fill-verification guard).
 //!
 //! Written **without reading** `crates/sentinel/src/execution/*.rs` (black
-//! box): every expectation below is re-derived from `SPEC-P05.md` §5 and
+//! box): every expectation below is re-derived from `P05` §5 and
 //! `docs/FACTS.md` §1.6 (HTTP batch `POST /v1/trading/orders`, ack codes,
 //! `CloseLong` t=3 / `CloseShort` t=4). Exact arithmetic was generated with
 //! Python `decimal` (command and complete output quoted below; per-test
@@ -70,7 +70,7 @@ use wiremock::matchers::{method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
 // ---------------------------------------------------------------------------
-// Helpers and test doubles (own tooling per SPEC-P05 §8: small structs
+// Helpers and test doubles (own tooling per P05 §8: small structs
 // implementing `PositionProbe` / `Executor`)
 // ---------------------------------------------------------------------------
 

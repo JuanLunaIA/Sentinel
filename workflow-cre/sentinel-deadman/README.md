@@ -1,4 +1,4 @@
-# sentinel-deadman — CRE workflow (SPEC-P14 §6)
+# sentinel-deadman — CRE workflow (P14 §6)
 
 Cron (every 2 min) ➜ `GET /api/heartbeat-status` ➜ condition *(any guardian
 `stale && critical`)* ➜ optional chain-read corroboration ➜ signed
@@ -101,7 +101,7 @@ from `src/core.ts`, the identical module the CRE handler calls.
 ```bash
 npx tsc --noEmit                     # workflow code (cre-sdk globals, types: [])
 npx tsc -p tsconfig.tools.json --noEmit   # tools (Node types)
-node tools/local-runner.ts --self-test    # frozen SPEC-P14 §5 HMAC vector
+node tools/local-runner.ts --self-test    # frozen P14 §5 HMAC vector
 ```
 
 Notes: `typescript` is pinned to `5.9.3` because TS 7 breaks the CRE

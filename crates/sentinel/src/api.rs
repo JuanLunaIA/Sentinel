@@ -1,8 +1,8 @@
 //! Audit-facing HTTP API (merged into the daemon router by `main`) plus the
 //! P15 dashboard surface.
 //!
-//! Implemented per `SPEC-P10.md` §7 (audit listing + verify) and
-//! `SPEC-P15.md` §2-§3 (dashboard panels, kill switch, CORS, rate limit):
+//! Implemented per `P10` §7 (audit listing + verify) and
+//! `P15` §2-§3 (dashboard panels, kill switch, CORS, rate limit):
 //!
 //! - `GET /` — the embedded single-file dashboard (`include_str!` of
 //!   `dashboard/index.html`, authored separately);
@@ -201,7 +201,7 @@ fn error_json(status: StatusCode, message: &str) -> Response {
 }
 
 // ---------------------------------------------------------------------------
-// P15 dashboard surface (SPEC-P15 §2-§3)
+// P15 dashboard surface (P15 §2-§3)
 // ---------------------------------------------------------------------------
 
 /// Default page size for `/api/decisions`.
@@ -243,7 +243,7 @@ const MAX_BUCKETS: usize = 4_096;
 /// Idle time after which a bucket is pruned when the map is full.
 const BUCKET_IDLE_TTL: Duration = Duration::from_secs(600);
 
-/// Aggregated handles for the dashboard + public API surface (SPEC-P15 §3).
+/// Aggregated handles for the dashboard + public API surface (P15 §3).
 #[derive(Clone)]
 pub struct DashboardState {
     /// Health surface (mode, uptime, feed freshness, version).
@@ -258,7 +258,7 @@ pub struct DashboardState {
     pub paths: DashboardPaths,
 }
 
-/// Filesystem paths backing dashboard panels (SPEC-P15 §2).
+/// Filesystem paths backing dashboard panels (P15 §2).
 #[derive(Debug, Clone)]
 pub struct DashboardPaths {
     /// Journal directory (`AUDIT_DIR` env honored by [`Default`]).
@@ -292,7 +292,7 @@ impl Default for DashboardPaths {
     }
 }
 
-/// Full dashboard + API router (SPEC-P15 §2-§3).
+/// Full dashboard + API router (P15 §2-§3).
 ///
 /// Serves the embedded dashboard, every `/api/*` panel, the P10 audit
 /// endpoints (`state.journal: Some`) and the key-gated kill switch. All
@@ -335,7 +335,7 @@ async fn index_html() -> Response {
         .into_response()
 }
 
-/// `GET /api/state` — dashboard snapshot (SPEC-P15 §2).
+/// `GET /api/state` — dashboard snapshot (P15 §2).
 ///
 /// Health fields come from [`crate::health::HealthState::render`]; live
 /// account/positions come from the pipeline's shared
@@ -383,7 +383,7 @@ async fn get_state(State(state): State<DashboardState>) -> Response {
     Json(body).into_response()
 }
 
-/// Render one position for `/api/state` (decimals as strings, SPEC-P15 §2).
+/// Render one position for `/api/state` (decimals as strings, P15 §2).
 fn position_json(
     live: &crate::pipeline::LiveState,
     position: &Position,
@@ -506,7 +506,7 @@ fn decisions_limit(limit: Option<usize>) -> usize {
         .clamp(1, DECISIONS_MAX_LIMIT)
 }
 
-/// `GET /api/decisions?limit=` — newest-first journal window (SPEC-P15 §2).
+/// `GET /api/decisions?limit=` — newest-first journal window (P15 §2).
 ///
 /// Without a journal handle the panel degrades to an empty array (audit
 /// endpoints keep their P10 404 degradation).
@@ -546,7 +546,7 @@ fn decision_entry_json(entry: &AuditEntry) -> Value {
     })
 }
 
-/// `GET /api/backtest` — raw contents of the P13 report JSON (SPEC-P15 §2).
+/// `GET /api/backtest` — raw contents of the P13 report JSON (P15 §2).
 async fn get_backtest(State(state): State<DashboardState>) -> Response {
     match std::fs::read_to_string(&state.paths.backtest_report) {
         Ok(contents) => ([(header::CONTENT_TYPE, "application/json")], contents).into_response(),
@@ -561,7 +561,7 @@ async fn get_backtest(State(state): State<DashboardState>) -> Response {
 }
 
 /// `GET /api/nansen/spend` — spend-ledger totals + sliding windows
-/// (SPEC-P15 §2). A missing ledger degrades to zeros; the live TTL cache is
+/// (P15 §2). A missing ledger degrades to zeros; the live TTL cache is
 /// not reachable from here, so `cache` stats stay null.
 async fn get_nansen_spend(State(state): State<DashboardState>) -> Response {
     let ledger = SpendLedger::new(state.paths.spend_ledger.clone());
@@ -606,7 +606,7 @@ async fn get_nansen_spend(State(state): State<DashboardState>) -> Response {
 }
 
 /// `GET /api/breaker-status` — breaker state file + last journal lines
-/// (SPEC-P15 §2). `available` is false (and `state` null) while the state
+/// (P15 §2). `available` is false (and `state` null) while the state
 /// file is absent or unparseable.
 async fn get_breaker_status(State(state): State<DashboardState>) -> Response {
     let breaker_state = read_json_file(&state.paths.breaker_state);
@@ -729,7 +729,7 @@ fn read_json_file(path: &Path) -> Option<Value> {
 }
 
 /// `/api/state` heartbeat block from `data/heartbeat.json`
-/// (`{"ts_ms":u64,"tx_hash":str|null,"seq":u64}`, SPEC-P16); nulls when the
+/// (`{"ts_ms":u64,"tx_hash":str|null,"seq":u64}`, P16); nulls when the
 /// file is absent or a field is missing.
 fn heartbeat_json(path: &Path, now_ms: u64) -> Value {
     let parsed = read_json_file(path);
@@ -759,7 +759,7 @@ fn wall_now_ms() -> u64 {
 }
 
 // ---------------------------------------------------------------------------
-// CORS + per-IP rate limit middleware (SPEC-P15 §2; hand-rolled, no deps)
+// CORS + per-IP rate limit middleware (P15 §2; hand-rolled, no deps)
 // ---------------------------------------------------------------------------
 
 /// Hand-rolled per-IP token bucket (60 req/min, burst 120).
@@ -1226,7 +1226,7 @@ mod tests {
         record_decision(&journal, Some(64), "close", Trigger::Strategy).await;
         state.journal = Some(journal);
 
-        // Heartbeat file (SPEC-P16 shape) 5 s old.
+        // Heartbeat file (P16 shape) 5 s old.
         let heartbeat = json!({
             "ts_ms": wall_now_ms() - 5_000,
             "tx_hash": "0xabc",

@@ -1,5 +1,5 @@
 //! Simulated venue: deterministic fills for the backtest engine
-//! (SPEC-P13 §4; implements the production [`Executor`] trait).
+//! (P13 §4; implements the production [`Executor`] trait).
 //!
 //! [`SimExecutor`] fills the whole order at `mark × (1 ∓ slippage_bps/1e4)` —
 //! sells ([`CloseSide::CloseLong`]) below the mark, buys
@@ -20,7 +20,7 @@ use sentinel_core::types::{Market, MarketId};
 use crate::error::{PerplError, Result};
 use crate::execution::{ExecutionReport, ExecutionStatus, Executor};
 
-/// Default slippage penalty applied to the mark, basis points (SPEC-P13 §4).
+/// Default slippage penalty applied to the mark, basis points (P13 §4).
 pub const DEFAULT_SLIPPAGE_BPS: u16 = 10;
 
 /// Basis points denominator: 1 bp = 1/10_000.
@@ -48,7 +48,7 @@ pub struct SimFill {
     pub fee_usd: Decimal,
 }
 
-/// Deterministic in-process venue for the backtest engine (SPEC-P13 §4).
+/// Deterministic in-process venue for the backtest engine (P13 §4).
 ///
 /// State is interior-mutable so the async [`Executor`] trait can be
 /// implemented with `&self` while the tick loop updates marks and logical

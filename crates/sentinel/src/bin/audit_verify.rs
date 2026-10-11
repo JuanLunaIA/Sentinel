@@ -1,6 +1,6 @@
 //! `audit-verify` — local chain verify + on-chain anchor cross-check.
 //!
-//! Usage (`SPEC-P10.md` §6):
+//! Usage (`P10` §6):
 //!   `cargo run --bin audit-verify -- [--journal <path>] [--from-block N] [--no-chain]`
 //!
 //! Prints the Trust-beat line on success (demo evidence):
@@ -79,7 +79,7 @@ async fn main() -> std::process::ExitCode {
     }
 }
 
-/// Parsed command-line options (`SPEC-P10` §6; hand-rolled, no new deps).
+/// Parsed command-line options (`P10` §6; hand-rolled, no new deps).
 #[derive(Debug, Clone, Default, PartialEq)]
 struct Cli {
     /// Journal file to verify (default: latest `journal-*.jsonl` under
@@ -184,7 +184,7 @@ async fn verify_cli(cli: &Cli) -> anyhow::Result<CliOutcome> {
     Ok(CliOutcome { lines, success })
 }
 
-/// The exact success line (`SPEC-P10` §6); `—` when no root was checked.
+/// The exact success line (`P10` §6); `—` when no root was checked.
 fn success_line(entries: usize, anchored: u64, root_matches_at: Option<u64>) -> String {
     let root = root_matches_at.map_or_else(|| "—".to_string(), |seq| seq.to_string());
     format!(
@@ -192,7 +192,7 @@ fn success_line(entries: usize, anchored: u64, root_matches_at: Option<u64>) -> 
     )
 }
 
-/// The exact failure line (`SPEC-P10` §6).
+/// The exact failure line (`P10` §6).
 fn failure_line(seq: u64, detail: &str) -> String {
     format!("❌ broken at seq {seq}: {detail}")
 }

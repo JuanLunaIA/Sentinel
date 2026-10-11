@@ -323,7 +323,7 @@
       },
       "notes": [
         "ignored event 'funding' at 1791243600000 ms (unmodeled in v1.0)",
-        "event note: funding rate spike: longs pay; funding is not modeled in v1.0 (ignored per SPEC-P13 §3)",
+        "event note: funding rate spike: longs pay; funding is not modeled in v1.0 (ignored per P13 §3)",
         "ignored event 'funding' at 1791250800000 ms (unmodeled in v1.0)",
         "event note: second funding spike inside the squeeze; ignored"
       ],

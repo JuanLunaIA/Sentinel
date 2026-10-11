@@ -1,4 +1,4 @@
-//! Armed HTTP surface (`SPEC-P14.md` §5).
+//! Armed HTTP surface (`P14` §5).
 //!
 //! - `GET /api/heartbeat-status` → 200
 //!   `{"generated_at_ms":n,"guardians":[{"address","last_ts_ms","age_secs",
@@ -20,7 +20,7 @@
 //! predicate; the shared one-fire-per-epoch gate makes the two paths
 //! idempotent against each other.
 //!
-//! Frozen test vector (`SPEC-P14` §5):
+//! Frozen test vector (`P14` §5):
 //!
 //! ```text
 //! secret    = spec-test-secret

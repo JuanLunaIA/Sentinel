@@ -1,6 +1,6 @@
 //! DRY_RUN executor — local fills at mark ± slippage, reports persisted.
 //!
-//! **P05 status:** implemented; interfaces frozen per `SPEC-P05.md` §5.
+//! **P05 status:** implemented; interfaces frozen per `P05` §5.
 
 use std::path::PathBuf;
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# check-links.sh — P17 markdown link audit (agent R, SPEC-P17 §5)
+# check-links.sh — P17 markdown link audit (agent R, P17 §5)
 #
 # Extracts markdown links [text](target) (plus [label]: target reference
 # definitions) from README.md, docs/architecture.md and docs/submission/*.md,
@@ -39,7 +39,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT"
 
-CURL_MAX_TIME=8     # seconds, per SPEC-P17 §5
+CURL_MAX_TIME=8     # seconds, per P17 §5
 CURL_HARD_CAP=12    # extra wall-clock kill switch on top of curl --max-time
 SKIP_EXTERNAL="${SKIP_EXTERNAL:-0}"
 

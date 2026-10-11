@@ -1,9 +1,9 @@
-//! Scenario format and loader (SPEC-P13 §3, normative).
+//! Scenario format and loader (P13 §3, normative).
 //!
 //! A scenario is a self-contained, frozen replay input: full `sentinel_core`
 //! market and position documents, a scripted price path, optional feed events,
 //! optional reflex/policy overrides and an optional recorded decision trace.
-//! [`load`] parses and validates; every SPEC-P13 §3 violation surfaces as a
+//! [`load`] parses and validates; every P13 §3 violation surfaces as a
 //! typed [`ScenarioError`].
 
 use std::path::Path;
@@ -14,7 +14,7 @@ use sentinel_core::risk::ReflexConfig;
 use sentinel_core::types::{Decision, Market, MarketId, Position};
 use serde::{Deserialize, Serialize};
 
-/// Honesty marker rendered verbatim in the report (SPEC-P13 §3).
+/// Honesty marker rendered verbatim in the report (P13 §3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ScenarioLabel {
@@ -49,7 +49,7 @@ pub struct PriceTick {
 }
 
 /// Kinds accepted in `events` (v1.0 honors `feed_stale`; others are ignored
-/// and counted in report notes — SPEC-P13 §3).
+/// and counted in report notes — P13 §3).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum EventKind {
@@ -87,7 +87,7 @@ pub struct ScenarioEvent {
     pub note: Option<String>,
 }
 
-/// One recorded strategy decision replayed at a consult tick (SPEC-P13 §4).
+/// One recorded strategy decision replayed at a consult tick (P13 §4).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DecisionTraceEntry {
     /// Tick timestamp the decision applies to.
@@ -98,7 +98,7 @@ pub struct DecisionTraceEntry {
     pub decision: Decision,
 }
 
-/// A complete scenario (SPEC-P13 §3).
+/// A complete scenario (P13 §3).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Scenario {
     /// Stable id (file stem expected to match).
@@ -129,7 +129,7 @@ pub struct Scenario {
     pub decision_trace: Option<Vec<DecisionTraceEntry>>,
 }
 
-/// Reflex override block (SPEC-P13 §3). Missing fields take the production
+/// Reflex override block (P13 §3). Missing fields take the production
 /// defaults: `0.5` / `0.25` / `600000` / `false`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(default)]
@@ -155,7 +155,7 @@ impl Default for ReflexOverrides {
     }
 }
 
-/// Policy override block (SPEC-P13 §3). Missing fields take the SPEC-P13 §3
+/// Policy override block (P13 §3). Missing fields take the P13 §3
 /// defaults: allowlist `[32]`, cap `$1000`, `10` daily actions, approval
 /// threshold `$500`, kill switch off.
 #[derive(Debug, Clone, Deserialize)]
@@ -185,7 +185,7 @@ impl Default for PolicyOverrides {
     }
 }
 
-/// Scenario loading/validation error (typed; SPEC-P13 §3).
+/// Scenario loading/validation error (typed; P13 §3).
 #[derive(Debug, thiserror::Error)]
 pub enum ScenarioError {
     /// Filesystem error.
@@ -200,7 +200,7 @@ pub enum ScenarioError {
 }
 
 impl Scenario {
-    /// Load + validate a scenario from `path` (SPEC-P13 §3).
+    /// Load + validate a scenario from `path` (P13 §3).
     ///
     /// # Errors
     /// [`ScenarioError`] on io/json/validation failure.
@@ -208,7 +208,7 @@ impl Scenario {
         load(path)
     }
 
-    /// Parse + validate a scenario from a JSON string (SPEC-P13 §3).
+    /// Parse + validate a scenario from a JSON string (P13 §3).
     ///
     /// # Errors
     /// [`ScenarioError`] on json/validation failure.
@@ -219,7 +219,7 @@ impl Scenario {
         Ok(scenario)
     }
 
-    /// Validate the SPEC-P13 §3 rules:
+    /// Validate the P13 §3 rules:
     ///
     /// - `price_path` ts_ms non-negative and strictly increasing;
     /// - every `market_id` used (path, positions, trace) exists in `markets`;
@@ -250,7 +250,7 @@ impl Scenario {
     }
 
     /// Reflex configuration: overrides mapped onto [`ReflexConfig`], or the
-    /// production defaults when the block is absent (SPEC-P13 §3).
+    /// production defaults when the block is absent (P13 §3).
     ///
     /// # Errors
     /// [`ScenarioError::Invalid`] on unparseable overrides or fractions
@@ -275,7 +275,7 @@ impl Scenario {
     }
 
     /// Policy configuration: overrides mapped onto [`PolicyConfig`], or the
-    /// SPEC-P13 §3 defaults when the block is absent.
+    /// P13 §3 defaults when the block is absent.
     ///
     /// # Errors
     /// [`ScenarioError::Invalid`] on unparseable overrides.
@@ -337,7 +337,7 @@ impl Scenario {
         Ok(())
     }
 
-    /// Every market_id used must exist in `markets` (SPEC-P13 §3).
+    /// Every market_id used must exist in `markets` (P13 §3).
     fn validate_market_refs(&self) -> Result<(), ScenarioError> {
         let known: Vec<MarketId> = self.markets.iter().map(|market| market.id).collect();
         for (index, tick) in self.price_path.iter().enumerate() {
@@ -370,7 +370,7 @@ impl Scenario {
     }
 
     /// `feed_stale` windows must be well-formed; other kinds are accepted
-    /// as-is (ignored in v1.0, SPEC-P13 §3).
+    /// as-is (ignored in v1.0, P13 §3).
     fn validate_events(&self) -> Result<(), ScenarioError> {
         for (index, event) in self.events.iter().enumerate() {
             if event.kind == EventKind::FeedStale {
@@ -394,7 +394,7 @@ impl Scenario {
     }
 }
 
-/// Load + validate a scenario from disk (SPEC-P13 §3 validation rules).
+/// Load + validate a scenario from disk (P13 §3 validation rules).
 ///
 /// # Errors
 /// `ScenarioError` on io/json/validation failure.
@@ -453,7 +453,7 @@ mod tests {
         })
     }
 
-    /// Baseline valid scenario document (SPEC-P13 §3 example shape).
+    /// Baseline valid scenario document (P13 §3 example shape).
     fn base_json() -> Value {
         json!({
             "id": "unit-test",

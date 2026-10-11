@@ -1,7 +1,7 @@
 //! P09 adversarial verification — independent black-box corpus for the Nansen
-//! x402 client (SPEC-P09.md).
+//! x402 client (P09).
 //!
-//! Written from `SPEC-P09.md` + the frozen public API + the **recorded** live
+//! Written from `P09` + the frozen public API + the **recorded** live
 //! fixtures (`docs/evidence/p01-nansen-402*`) only; the sibling implementations
 //! (`nansen/{x402,client,cache,spend,mod}.rs`) are treated as black boxes.
 //! The EIP-712 expectation is NOT taken from our code: it is pinned from an
@@ -13,7 +13,7 @@
 //! cd ~/.hermes/cache/scratch/oracle && node eip712_oracle.js
 //! ```
 //!
-//! Coverage (SPEC-P09 §7 verifier row):
+//! Coverage (P09 §7 verifier row):
 //! 1. recorded body parse; base64 header fallback (incl. no-pad); body-first.
 //! 2. rail selection: duplicate rails ⇒ first; non-`exact` scheme skipped.
 //! 3. EIP-712 signature vector vs the independent oracle + alloy recovery.
@@ -95,7 +95,7 @@ fn dec(value: &str) -> Decimal {
     Decimal::from_str(value).expect("valid decimal")
 }
 
-/// The exact Monad rail bytes from the recorded challenges (SPEC-P09 §2).
+/// The exact Monad rail bytes from the recorded challenges (P09 §2).
 fn monad_rail(amount: &str) -> PaymentRequirements {
     PaymentRequirements {
         scheme: "exact".to_string(),
@@ -1226,7 +1226,7 @@ async fn smart_money_context_success_fills_fields_and_proxy_note() {
     assert_eq!(
         ctx.note.as_deref(),
         Some(PROXY_NOTE),
-        "SPEC-P09 §3.5 honesty note"
+        "P09 §3.5 honesty note"
     );
 
     let requests = server.received_requests().await.unwrap();

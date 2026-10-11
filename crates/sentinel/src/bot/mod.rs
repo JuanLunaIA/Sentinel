@@ -1,6 +1,6 @@
 //! Telegram bot — dispatcher assembly (thin teloxide layer).
 //!
-//! Frozen by `SPEC-P11.md` §2. All logic lives in `handlers.rs` (pure);
+//! Frozen by `P11` §2. All logic lives in `handlers.rs` (pure);
 //! this module only wires teloxide: auth filter, routing, callbacks,
 //! long polling and graceful shutdown.
 //!
@@ -28,7 +28,7 @@ use crate::config::Config;
 use crate::error::{Result, SentinelError};
 
 /// Handler context the bot runs with (`main.rs` builds the concrete pair;
-/// the engine is the daemon-shared `Arc`, SPEC-P20 §2).
+/// the engine is the daemon-shared `Arc`, P20 §2).
 type Ctx = BotContext;
 
 /// Housekeeping cadence (approval expiry pass), seconds.

@@ -221,7 +221,7 @@ impl fmt::Display for ExecutionMode {
     }
 }
 
-/// Action classes of the strategy-brain decision schema v3 (`SPEC-P07.md` §2).
+/// Action classes of the strategy-brain decision schema v3 (`P07` §2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum DecisionAction {
@@ -274,7 +274,7 @@ impl Decision {
     /// Range/business validation against the consulted snapshot's markets.
     ///
     /// # Errors
-    /// Static description of the first violated rule (`SPEC-P07.md` §2).
+    /// Static description of the first violated rule (`P07` §2).
     pub fn validate(&self, allowed_markets: &[MarketId]) -> Result<(), String> {
         let confidence = self.confidence;
         if confidence < Decimal::ZERO || confidence > Decimal::ONE {
@@ -409,7 +409,7 @@ mod decisions {
 
     #[test]
     fn serde_amount_as_json_number_parses() {
-        // SPEC-P07 §2: string on the wire, but the tolerant parse also accepts
+        // P07 §2: string on the wire, but the tolerant parse also accepts
         // a JSON number.
         let mut raw = base_json();
         raw["action"] = json!("REDUCE");

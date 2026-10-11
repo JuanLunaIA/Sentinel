@@ -1,4 +1,4 @@
-# tests/fixtures/p16 — verifier fixtures (SPEC-P16 §3, agent M)
+# tests/fixtures/p16 — verifier fixtures (P16 §3, agent M)
 
 | file | purpose |
 |------|---------|

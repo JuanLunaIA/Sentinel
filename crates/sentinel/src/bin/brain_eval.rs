@@ -1,6 +1,6 @@
 //! `brain_eval` — score the strategy brain over golden scenarios.
 //!
-//! Usage (`SPEC-P07.md` §7; provider chain per `SPEC-P08.md` §5):
+//! Usage (`P07` §7; provider chain per `P08` §5):
 //!   `cargo run --bin brain_eval -- [--scenarios tests/golden] [--mock]
 //!    [--provider qwen|kimi] [--out docs/evidence/p08-brain-eval.txt]`
 //!
@@ -47,7 +47,7 @@ const FORCE_PROVIDER_FAIL_ENV: &str = "FORCE_PROVIDER_FAIL";
 /// mode is kept.
 const MOCK_MIN_INTERVAL_SECS: u64 = 120;
 
-/// Fallback provider name of the mock chain (`SPEC-P08.md` §5).
+/// Fallback provider name of the mock chain (`P08` §5).
 const MOCK_FALLBACK_NAME: &str = "kimi";
 
 /// Provider label rendered on single-provider mock rows that carry no outcome
@@ -223,7 +223,7 @@ fn load_scenarios(dir: &Path) -> anyhow::Result<Vec<Scenario>> {
 /// `FORCE_PROVIDER_FAIL` (environment), when set to a non-empty value.
 ///
 /// The mock chain needs the name as a `&'static str` (`MockProvider::named`,
-/// `SPEC-P08.md` §4) while the env value is runtime data; the harness is a
+/// `P08` §4) while the env value is runtime data; the harness is a
 /// short-lived process, so leaking the one small name per run is the honest
 /// bridge. The name is compared by equality against each provider slot, so a
 /// value matching no provider is a no-op.
@@ -307,7 +307,7 @@ async fn run_scenarios(
 /// mock chain mirrors the live shape: a force-failed primary (empty queue —
 /// the forced failure short-circuits, so it is never called) plus the
 /// scenario's canned completion on the `kimi` fallback, so every row reports
-/// `provider=kimi` (`SPEC-P08.md` §5). A fresh engine is built per scenario
+/// `provider=kimi` (`P08` §5). A fresh engine is built per scenario
 /// because a consult consumes its single canned completion.
 async fn run_mock_scenario(
     scenario: &Scenario,
@@ -517,7 +517,7 @@ mod tests {
     /// Every golden scenario driven through the mock failover chain (the
     /// `FORCE_PROVIDER_FAIL=qwen` shape: force-failed primary, canned `kimi`
     /// fallback) must produce a successful row reporting `provider=kimi` —
-    /// the data-level form of the offline failover demo (`SPEC-P08.md` §5).
+    /// the data-level form of the offline failover demo (`P08` §5).
     #[tokio::test]
     async fn mock_chain_forced_primary_reports_kimi_on_every_golden_row() {
         let scenarios = load_scenarios(&golden_dir()).expect("golden scenarios load");

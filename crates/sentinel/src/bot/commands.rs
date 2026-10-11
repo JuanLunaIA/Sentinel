@@ -1,4 +1,4 @@
-//! Bot commands — parsing with EN primary + ES aliases (`SPEC-P11.md` §3).
+//! Bot commands — parsing with EN primary + ES aliases (`P11` §3).
 //!
 //! Parsing is pure and total: [`parse`] maps one message text to a
 //! [`Command`] or `None` for anything unknown or malformed. The dispatcher
@@ -70,7 +70,7 @@ pub const AUDIT_DEFAULT: usize = 10;
 pub const AUDIT_MAX: usize = 50;
 
 /// Parse one message text into a command (`None` for anything unrecognized
-/// or malformed). EN primary plus ES aliases (ASCII, per `SPEC-P11.md` §3).
+/// or malformed). EN primary plus ES aliases (ASCII, per `P11` §3).
 ///
 /// Rules (frozen): trim; require and strip exactly ONE leading `/`; the
 /// command token is case-insensitive (lowercased), arguments are preserved

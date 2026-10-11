@@ -1,6 +1,6 @@
 # workflow-cre — Sentinel dead-man's-switch (CRE project)
 
-Chainlink CRE (Chainlink Runtime Environment) project for **SPEC-P14 §6**: a
+Chainlink CRE (Chainlink Runtime Environment) project for **P14 §6**: a
 cron-triggered workflow that watches the Sentinel breaker's heartbeat status
 and, when a guardian is `stale && critical`, POSTs the frozen signed
 `/breaker/trigger` request (plus an optional Telegram alert).
@@ -61,7 +61,7 @@ cd workflow-cre/sentinel-deadman
 npm install
 node tools/stale-breaker-emulator.ts &                                   # stale endpoint on :9091
 BREAKER_ARM_SECRET=demo-secret node tools/local-runner.ts --config config.local.json --expect fire
-node tools/local-runner.ts --self-test        # frozen SPEC-P14 §5 HMAC vector
+node tools/local-runner.ts --self-test        # frozen P14 §5 HMAC vector
 ```
 
 ## The on-chain leg
@@ -76,5 +76,5 @@ for the rationale, including why `project.yaml` intentionally carries no
 
 ## Spec / links
 
-- `SPEC-P14.md` §6 (frozen), docs.chain.link/cre (CLI, HTTP client, cron
+- `P14` §6 (frozen), docs.chain.link/cre (CLI, HTTP client, cron
   trigger, secrets-in-simulation), `docs/FACTS.md` §5 (CRE facts, Monad support).

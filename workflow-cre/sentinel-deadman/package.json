@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Sentinel dead-man's-switch CRE workflow: cron -> breaker heartbeat-status -> signed trigger POST (SPEC-P14)",
+  "description": "Sentinel dead-man's-switch CRE workflow: cron -> breaker heartbeat-status -> signed trigger POST (P14)",
   "scripts": {
     "typecheck": "tsc --noEmit && tsc -p tsconfig.tools.json --noEmit",
     "runner": "node tools/local-runner.ts",

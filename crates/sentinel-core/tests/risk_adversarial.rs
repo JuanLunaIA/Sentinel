@@ -1,14 +1,14 @@
 //! # P04 independent verification — adversarial suite for the reflex risk engine.
 //!
 //! Written **without reading** `crates/sentinel-core/src/risk.rs` (black box):
-//! every expectation below is re-derived from `SPEC-P04.md`, `docs/FACTS.md`
+//! every expectation below is re-derived from `P04`, `docs/FACTS.md`
 //! §1.7 and the official SDK source pinned at `vendor/dex-sdk` @ `01b9910`
 //! (`crates/sdk/src/state/position.rs` L134-153 `liquidation_price`, L645-683
 //! its unit vectors). Exact arithmetic was generated with Python `decimal`
 //! (commands and full outputs quoted below; per-test references use the `A|`…
 //! `J|` line tags).
 //!
-//! **Re-verified against SPEC-P04 v1.0.1 (changelog §11):** `distance_to_liq_pct`
+//! **Re-verified against P04 v1.0.1 (changelog §11):** `distance_to_liq_pct`
 //! now takes `(pos: &Position, market: &Market)` — the exchange price when present,
 //! else the derived price (`implied_liq_price` via the market's maintenance-margin
 //! fraction), else `None`; still `None` when the mark is missing, `mark <= 0`, or
@@ -196,8 +196,8 @@
 //! I| huge C=1e9 m100: liq = -99999895 | dist28 = 99999995
 //! ```
 //!
-//! Timing/order note: all sequences use caller-supplied `now_ms` (SPEC-P04 §1:
-//! no clock reads); the default cooldown is 600_000 ms (SPEC-P04 §3.4).
+//! Timing/order note: all sequences use caller-supplied `now_ms` (P04 §1:
+//! no clock reads); the default cooldown is 600_000 ms (P04 §3.4).
 
 use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
@@ -332,12 +332,12 @@ fn assert_close(actual: Decimal, expected: Decimal, tol: Decimal, ctx: &str) {
 
 #[test]
 fn sdk_vector_derived_liq_prices() {
-    // SPEC-P04 §3.1 + FACTS §1.7 + SDK tests (position.rs L645-683): entry 100,
+    // P04 §3.1 + FACTS §1.7 + SDK tests (position.rs L645-683): entry 100,
     // |size| 10, collateral 100, mmr = 20/100 = 0.05.
     //   MMR = 100 * 10 * 0.05 = 50
     //   liq_long  = 100 + (50-100)/10 = 95
     //   liq_short = 100 - (50-100)/10 = 105
-    // (SDK bankruptcy prices 90/110 are out of API scope: SPEC-P04 §4 has no such fn.)
+    // (SDK bankruptcy prices 90/110 are out of API scope: P04 §4 has no such fn.)
     // Python: A| liq_long = 95.00 | liq_short = 105.00
     let m = market();
     assert_eq!(implied_liq_price(&sdk_long(), &m), Some(dec!(95)));
@@ -350,7 +350,7 @@ fn sdk_vector_derived_liq_prices() {
 
 #[test]
 fn sdk_vector_distance_checks() {
-    // distance = |mark - liq| / mark * 100 (SPEC-P04 §3.1); v1.0.1 2-arg form:
+    // distance = |mark - liq| / mark * 100 (P04 §3.1); v1.0.1 2-arg form:
     // exchange price preferred, else derived from the market, else None.
     // Python: A| dist_long(mark100) = 5.00 | dist_short(mark100) = 5.00 | dist_long(mark95) = 0
     let m = market();
@@ -386,7 +386,7 @@ fn sdk_vector_distance_checks() {
 
 #[test]
 fn tier_cut_boundaries_exact_and_one_ulp() {
-    // SPEC-P04 §3.3: >= soft → Green; >= warn → Yellow; >= hard → Orange; else Red;
+    // P04 §3.3: >= soft → Green; >= warn → Yellow; >= hard → Orange; else Red;
     // a value exactly at a threshold belongs to the safer tier.
     // Python: B| tier inputs: 24.999999999999999999999999999 | 25 | 25.000000000000000000000000001 (等)
     let t = th();
@@ -968,7 +968,7 @@ fn margin_health_values_and_none_rules() {
 
 #[test]
 fn reflex_intent_stateless_table_grid() {
-    // SPEC-P04 §3.4 table, swept over tier × quality × stale_reduce with a custom
+    // P04 §3.4 table, swept over tier × quality × stale_reduce with a custom
     // config (0.35 / 0.15) to prove the fraction fields are read, not hardcoded.
     let p = sdk_long();
     let qualities = [
@@ -1429,7 +1429,7 @@ fn thresholds_validation_edges() {
 
 #[test]
 fn adversarial_nonpositive_entry_probe() {
-    // SPEC-P04 §3.1 gives no None condition for entry_price <= 0. This probe pins
+    // P04 §3.1 gives no None condition for entry_price <= 0. This probe pins
     // determinism and records the behavior (run with --nocapture to see both lines);
     // any panic or per-call difference is a finding, a None is spec-unspecified.
     let m = market();

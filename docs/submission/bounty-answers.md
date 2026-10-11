@@ -1,6 +1,6 @@
 # Sentinel — paste-ready bounty answers (Monad Metropolis)
 
-Generated 2026-10-06 from the frozen fact sheet (SPEC-P17 §1). Seven self-contained blocks, each ≤200 words (heading through Evidence line), ready to paste into the corresponding bounty form. The platform's exact form-question wording is not stored in this repo, so each block is written as a direct answer to that bounty's core question. Every number traces to an evidence file named on the block's own Evidence line; PENDING items are stated inline and collected at the end.
+Generated 2026-10-06 from the frozen fact sheet (P17 §1). Seven self-contained blocks, each ≤200 words (heading through Evidence line), ready to paste into the corresponding bounty form. The platform's exact form-question wording is not stored in this repo, so each block is written as a direct answer to that bounty's core question. Every number traces to an evidence file named on the block's own Evidence line; PENDING items are stated inline and collected at the end.
 
 Map (answer → bounty as listed on the Metropolis platform):
 1. Perpl — Best use of Perpl's API · 2. Perpl — Best Analytics / Risk Tool · 3. Nansen — Best use of Nansen · 4. Alibaba Cloud — Best Builds with Qwen 3.8 Max · 5. Kimi — Best Builds Powered by KIMI · 6. Chainlink — Best workflow with CRE · 7. Envio — Best Use of Envio

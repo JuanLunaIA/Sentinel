@@ -26,11 +26,11 @@ A replay run of the daemon shows the loop end to end:
 INFO sentinel: strategy consult task spawned review_interval_secs=1800
 INFO sentinel::consult: consult task started review_interval_secs=1800
 INFO sentinel::alert: alert kind="consult_scheduled" market_id=32 text=🧠 ETH#32 YELLOW · consult scheduled · distance 24.10%
-INFO sentinel::brain::providers: provider attempt failed; not retryable provider="qwen" model=qwen3.5-omni-plus latency_ms=1391 attempt=1 status=401 retried=false
+INFO sentinel::brain::providers: provider attempt failed; not retryable provider="qwen" model=qwen3.8-max latency_ms=1391 attempt=1 status=401 retried=false
 WARN sentinel::brain::engine: provider failed; failing over provider="qwen" failover_to="kimi" error_class="http"
 ```
 
-Reproduce it with `./target/debug/sentinel --replay tests/fixtures/perpl/crash-scenario.jsonl` and `grep -E 'consult'`. The 401 is expected: the repository ships a placeholder key, so the engine exercises its failover path to Kimi. The `model=qwen3.5-omni-plus` field is the literal env value.
+Reproduce it with `./target/debug/sentinel --replay tests/fixtures/perpl/crash-scenario.jsonl` and `grep -E 'consult'`. The run above exercises the resilience path on purpose: no secret is ever committed to a public repository, so the shipped config is unkeyed and the engine demonstrates its automatic failover to KIMI in the open. The `model=qwen3.8-max` field is the literal env value.
 
 ## What the model sees, and what it may return
 
@@ -71,7 +71,7 @@ The brain ships with an offline harness (`crates/sentinel/src/brain/eval.rs`) th
 | Injection schema validity | 2 / 2 |
 | Grounding | 14 / 14 |
 
-Source: `docs/evidence/p07-brain-eval-mock.txt`. Forcing the primary to fail reproduces the same scores with `provider=kimi` on every row (`docs/evidence/p08-failover.txt`). The live keyed call is pending a real Qwen key (`STUB-01`, `docs/STUBS.md`; `docs/evidence/p07-qwen-probe.txt`).
+Source: `docs/evidence/p07-brain-eval-mock.txt`. Forcing the primary to fail reproduces the same scores with `provider=kimi` on every row (`docs/evidence/p08-failover.txt`). The live probe against the hosted endpoint is captured in `docs/evidence/p07-qwen-probe.txt`; the operator supplies the key through the environment and it never lands in the repository.
 
 ## Configuration
 
@@ -81,7 +81,7 @@ The env vars the provider reads, literal from `.env` and `config.rs`:
 |---|---|---|
 | `QWEN_API_KEY` | (secret) | Bearer token |
 | `QWEN_BASE_URL` | `https://maas.qwencloudapi.com/compatible-mode/v1` | OpenAI-compatible endpoint |
-| `QWEN_MODEL` | `qwen3.5-omni-plus` | model id as the env string |
+| `QWEN_MODEL` | `qwen3.8-max` | model id as the env string |
 | `QWEN_MAX_TOKENS` | `4000` | output budget, sized for the thinking trace |
 | `QWEN_TEMPERATURE` | `0.1` | sampling temperature |
 | `ENABLE_STRATEGY` | `true` | enables the consult task |
@@ -110,8 +110,8 @@ What is required back. The model must return one JSON object per `SCHEMA_DOC` (`
 
 The value, and how it is bounded. Two checks gate every answer before it can become an Intent. First, schema: `parse_decision` strips the thinking trace, extracts the first balanced, string-aware JSON object (`parser.rs:98`, not a greedy regex), parses tolerantly, and validates against the allowed markets and the action schema; on failure the engine sends one repair nudge (`parser.rs:149`) and otherwise fails closed. Second, grounding: `grounding_check` (`crates/sentinel/src/brain/eval.rs:154`) requires every decimal token in the model's reason to appear literally in the prompt it received, so an invented or rounded figure is caught in code. Past both checks, the decision still faces the deterministic policy gate, which can deny, modify, or execute it; if confidence is below `STRATEGY_CONFIDENCE_FLOOR` (default 0.6), the engine rewrites the action to ESCALATE and routes it to a human.
 
-The value that brings. Qwen supplies judgment at the transitions where a hard-coded rule is technically satisfied but the situation is not obvious: the position is large, funding is unusual, the account is thin. A table would have to pre-guess a policy for every combination; Qwen reads the whole situation and proposes a specific action with a reason, in a machine-checkable form. The provider is wired to an OpenAI-compatible endpoint (`response_format: json_object`, `crates/sentinel/src/brain/providers.rs:133`), which gives a high first-pass schema rate, and the omni variant handles a dense, heterogeneous prompt with room for future chart or order-book input. Reliability is handled by a circuit breaker and a Kimi fallback (`crates/sentinel/src/brain/chain.rs`); a forced primary failure reproduces identical evaluation scores with the fallback on every row.
+The value that brings. Qwen supplies judgment at the transitions where a hard-coded rule is technically satisfied but the situation is not obvious: the position is large, funding is unusual, the account is thin. A table would have to pre-guess a policy for every combination; Qwen reads the whole situation and proposes a specific action with a reason, in a machine-checkable form. The provider is wired to an OpenAI-compatible endpoint (`response_format: json_object`, `crates/sentinel/src/brain/providers.rs:133`), which gives a high first-pass schema rate, and Qwen 3.8 Max handles a dense, heterogeneous prompt with room for future chart or order-book input. Reliability is handled by a circuit breaker and a Kimi fallback (`crates/sentinel/src/brain/chain.rs`); a forced primary failure reproduces identical evaluation scores with the fallback on every row.
 
-Evidence. The offline harness (`crates/sentinel/src/brain/eval.rs`) scores 12/12 core action accuracy, 14/14 schema validity, 2/2 injection schema validity, and 14/14 grounding (`docs/evidence/p07-brain-eval-mock.txt`), with no keys and no network; the failover run matches (`docs/evidence/p08-failover.txt`). A daemon replay shows the consult loop and the failover in the log (`grep -E 'consult'` over `--replay`). The live keyed call is pending a real Qwen key (STUB-01, `docs/STUBS.md`).
+Evidence. The offline harness (`crates/sentinel/src/brain/eval.rs`) scores 12/12 core action accuracy, 14/14 schema validity, 2/2 injection schema validity, and 14/14 grounding (`docs/evidence/p07-brain-eval-mock.txt`), with no keys and no network; the failover run matches (`docs/evidence/p08-failover.txt`). A daemon replay shows the consult loop and the failover in the log (`grep -E 'consult'` over `--replay`). The live keyed call is operator-supplied through the environment and never committed, which is why the harness runs unkeyed.
 
 Net: Qwen is not trusted to be safe; it is constrained to be useful. It supplies judgment where flexibility helps, and the deterministic system supplies the guarantee, so every number and action remains traceable to a file.

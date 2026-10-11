@@ -2,7 +2,7 @@
 //! reduce-only order sizing (`sentinel-core`).
 //!
 //! Written **without reading** `crates/sentinel-core/src/{policy.rs,order.rs}`
-//! (black box): every expectation below is re-derived from `SPEC-P05.md` §3–§4
+//! (black box): every expectation below is re-derived from `P05` §3–§4
 //! and `docs/FACTS.md` §1.6 (`CloseLong` = t 3 / `CloseShort` = t 4,
 //! reduce-only by construction). Exact arithmetic was generated with Python
 //! `decimal` (commands and complete outputs quoted below; the per-test `A|`…

@@ -1,5 +1,5 @@
 //! Staleness, criticality and the persisted one-fire-per-epoch gate
-//! (`SPEC-P14.md` §3).
+//! (`P14` §3).
 //!
 //! Rules (frozen):
 //! - `stale <=> age_secs > stale_mult × heartbeat_interval` — **strict** `>`;

@@ -5,9 +5,9 @@
 //! [`PolicyEngine::evaluate`] before execution (P00 invariant #1).
 //!
 //! Check precedence, exact reasons, and the deliberate REFLEX+Red approval
-//! asymmetry are frozen in `SPEC-P05.md` §3.
+//! asymmetry are frozen in `P05` §3.
 //!
-//! **P05 status:** implemented; checks run in `SPEC-P05.md` §3 order and the
+//! **P05 status:** implemented; checks run in `P05` §3 order and the
 //! first failure wins. The `Reflex`+`Red` asymmetry bypasses only the approval
 //! threshold — the per-order cap and the daily action cap still apply.
 
@@ -67,7 +67,7 @@ impl PolicyEngine {
     /// Evaluate an intent against the configured limits.
     ///
     /// Returns `Allow`, `Deny { reason }` or `NeedsApproval { reason }`;
-    /// precedence and messages are normative in `SPEC-P05.md` §3.
+    /// precedence and messages are normative in `P05` §3.
     ///
     /// The checks run in spec order and the first failure wins: kill switch →
     /// market allowlist → position resolution (`Alert` short-circuits to
@@ -96,7 +96,7 @@ impl PolicyEngine {
             return deny(format!("market {} not in allowlist", ctx.market_id.0));
         }
 
-        // 3. `Alert` skips position resolution and checks 4–7 (SPEC-P05 §3
+        // 3. `Alert` skips position resolution and checks 4–7 (P05 §3
         // step 3): an informational alert needs no position and no notional.
         if matches!(intent, Intent::Alert { .. }) {
             return PolicyVerdict::Allow;
@@ -389,7 +389,7 @@ mod tests {
 
     #[test]
     fn rule3_alert_short_circuits_after_rules_1_and_2() {
-        // Marked reading of SPEC-P05 §3 step 3: `Alert` skips steps 3–7 and
+        // Marked reading of P05 §3 step 3: `Alert` skips steps 3–7 and
         // returns `Allow` even when the market has no position at all ...
         assert_eq!(
             gate(&alert(), &account(vec![]), &cfg(), &day(0)),

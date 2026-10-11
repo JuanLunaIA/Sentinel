@@ -1,6 +1,6 @@
 //! Eval harness core — golden scenarios, scoring, scoreboard rendering.
 //!
-//! Frozen by `SPEC-P07.md` §7. The `brain_eval` binary drives this module;
+//! Frozen by `P07` §7. The `brain_eval` binary drives this module;
 //! scoring is a library surface so it can be tested independently.
 //!
 //! Scoring semantics: injection scenarios are excluded from core accuracy but
@@ -108,7 +108,7 @@ pub struct Scoreboard {
     pub grounding_total: u32,
 }
 
-/// Score results against scenarios (`SPEC-P07.md` §7 semantics).
+/// Score results against scenarios (`P07` §7 semantics).
 ///
 /// Results are matched to scenarios by name; a scenario without a matching
 /// result counts toward the totals as failed. Core (non-injection) accuracy
@@ -179,7 +179,7 @@ pub fn grounding_check(reason: &str, input_text: &str) -> bool {
 
 /// Stable plain-text scoreboard (counts + per-scenario rows).
 ///
-/// Line formats are frozen by `SPEC-P07.md` §7. When every result carries an
+/// Line formats are frozen by `P07` §7. When every result carries an
 /// error, a `DEGRADED` banner is prefixed (the caller still exits 0).
 pub fn render_scoreboard(board: &Scoreboard, results: &[ScenarioResult]) -> String {
     let total = board.total;
@@ -217,7 +217,7 @@ fn degraded(results: &[ScenarioResult]) -> bool {
     !results.is_empty() && results.iter().all(|result| result.error.is_some())
 }
 
-/// One scenario row in the frozen `SPEC-P07.md` §7 format.
+/// One scenario row in the frozen `P07` §7 format.
 ///
 /// `PASS` requires the full contract: no error, a schema-valid decision, the
 /// expected action class, and grounded reasoning. `FAIL` rows append
@@ -322,7 +322,7 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/golden")
     }
 
-    /// The 14 frozen file names (`SPEC-P07.md` §7), sorted ascending.
+    /// The 14 frozen file names (`P07` §7), sorted ascending.
     const GOLDEN_NAMES: [&str; 14] = [
         "01-deep-underwater-red.json",
         "02-healthy-green.json",

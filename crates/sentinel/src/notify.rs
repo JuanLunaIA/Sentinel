@@ -1,12 +1,12 @@
 //! Alert delivery v1 — tier changes and reflex actions to tracing/Telegram.
 //!
-//! Frozen by `SPEC-P06.md` §3. Dedupe rule: one alert per `(market, tier)`
+//! Frozen by `P06` §3. Dedupe rule: one alert per `(market, tier)`
 //! until the tier changes; a persistent `Red` re-alerts every 15 minutes.
 //! All timestamps come from `Alert::at_ms` (logical in replay → deterministic).
 //! Suppressed alerts return `Ok(())` without touching the inner sink; sink
 //! errors propagate to the caller (the pipeline logs them, never fatal) —
 //! except [`TelegramSink`], whose deliveries are queued and retried in the
-//! background and never surface to the pipeline (SPEC-P16 §2).
+//! background and never surface to the pipeline (P16 §2).
 
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
@@ -20,7 +20,7 @@ use teloxide::requests::Requester;
 
 use crate::error::Result;
 
-/// Persistent-Red re-alert interval, ms (SPEC-P06 §3).
+/// Persistent-Red re-alert interval, ms (P06 §3).
 pub const RED_REALERT_MS: u64 = 15 * 60 * 1000;
 
 /// What an alert is about.
@@ -58,7 +58,7 @@ pub enum AlertKind {
         secs: u64,
     },
     /// Anchor heartbeats/batches failed consecutively, or recovered after a
-    /// degraded streak (STUB-19 partial, `SPEC-P20.md` §4). The anchor task
+    /// degraded streak (STUB-19 partial, `P20` §4). The anchor task
     /// emits this at 3 consecutive failures and once when anchoring lands
     /// again.
     AnchoringDegraded {
@@ -70,7 +70,7 @@ pub enum AlertKind {
         recovering: bool,
     },
     /// A strategy consult produced a decision, or its approved order was
-    /// submitted (`SPEC-P20.md` §2.5). The consult task emits this for
+    /// submitted (`P20` §2.5). The consult task emits this for
     /// gated / needs-approval / ESCALATE outcomes; the pipeline mirrors the
     /// execution status of an approved strategy order through the same kind.
     StrategyDecision {
@@ -99,7 +99,7 @@ pub struct Alert {
 
 /// Destination for alerts. Errors are logged by the pipeline, never fatal.
 ///
-/// The returned future is `Send` by contract so supervised tasks (SPEC-P20
+/// The returned future is `Send` by contract so supervised tasks (P20
 /// consult task) can own a sink and be spawned on the multithreaded runtime;
 /// every existing `async fn` implementation satisfies this bound unchanged.
 pub trait AlertSink {
@@ -216,7 +216,7 @@ impl AlertSink for TelegramSink {
     }
 }
 
-/// Outbound queue capacity (frozen: 32, SPEC-P16 §2).
+/// Outbound queue capacity (frozen: 32, P16 §2).
 const QUEUE_CAPACITY: usize = 32;
 /// Retries after the initial delivery attempt (frozen: 3).
 const MAX_RETRIES: u32 = 3;
@@ -825,7 +825,7 @@ mod tests {
             queue.pop().expect("queue holds alerts").text,
             "queue-alert-1"
         );
-        // The overflow is loud (SPEC-P16 §2: drop oldest + warn).
+        // The overflow is loud (P16 §2: drop oldest + warn).
         let text = captured_text(&logs);
         assert!(
             text.contains("dropping oldest alert"),

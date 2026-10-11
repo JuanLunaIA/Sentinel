@@ -1,6 +1,6 @@
 //! P06 acceptance (parent): replay determinism + shutdown contract.
 //!
-//! SPEC-P06.md §6/§9: the same fixture + the same config must produce an
+//! P06 §6/§9: the same fixture + the same config must produce an
 //! identical `PipelineOutcome::to_jsonl()` (and identical alerts), and a
 //! shutdown flip must drain to exactly one trailing `Shutdown` event.
 

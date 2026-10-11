@@ -1,4 +1,4 @@
-//! Do-nothing baseline (SPEC-P13 §5).
+//! Do-nothing baseline (P13 §5).
 //!
 //! Walks the scenario price path with no actions: a position liquidates at the
 //! first tick where the mark crosses its effective liquidation price
@@ -25,7 +25,7 @@ pub struct BaselineOutcome {
     pub liquidations: u32,
 }
 
-/// Walk the scenario path with no actions (SPEC-P13 §5).
+/// Walk the scenario path with no actions (P13 §5).
 pub fn simulate(scenario: &Scenario) -> BaselineOutcome {
     let markets: HashMap<MarketId, &Market> = scenario
         .markets
@@ -78,7 +78,7 @@ pub fn simulate(scenario: &Scenario) -> BaselineOutcome {
             .sum::<Decimal>()
     } else {
         // Nothing liquidates: the loss is the clamped end-of-path unrealized
-        // loss per position (+0 fees, SPEC-P13 §5).
+        // loss per position (+0 fees, P13 §5).
         scenario
             .positions
             .iter()
@@ -105,7 +105,7 @@ pub fn simulate(scenario: &Scenario) -> BaselineOutcome {
 }
 
 /// Effective liquidation price: the exchange's value when present, else the
-/// first-principles derivation (SPEC-P13 §5).
+/// first-principles derivation (P13 §5).
 pub(crate) fn liq_price_of(position: &Position, market: &Market) -> Option<Decimal> {
     if let Some(price) = position.liq_price {
         return Some(price);
@@ -113,7 +113,7 @@ pub(crate) fn liq_price_of(position: &Position, market: &Market) -> Option<Decim
     implied_liq_price(position, market)
 }
 
-/// Whether `mark` has crossed `liq` for the position's side (SPEC-P13 §5):
+/// Whether `mark` has crossed `liq` for the position's side (P13 §5):
 /// long liquidates at `mark <= liq`, short at `mark >= liq`.
 pub(crate) fn crossed(position: &Position, mark: Decimal, liq: Decimal) -> bool {
     if position.size > Decimal::ZERO {

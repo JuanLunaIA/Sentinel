@@ -1,6 +1,6 @@
 //! Prompt construction — versioned, grounded, budget-bounded.
 //!
-//! Frozen by `SPEC-P07.md` §5. The system text is static; every number the
+//! Frozen by `P07` §5. The system text is static; every number the
 //! model may cite lives in the user block (grounding rule).
 //!
 //! **P07 status:** implemented. [`system_prompt`] carries no digits and reads
@@ -19,7 +19,7 @@ pub const PROMPT_VERSION: &str = "v3.0";
 
 /// The static system prompt.
 ///
-/// Static by contract (`SPEC-P07.md` §5): no runtime numbers, no config reads.
+/// Static by contract (`P07` §5): no runtime numbers, no config reads.
 /// All numeric context is rendered into the user block by [`user_prompt`],
 /// which also appends the exact schema ([`SCHEMA_DOC`]) as the final
 /// instruction.
@@ -204,9 +204,9 @@ pub fn user_prompt(input: &PromptInput<'_>) -> String {
 }
 
 /// P04 default distance-to-liquidation cuts in **percent**: soft 25 / warn 15
-/// / hard 8 (`SPEC-P04.md` §3.2, mirrored by the `crate::config::RiskConfig`
+/// / hard 8 (`P04` §3.2, mirrored by the `crate::config::RiskConfig`
 /// defaults `RISK_SOFT_PCT` / `RISK_WARN_PCT` / `RISK_HARD_PCT`). The prompt
-/// layer reads no config (`SPEC-P07.md` §5), so the defaults are hardcoded.
+/// layer reads no config (`P07` §5), so the defaults are hardcoded.
 fn default_thresholds() -> RiskThresholds {
     RiskThresholds {
         soft: Decimal::new(25, 0),
@@ -290,7 +290,7 @@ fn account_row(
 }
 
 /// Smart-money block body: the literal unavailable line when every data field
-/// is `None` (`SPEC-P07.md` §5), otherwise the asset plus each present value.
+/// is `None` (`P07` §5), otherwise the asset plus each present value.
 fn smart_money_lines(sm: &SmartMoneyContext) -> Vec<String> {
     if sm.netflow_24h.is_none()
         && sm.holdings_delta.is_none()

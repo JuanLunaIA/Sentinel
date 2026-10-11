@@ -2,7 +2,7 @@
 # ==========================================================================
 # Sentinel P16 — docker build + compose cycle + journal seq continuity.
 #
-# Proves the SPEC-P16 §1 acceptance substitute (evidence:
+# Proves the P16 §1 acceptance substitute (evidence:
 # docs/evidence/p16-docker.txt):
 #   1. `docker build` — clean multi-stage release build of the workspace.
 #   2. `docker compose up -d` — sentinel + breaker on the ./data volume.

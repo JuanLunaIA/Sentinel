@@ -1,6 +1,6 @@
 [package]
 name = "breaker"
-description = "Sentinel breaker: independent dead-man's-switch guardian that fires pre-authorized defensive reduces when the daemon's heartbeats go stale (SPEC-P14)"
+description = "Sentinel breaker: independent dead-man's-switch guardian that fires pre-authorized defensive reduces when the daemon's heartbeats go stale (P14)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
