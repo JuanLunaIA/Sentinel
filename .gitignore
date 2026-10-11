@@ -20,6 +20,7 @@ workflow-cre/target/
 /logs/
 *.log
 !docs/evidence/*.log
+!tests/fixtures/p16/redaction-sample.log
 /data/
 
 # --- Vendor (cloned reference repos; re-clone via scripts/verify-facts.sh) ---

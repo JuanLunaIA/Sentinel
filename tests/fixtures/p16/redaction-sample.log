@@ -1,0 +1,24 @@
+# P16 secret-scan fixture — synthetic redaction sample.
+#
+# This file is SCANNED by `crates/sentinel/tests/p16_adversarial.rs`
+# (`secret_scan_*` tests). It must contain zero unredacted secret material.
+# It deliberately exercises:
+#   * every redaction-marker style the scanner must tolerate
+#     ([REDACTED], <redacted>, ***, (redacted), REDACTED-suffix);
+#   * the well-known Foundry/anvil PUBLIC dev key #0 in a `--private-key`
+#     context (the one exemption the spec allows, SPEC-P16 §3);
+#   * bare sha256 digests and 0x transaction hashes (hash context, must NOT
+#     be classified as key material).
+# Timestamps are fictional (deterministic artifact; no wall-clock intent).
+2026-10-06T03:10:00.000Z  INFO sentinel::config: loaded config PERPL_ENV=testnet mode=DRY_RUN 
+2026-10-06T03:10:00.001Z  INFO sentinel::perpl::auth: api credential loaded key=[REDACTED] secret=[REDACTED] account=0x0000000000000000000000000000000000000007
+2026-10-06T03:10:00.002Z  INFO sentinel::anchor: signer loaded --private-key 0x<redacted> --broadcast
+2026-10-06T03:10:00.003Z  WARN sentinel::nansen::client: x402 payer key fingerprint=sha256:9f2c0e11aa source=local key=(redacted)
+2026-10-06T03:10:00.004Z  INFO sentinel::notify: telegram bot token=1234567890:[REDACTED] chat=<redacted>
+2026-10-06T03:10:00.005Z  INFO sentinel::brain::providers: request header Authorization: Bearer [REDACTED]
+2026-10-06T03:10:00.006Z  INFO sentinel::brain::providers: qwen api_key=sk-REDACTED-000 provider=qwen
+2026-10-06T03:10:00.007Z DEBUG sentinel::audit: entry prev_hash=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 (sha256, not key material)
+2026-10-06T03:10:00.008Z  INFO sentinel::anchor: beat anchored tx=0xe67e2d0d5c1f4a9b3e77aa0211d4c8f30b5a9e6d2c4f1a8b7d9e0f3a6c5b4d2e (tx hash, not key material)
+2026-10-06T03:10:00.009Z  INFO sentinel::test: forge create --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --broadcast (well-known anvil dev key #0, public throwaway)
+2026-10-06T03:10:00.010Z  INFO sentinel::test: webhook signing secret=<redacted> (32-byte seed; value omitted)
+2026-10-06T03:10:00.011Z  INFO sentinel::brain::providers: api_key sk-REDACTED-4f2b9c retry=1
