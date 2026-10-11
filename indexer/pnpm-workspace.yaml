@@ -1,4 +1,7 @@
-# pnpm 11 project settings live here (NOT in package.json's `pnpm` field).
+# pnpm project settings live here (NOT in package.json's `pnpm` field).
 # esbuild needs its postinstall to place the platform binary during `pnpm install`.
+# `packages: []` tells pnpm this is not a monorepo root (CI pnpm 9 refuses to
+# install without the field).
+packages: []
 allowBuilds:
   esbuild: true

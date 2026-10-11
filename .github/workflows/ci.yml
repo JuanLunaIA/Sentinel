@@ -32,6 +32,11 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      # The breaker integration tests spawn a local anvil chain.
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
       - uses: Swatinem/rust-cache@v2
 
       - name: cargo fmt
