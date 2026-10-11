@@ -42,3 +42,13 @@ Thumbs.db
 # --- Foundry (contracts/) ---
 /contracts/out/
 /contracts/cache/
+
+# Video recording intermediates + renders (large; clips are delivered via the
+# video host and rebuilt with tools/video/*.sh). Keep the scripts and README.
+docs/video/recordings/
+docs/video/casts/
+docs/video/html/
+docs/video/cards/
+docs/video/norm/
+docs/video/final/
+docs/video/rendered/
