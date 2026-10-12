@@ -710,7 +710,7 @@
     var cssW = cv.clientWidth || 860;
     var rows = scen.length;
     var rowH = 27, top = 36, bottom = 10, right = 46;
-    var left = cssW < 720 ? 112 : 208;   /* narrower name gutter on small screens */
+    var left = cssW < 640 ? 112 : 208;   /* narrower name gutter on small screens */
     var H = top + bottom + rows * rowH;
     var dpr = window.devicePixelRatio || 1;
     cv.style.height = H + "px";
