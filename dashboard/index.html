@@ -786,9 +786,9 @@
     if (!favLink) { return; }
     var color = state === "paused" ? "#f85149" : (state === "stale" ? "#e0863c" : "#3fb950");
     favLink.href = "data:image/svg+xml," + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">' +
-      '<circle cx="8" cy="8" r="6.5" fill="' + color + '"/>' +
-      '<circle cx="8" cy="8" r="6.5" fill="none" stroke="#0a0a11" stroke-width="1"/></svg>');
+      "<svg width='16' height='16'>" +
+      "<circle cx='8' cy='8' r='6.5' fill='" + color + "'/>" +
+      "<circle cx='8' cy='8' r='6.5' fill='none' stroke='#0a0a11' stroke-width='1'/></svg>");
   }
 
   /* ---- positions --------------------------------------------------------- */
