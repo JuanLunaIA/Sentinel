@@ -11,7 +11,7 @@
 // API key, which never leaves the operator's machine). The `live` block is
 // fetched fresh here — that is what makes this a running deployment against
 // Monad Testnet (chain id 10143).
-const SNAPSHOT = {"account": {"equity": "100", "free_balance": "100"}, "feed_age_s": 0, "feed_fresh": true, "heartbeat": {"age_s": 1545, "seq": 156, "tx_hash": "0x327f59eb6efce53ac3df66e7cbb766f1113b5bfeb31231c318e99ff749544eb2"}, "mode": "TESTNET", "paused": false, "positions": [], "uptime_s": 77, "version": "0.1.0"};
+const SNAPSHOT = {"account": {"equity": "100", "free_balance": "100"}, "feed_age_s": 0, "feed_fresh": true, "heartbeat": {"age_s": 137094, "seq": 156, "tx_hash": "0x327f59eb6efce53ac3df66e7cbb766f1113b5bfeb31231c318e99ff749544eb2"}, "mode": "TESTNET", "paused": false, "positions": [], "uptime_s": 71, "version": "0.1.0"};
 
 const PERPL = 'https://testnet.perpl.xyz/api';
 const TIMEOUT_MS = 4000;

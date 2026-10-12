@@ -220,6 +220,71 @@
   .modal-box input:focus{outline:none;border-color:var(--accent)}
   .modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:14px}
   .modal-error{color:#ff9d95;font-size:12px;min-height:17px;margin:8px 0 0}
+
+  /* ============ v2 upgrades: hero KPIs, chain panel, chart, clock ============ */
+  .hero{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:0 0 14px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+    min-width:0;position:relative;overflow:hidden;transition:border-color .3s}
+  .kpi:hover{border-color:var(--line2)}
+  .kpi .k-label{font-size:9px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted2);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi .k-value{font-size:23px;font-weight:800;color:#fff;line-height:1.12;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+  .kpi .k-sub{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi.accent{border-color:var(--accent-dim);background:linear-gradient(180deg,#171331 0%,#111119 100%)}
+  .kpi.good{border-color:#2f6b3c;background:linear-gradient(180deg,#0f2416 0%,#111119 100%)}
+  .kpi.warn{border-color:#7a6535}
+  .kpi.bad{border-color:#7a2f2b}
+  .kpi .k-glow{position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;
+    background:radial-gradient(circle,rgba(131,110,249,.16),transparent 70%);pointer-events:none}
+  @keyframes kpiflash{0%{text-shadow:0 0 14px rgba(131,110,249,.95);color:#fff}100%{text-shadow:none}}
+  .kpi .flash{animation:kpiflash .8s ease-out}
+  #clock{color:var(--muted);font-size:12px;letter-spacing:.5px}
+  @media(max-width:1100px){.hero{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media(max-width:640px){.hero{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}}
+
+  /* chain panel */
+  #section-chain{grid-column:8/span 5;grid-row:5}
+  #section-chain .chain-hero{display:flex;align-items:baseline;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+  .chain-block{font-size:27px;font-weight:800;color:#fff;letter-spacing:.5px}
+  .chain-name{color:var(--accent-soft);font-size:12px;letter-spacing:1px}
+  .chain-block-time{color:var(--muted2);font-size:10px;margin-left:auto}
+  .chain-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px 10px;margin-top:8px}
+  .chain-cell{background:#14141f;border:1px solid #26263c;border-radius:6px;padding:6px 10px;min-width:0}
+  .chain-cell label{display:block;font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted2)}
+  .chain-cell .v{font-size:14px;font-weight:700;color:#e6e6f2;font-variant-numeric:tabular-nums;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+
+  /* backtest canvas chart */
+  .bt-chart-wrap{position:relative;margin-top:8px}
+  #bt-canvas{width:100%;height:auto;display:block}
+
+  /* feed: taller on big screens for 24/7 glanceability */
+  @media(min-height:900px){.feed-scroll{max-height:720px}}
+
+  /* subtle breathing on the live dots (disabled by reduced-motion) */
+  @keyframes dotpulse{0%,100%{opacity:1}50%{opacity:.55}}
+  .dot-fresh{animation:dotpulse 2.6s ease-in-out infinite}
+  @media(prefers-reduced-motion:reduce){
+    .dot-fresh,.big-pill.checking{animation:none}
+    .kpi .flash{animation:none}
+  }
+
+  /* 640px: everything single column, hero 2-col, tighter header */
+  @media(max-width:768px){
+    #section-positions,#section-audit,#section-feed,#section-resilience,
+    #section-backtest,#section-nansen,#section-killswitch,#section-chain{grid-column:1/-1;grid-row:auto}
+    .wordmark{font-size:18px;letter-spacing:2.5px}
+    .tagline{display:none}
+    .header-stats{gap:10px;margin-left:0}
+    .kpi .k-value{font-size:19px}
+    .chain-block{font-size:22px}
+    .big-pill{font-size:16px}
+  }
+  @media(max-width:420px){
+    .page{padding:10px 10px 40px}
+    .panel{padding:10px 11px}
+    .kpi .k-value{font-size:17px}
+  }
 </style>
 </head>
 <body>
@@ -239,8 +304,25 @@
       <span class="stat"><span id="hb-age">beat —</span> <span id="hb-tx" class="small"></span></span>
       <span class="stat"><span id="uptime">up —</span></span>
       <span class="stat"><span id="version">v—</span></span>
+      <span class="stat" id="clock">UTC —</span>
     </div>
   </header>
+
+  <!-- hero KPI strip -->
+  <div class="hero" aria-label="key metrics">
+    <div class="kpi accent"><span class="k-glow"></span>
+      <div class="k-label">Account equity</div><div class="k-value" id="kpi-equity">—</div><div class="k-sub" id="kpi-free">free —</div></div>
+    <div class="kpi good"><span class="k-glow"></span>
+      <div class="k-label">Capital preserved</div><div class="k-value" id="kpi-saved">—</div><div class="k-sub" id="kpi-pct">backtest pending</div></div>
+    <div class="kpi"><span class="k-glow"></span>
+      <div class="k-label">Liquidations</div><div class="k-value" id="kpi-liq">—</div><div class="k-sub" id="kpi-liq-sub">—</div></div>
+    <div class="kpi"><span class="k-glow"></span>
+      <div class="k-label">Chain block</div><div class="k-value" id="kpi-block">—</div><div class="k-sub" id="kpi-chain-name">—</div></div>
+    <div class="kpi"><span class="k-glow"></span>
+      <div class="k-label">Verified entries</div><div class="k-value" id="kpi-audit">—</div><div class="k-sub" id="kpi-audit-sub">journal —</div></div>
+    <div class="kpi"><span class="k-glow"></span>
+      <div class="k-label">Guardian</div><div class="k-value" id="kpi-guard">—</div><div class="k-sub" id="kpi-uptime">up —</div></div>
+  </div>
 
   <main class="grid">
     <!-- (2) positions -->
@@ -291,6 +373,7 @@
     <section id="section-backtest" data-hook="backtest" data-section="6" class="panel" aria-label="backtest">
       <h2>Backtest <span class="muted small">P13 replay report</span></h2>
       <div id="backtest-aggregate"><div class="muted pad">loading…</div></div>
+      <div class="bt-chart-wrap"><canvas id="bt-canvas" width="860" height="290"></canvas></div>
       <div id="backtest-bars" class="bt-scroll"></div>
       <div id="backtest-latency" class="muted-2"></div>
     </section>
@@ -302,6 +385,22 @@
       <div id="nansen-budget"></div>
       <div id="nansen-recent"></div>
       <div id="nansen-cache" class="muted-2"></div>
+    </section>
+
+    <!-- (9) chain — live Monad testnet state -->
+    <section id="section-chain" data-hook="chain" data-section="9" class="panel" aria-label="chain">
+      <h2>Chain <span class="muted small">live read</span><span class="spacer"></span><span id="chain-source" class="chip">—</span></h2>
+      <div class="chain-hero">
+        <span class="chain-block" id="chain-block">—</span>
+        <span class="chain-name" id="chain-name">—</span>
+        <span class="chain-block-time" id="chain-fetched-at">—</span>
+      </div>
+      <div class="chain-grid">
+        <div class="chain-cell"><label>chain id</label><span class="v" id="chain-id">—</span></div>
+        <div class="chain-cell"><label>markets</label><span class="v" id="chain-markets">—</span></div>
+        <div class="chain-cell"><label>tickers live</label><span class="v" id="chain-tickers">—</span></div>
+        <div class="chain-cell"><label>fetched</label><span class="v" id="chain-fetched">—</span></div>
+      </div>
     </section>
 
     <!-- (8) kill switch -->
@@ -478,6 +577,17 @@
     btAgg: $("backtest-aggregate"), btBars: $("backtest-bars"), btLat: $("backtest-latency"),
     nanTotals: $("nansen-totals"), nanBudget: $("nansen-budget"), nanRecent: $("nansen-recent"), nanCache: $("nansen-cache"),
     killBtn: $("kill-btn"), killState: $("kill-state"),
+    kpiEquity: $("kpi-equity"), kpiFree: $("kpi-free"),
+    kpiSaved: $("kpi-saved"), kpiPct: $("kpi-pct"),
+    kpiLiq: $("kpi-liq"), kpiLiqSub: $("kpi-liq-sub"),
+    kpiBlock: $("kpi-block"), kpiChainName: $("kpi-chain-name"),
+    kpiAudit: $("kpi-audit"), kpiAuditSub: $("kpi-audit-sub"),
+    kpiGuard: $("kpi-guard"), kpiUptime: $("kpi-uptime"),
+    clock: $("clock"),
+    chainBlock: $("chain-block"), chainName: $("chain-name"), chainFetchedAt: $("chain-fetched-at"),
+    chainId: $("chain-id"), chainMarkets: $("chain-markets"), chainTickers: $("chain-tickers"),
+    chainFetched: $("chain-fetched"), chainSource: $("chain-source"),
+    btCanvas: $("bt-canvas"),
     modal: $("modal"), modalTitle: $("modal-title"), modalHint: $("modal-hint"),
     modalWord: $("modal-word"), modalKey: $("modal-key"), modalError: $("modal-error"),
     modalCancel: $("modal-cancel"), modalConfirm: $("modal-confirm")
@@ -485,6 +595,7 @@
 
   /* ---- shared state ------------------------------------------------------ */
   var stateCache = null;          /* last good /api/state payload */
+  var btCache = null;             /* last backtest scenario array (for chart redraws) */
   var symbolsById = {};           /* market_id -> symbol */
   var lastPositionsKey = null;
   var lastFeedKey = null;
@@ -538,6 +649,125 @@
     setTxInto(refs.hbTx, hb ? hb.tx_hash : null);
     refs.uptime.textContent = "up " + fmtUptime(s.uptime_s);
     refs.version.textContent = "v" + (s.version ? String(s.version) : "—");
+  }
+
+  /* ---- v2: hero KPIs, chain panel, backtest chart, clock ------------------ */
+  function flashKpi(node, text) {
+    if (node.textContent === text) { return; }
+    node.textContent = text;
+    node.classList.remove("flash");
+    void node.offsetWidth; /* reflow so the animation restarts */
+    node.classList.add("flash");
+  }
+  var lastChainFetchedAt = null;
+
+  function renderHero(s) {
+    if (!s) { return; }
+    var acc = s.account && typeof s.account === "object" ? s.account : null;
+    var equity = acc ? num(acc.equity) : null;
+    var free = acc ? num(acc.free_balance) : null;
+    flashKpi(refs.kpiEquity, equity === null ? "—" : fmtUsd(equity));
+    refs.kpiFree.textContent = free === null ? "free —" : ("free " + fmtUsd(free));
+    flashKpi(refs.kpiGuard, s.paused ? "PAUSED" : (s.mode ? String(s.mode) : "—"));
+    refs.kpiGuard.parentNode.className = "kpi" + (s.paused ? " bad" : "");
+    refs.kpiUptime.textContent = "up " + fmtUptime(s.uptime_s) + " · v" + (s.version ? String(s.version) : "—");
+  }
+
+  function renderChain(live) {
+    var chain = live && typeof live === "object" ? live : null;
+    if (!chain) {
+      refs.chainBlock.textContent = "—";
+      refs.chainName.textContent = "chain data unavailable";
+      refs.chainSource.textContent = "—"; refs.chainSource.className = "chip";
+      return;
+    }
+    var block = num(chain.block);
+    flashKpi(refs.chainBlock, block === null ? "—" : fmtInt(block));
+    flashKpi(refs.kpiBlock, block === null ? "—" : fmtInt(block));
+    refs.kpiChainName.textContent = chain.chain_name ? String(chain.chain_name) : "—";
+    refs.chainName.textContent = chain.chain_name ? String(chain.chain_name) : "—";
+    refs.chainId.textContent = chain.chain_id !== null && chain.chain_id !== undefined ? String(chain.chain_id) : "—";
+    refs.chainMarkets.textContent = chain.markets !== null && chain.markets !== undefined ? fmtInt(chain.markets) : "—";
+    refs.chainTickers.textContent = chain.ticker_count !== null && chain.ticker_count !== undefined ? fmtInt(chain.ticker_count) : "—";
+    refs.chainFetched.textContent = chain.fetched_at ? fmtClock(chain.fetched_at) : "—";
+    lastChainFetchedAt = chain.fetched_at || null;
+    updateChainAge();
+    var src = String(chain.source || "—");
+    refs.chainSource.textContent = src;
+    refs.chainSource.className = "chip " + (src === "live" ? "v-allow" : "v-warn");
+  }
+  function updateChainAge() {
+    if (!lastChainFetchedAt) { refs.chainFetchedAt.textContent = "—"; return; }
+    var ms = Date.now() - new Date(lastChainFetchedAt).getTime();
+    if (isNaN(ms) || ms < 0) { refs.chainFetchedAt.textContent = "—"; return; }
+    refs.chainFetchedAt.textContent = fmtAge(ms / 1000) + " ago";
+  }
+
+  function drawBacktestChart(scen) {
+    var cv = refs.btCanvas;
+    if (!cv || !cv.getContext) { return; }
+    var ctx = cv.getContext("2d");
+    var cssW = cv.clientWidth || 860;
+    var rows = scen.length;
+    var rowH = 27, top = 36, bottom = 10, left = 208, right = 46;
+    var H = top + bottom + rows * rowH;
+    var dpr = window.devicePixelRatio || 1;
+    cv.style.height = H + "px";
+    cv.width = Math.max(100, Math.round(cssW * dpr));
+    cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var W = cssW;
+    ctx.clearRect(0, 0, W, H);
+    var max = 0;
+    scen.forEach(function (s) {
+      max = Math.max(max, num(s.baseline_loss_usd) || 0, num(s.sentinel_loss_usd) || 0);
+    });
+    if (max <= 0) { max = 1; }
+    var plotW = W - left - right;
+    var half = plotW * 0.46;
+    /* column headers */
+    ctx.font = "9px ui-monospace, Menlo, monospace";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#6f6f86";
+    ctx.fillText("BASELINE LOSS (USD)", left, 15);
+    ctx.fillStyle = "#7ce38b";
+    ctx.fillText("WITH SENTINEL (USD)", left + plotW * 0.5, 15);
+    /* zero axis label */
+    ctx.fillStyle = "#4a4a66";
+    ctx.fillText("$0", left + plotW * 0.5 - 8, top - 6);
+    scen.forEach(function (s, i) {
+      var y = top + i * rowH;
+      var bl = num(s.baseline_loss_usd) || 0;
+      var sl = num(s.sentinel_loss_usd) || 0;
+      /* name */
+      var name = String(s.scenario_id || "?");
+      ctx.fillStyle = "#9a9ab2";
+      ctx.font = "10px ui-monospace, Menlo, monospace";
+      ctx.textBaseline = "middle";
+      var t = name;
+      while (ctx.measureText(t).width > left - 14 && t.length > 5) { t = t.slice(0, -2) + ""; }
+      ctx.fillText(t, 0, y + rowH / 2);
+      /* baseline track + bar */
+      ctx.fillStyle = "#261214";
+      ctx.fillRect(left, y + 5, half, rowH - 10);
+      ctx.fillStyle = "#f85149";
+      ctx.fillRect(left, y + 5, Math.max(1.5, bl / max * half), rowH - 10);
+      /* sentinel track + bar */
+      ctx.fillStyle = "#0e1f14";
+      ctx.fillRect(left + plotW * 0.5, y + 5, half, rowH - 10);
+      ctx.fillStyle = "#3fb950";
+      ctx.fillRect(left + plotW * 0.5, y + 5, Math.max(1.5, sl / max * half), rowH - 10);
+      /* value labels */
+      ctx.fillStyle = "#8a8a9e";
+      ctx.font = "9px ui-monospace, Menlo, monospace";
+      ctx.fillText(fmtCompactMoney(bl), left + Math.min(half, Math.max(0, bl / max * half)) + 6, y + rowH / 2);
+      ctx.fillText(fmtCompactMoney(sl), left + plotW * 0.5 + Math.min(half, Math.max(0, sl / max * half)) + 6, y + rowH / 2);
+    });
+  }
+
+  function tickClock() {
+    refs.clock.textContent = "UTC " + new Date().toISOString().slice(0, 19).replace("T", " ");
+    updateChainAge();
   }
 
   /* ---- positions --------------------------------------------------------- */
@@ -843,6 +1073,10 @@
         refs.auditPill.className = "big-pill ok";
       }
       refs.auditEntries.textContent = fmtInt(rep.entries);
+      try {
+        flashKpi(refs.kpiAudit, fmtInt(rep.entries));
+        refs.kpiAuditSub.textContent = "valid up to #" + (rep.valid_up_to_seq !== null && rep.valid_up_to_seq !== undefined ? rep.valid_up_to_seq : "—");
+      } catch (e) { }
       refs.auditValid.textContent = rep.valid_up_to_seq !== null && rep.valid_up_to_seq !== undefined ? "#" + rep.valid_up_to_seq : "—";
       refs.auditFirst.textContent = rep.first_seq !== null && rep.first_seq !== undefined ? "#" + rep.first_seq : "—";
       setHashButton(refs.auditRoot, typeof rep.last_hash === "string" && rep.last_hash ? rep.last_hash : null);
@@ -966,8 +1200,16 @@
       refs.btAgg.appendChild(el("div", "muted-2", "liquidations: baseline " + fmtInt(agg.baseline_liquidations) + " \u2192 sentinel " + fmtInt(agg.sentinel_liquidations)));
 
       var scen = Array.isArray(rep.scenarios) ? rep.scenarios : [];
+      btCache = scen;
       var max = 0;
       scen.forEach(function (s) { var v = s ? num(s.capital_saved_usd) : null; if (v !== null && v > max) { max = v; } });
+      try { drawBacktestChart(scen); } catch (e) { }
+      try {
+        flashKpi(refs.kpiSaved, fmtUsd(agg.total_saved_usd));
+        refs.kpiPct.textContent = fmtNum(agg.pct_saved, 2) + "% of " + fmtCompactMoney(agg.total_notional_usd) + " notional";
+        flashKpi(refs.kpiLiq, fmtInt(agg.baseline_liquidations) + " \u2192 " + fmtInt(agg.sentinel_liquidations));
+        refs.kpiLiqSub.textContent = "baseline \u2192 sentinel";
+      } catch (e) { }
       clear(refs.btBars);
       scen.forEach(function (s) {
         if (!s || typeof s !== "object") { return; }
@@ -1082,6 +1324,8 @@
       if (r.ok && r.data && typeof r.data === "object") {
         stateCache = r.data;
         try { renderHeader(r.data); } catch (e) { }
+        try { renderHero(r.data); } catch (e) { }
+        try { renderChain(r.data.live); } catch (e) { }
         try { renderPositions(r.data); } catch (e) { }
         try { renderResHeartbeat(r.data); } catch (e) { }
         try { renderAuditHeartbeat(r.data); } catch (e) { }
@@ -1224,10 +1468,19 @@
   function init() {
     bindKill();
     renderCre();
+    tickClock();
+    setInterval(tickClock, 1000);
     loop(fastTick, POLL_FAST_MS);
     loop(slowTick, POLL_SLOW_MS);
     document.addEventListener("visibilitychange", function () {
       if (!document.hidden) { kicks.forEach(function (k) { k(); }); }
+    });
+    window.addEventListener("resize", function () {
+      /* redraw the chart when the panel width changes */
+      try {
+        var lastBt = btCache;
+        if (lastBt && Array.isArray(lastBt)) { drawBacktestChart(lastBt); }
+      } catch (e) { }
     });
   }
   if (document.readyState === "loading") {
