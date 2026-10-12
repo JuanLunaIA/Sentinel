@@ -768,6 +768,26 @@
   function tickClock() {
     refs.clock.textContent = "UTC " + new Date().toISOString().slice(0, 19).replace("T", " ");
     updateChainAge();
+    updateTitle();
+  }
+
+  /* tab title + favicon mirror the guardian state, visible without focus */
+  var favLink = document.querySelector('link[rel="icon"]');
+  function updateTitle() {
+    var t = "SENTINEL";
+    if (pausedNow) { t += " · PAUSED"; }
+    else if (stateCache && stateCache.live && stateCache.live.block !== null && stateCache.live.block !== undefined) {
+      t += " · blk " + fmtInt(stateCache.live.block);
+    }
+    if (document.title !== t) { document.title = t; }
+  }
+  function updateFavicon(state) {
+    if (!favLink) { return; }
+    var color = state === "paused" ? "#f85149" : (state === "stale" ? "#e0863c" : "#3fb950");
+    favLink.href = "data:image/svg+xml," + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16">' +
+      '<circle cx="8" cy="8" r="6.5" fill="' + color + '"/>' +
+      '<circle cx="8" cy="8" r="6.5" fill="none" stroke="#0a0a11" stroke-width="1"/></svg>');
   }
 
   /* ---- positions --------------------------------------------------------- */
@@ -1330,6 +1350,10 @@
         try { renderResHeartbeat(r.data); } catch (e) { }
         try { renderAuditHeartbeat(r.data); } catch (e) { }
         try { applyPaused(!!r.data.paused); } catch (e) { }
+        try {
+          updateFavicon(r.data.paused ? "paused" : (r.data.feed_fresh ? "fresh" : "stale"));
+          updateTitle();
+        } catch (e) { }
       } else {
         stateCache = null;
         renderHeader(null);

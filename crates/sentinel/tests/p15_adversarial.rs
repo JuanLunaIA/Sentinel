@@ -1835,6 +1835,7 @@ fn html_eight_section_hooks_present() {
         "backtest",
         "nansen",
         "killswitch",
+        "chain",
     ];
     let hooks = attr_values(&html, "data-hook");
     let unique: std::collections::BTreeSet<&str> = hooks.iter().map(String::as_str).collect();
@@ -1854,8 +1855,8 @@ fn html_eight_section_hooks_present() {
     let sections = attr_values(&html, "data-section");
     assert_eq!(
         sections.len(),
-        8,
-        "expected 8 data-section markers, got {}",
+        9,
+        "expected 9 data-section markers, got {}",
         sections.len()
     );
 }
