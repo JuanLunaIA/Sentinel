@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img">
+  <defs>
+    <linearGradient id="atStroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4ff0d0"/>
+      <stop offset="0.55" stop-color="#19c7a8"/>
+      <stop offset="1" stop-color="#a06cf0"/>
+    </linearGradient>
+  </defs>
+  <polygon points="90,18 145,50 145,130 90,162 35,130 35,50"
+           fill="none" stroke="url(#atStroke)" stroke-width="10" stroke-linejoin="round"/>
+  <polygon points="90,42 132,62 132,118 90,138 48,118 48,62"
+           fill="#0b0f1c" stroke="#2a3556" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M50 90 H70 L80 70 L100 110 L110 90 H130"
+        fill="none" stroke="#4ff0d0" stroke-width="10"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="90" cy="90" r="3.5" fill="#e8ecf8"/>
+</svg>

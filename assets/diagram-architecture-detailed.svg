@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1200" viewBox="0 0 2000 1200" role="img">
+  <title>Sentinel architecture (detailed)</title>
+  <desc>Complete signal-to-proof path with all subsystems, interfaces and invariants.</desc>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4a5573"/>
+    </marker>
+  </defs>
+  <rect width="2000" height="1200" fill="#05070f"/>
+  <g fill="none" stroke="#1b2340" stroke-width="1" opacity="0.5">
+    <line x1="0" y1="0" x2="2000" y2="0"/>
+    <line x1="0" y1="48" x2="2000" y2="48"/>
+    <line x1="0" y1="96" x2="2000" y2="96"/>
+    <line x1="0" y1="144" x2="2000" y2="144"/>
+    <line x1="0" y1="192" x2="2000" y2="192"/>
+    <line x1="0" y1="240" x2="2000" y2="240"/>
+    <line x1="0" y1="288" x2="2000" y2="288"/>
+    <line x1="0" y1="336" x2="2000" y2="336"/>
+    <line x1="0" y1="384" x2="2000" y2="384"/>
+    <line x1="0" y1="432" x2="2000" y2="432"/>
+    <line x1="0" y1="480" x2="2000" y2="480"/>
+    <line x1="0" y1="528" x2="2000" y2="528"/>
+    <line x1="0" y1="576" x2="2000" y2="576"/>
+    <line x1="0" y1="624" x2="2000" y2="624"/>
+    <line x1="0" y1="672" x2="2000" y2="672"/>
+    <line x1="0" y1="720" x2="2000" y2="720"/>
+    <line x1="0" y1="768" x2="2000" y2="768"/>
+    <line x1="0" y1="816" x2="2000" y2="816"/>
+    <line x1="0" y1="864" x2="2000" y2="864"/>
+    <line x1="0" y1="912" x2="2000" y2="912"/>
+    <line x1="0" y1="960" x2="2000" y2="960"/>
+    <line x1="0" y1="1008" x2="2000" y2="1008"/>
+    <line x1="0" y1="1056" x2="2000" y2="1056"/>
+    <line x1="0" y1="1104" x2="2000" y2="1104"/>
+    <line x1="0" y1="1152" x2="2000" y2="1152"/>
+    <line x1="48" y1="0" x2="48" y2="1200"/>
+    <line x1="96" y1="0" x2="96" y2="1200"/>
+    <line x1="144" y1="0" x2="144" y2="1200"/>
+    <line x1="192" y1="0" x2="192" y2="1200"/>
+    <line x1="240" y1="0" x2="240" y2="1200"/>
+    <line x1="288" y1="0" x2="288" y2="1200"/>
+    <line x1="336" y1="0" x2="336" y2="1200"/>
+    <line x1="384" y1="0" x2="384" y2="1200"/>
+    <line x1="432" y1="0" x2="432" y2="1200"/>
+    <line x1="480" y1="0" x2="480" y2="1200"/>
+    <line x1="528" y1="0" x2="528" y2="1200"/>
+    <line x1="576" y1="0" x2="576" y2="1200"/>
+    <line x1="624" y1="0" x2="624" y2="1200"/>
+    <line x1="672" y1="0" x2="672" y2="1200"/>
+    <line x1="720" y1="0" x2="720" y2="1200"/>
+    <line x1="768" y1="0" x2="768" y2="1200"/>
+    <line x1="816" y1="0" x2="816" y2="1200"/>
+    <line x1="864" y1="0" x2="864" y2="1200"/>
+    <line x1="912" y1="0" x2="912" y2="1200"/>
+    <line x1="960" y1="0" x2="960" y2="1200"/>
+    <line x1="1008" y1="0" x2="1008" y2="1200"/>
+    <line x1="1056" y1="0" x2="1056" y2="1200"/>
+    <line x1="1104" y1="0" x2="1104" y2="1200"/>
+    <line x1="1152" y1="0" x2="1152" y2="1200"/>
+    <line x1="1200" y1="0" x2="1200" y2="1200"/>
+    <line x1="1248" y1="0" x2="1248" y2="1200"/>
+    <line x1="1296" y1="0" x2="1296" y2="1200"/>
+    <line x1="1344" y1="0" x2="1344" y2="1200"/>
+    <line x1="1392" y1="0" x2="1392" y2="1200"/>
+    <line x1="1440" y1="0" x2="1440" y2="1200"/>
+    <line x1="1488" y1="0" x2="1488" y2="1200"/>
+    <line x1="1536" y1="0" x2="1536" y2="1200"/>
+    <line x1="1584" y1="0" x2="1584" y2="1200"/>
+    <line x1="1632" y1="0" x2="1632" y2="1200"/>
+    <line x1="1680" y1="0" x2="1680" y2="1200"/>
+    <line x1="1728" y1="0" x2="1728" y2="1200"/>
+    <line x1="1776" y1="0" x2="1776" y2="1200"/>
+    <line x1="1824" y1="0" x2="1824" y2="1200"/>
+    <line x1="1872" y1="0" x2="1872" y2="1200"/>
+    <line x1="1920" y1="0" x2="1920" y2="1200"/>
+    <line x1="1968" y1="0" x2="1968" y2="1200"/>
+  </g>
+  <rect width="2000" height="1200" fill="#05070f"/>
+  <text x="80" y="70" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="16" letter-spacing="2" fill="#7c88a8">SENTINEL · COMPLETE DECISION PATH</text>
+  <text x="80" y="108" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="16" fill="#4a5573">Two rules are structural: the reflex path never calls a model, and a model never bypasses the policy gate.</text>
+
+  <text x="80" y="170" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="14" letter-spacing="2" fill="#5aa9ff">EXTERNAL SIGNALS</text>
+  <rect x="80" y="190" width="300" height="90" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="84" y="190" width="4" height="90" rx="2" fill="#5aa9ff"/>
+  <text x="104" y="214" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Perpl REST + WS</text>
+  <text x="104" y="239" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">marks, funding, positions, order flow</text>
+  <rect x="410" y="190" width="300" height="90" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="414" y="190" width="4" height="90" rx="2" fill="#a06cf0"/>
+  <text x="434" y="214" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Nansen via x402</text>
+  <text x="434" y="239" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">paid intel, cached + capped at 40/hr</text>
+  <rect x="720" y="190" width="300" height="90" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="724" y="190" width="4" height="90" rx="2" fill="#a06cf0"/>
+  <text x="744" y="214" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Dual brain: Qwen + Kimi</text>
+  <text x="744" y="239" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">strict JSON, failover tested</text>
+  <rect x="1030" y="190" width="300" height="90" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="1034" y="190" width="4" height="90" rx="2" fill="#ffb020"/>
+  <text x="1054" y="214" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Telegram</text>
+  <text x="1054" y="239" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">human approval, alerts</text>
+
+  <rect x="60" y="330" width="1880" height="280" rx="16" fill="#0e1424" stroke="#4ff0d0" stroke-width="1.8" stroke-dasharray="10 8"/>
+  <text x="80" y="320" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="14" letter-spacing="1.8" fill="#4ff0d0">DETERMINISTIC CORE — NO NETWORK, NO MODEL, NO UNSAFE CODE</text>
+  <rect x="100" y="370" width="350" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="104" y="370" width="4" height="96" rx="2" fill="#4ff0d0"/>
+  <text x="124" y="394" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Reflex risk engine</text>
+  <text x="124" y="419" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">distance-to-liq from first principles
+0.271 µs/iter · pure function</text>
+  <rect x="480" y="370" width="320" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="484" y="370" width="4" height="96" rx="2" fill="#4ff0d0"/>
+  <text x="504" y="394" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Tier classifier</text>
+  <text x="504" y="419" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">Green ≥25% — Yellow 15–25% — Orange 8–15% — Red &lt;8%</text>
+  <rect x="830" y="370" width="320" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="834" y="370" width="4" height="96" rx="2" fill="#4ff0d0"/>
+  <text x="854" y="394" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Policy gate</text>
+  <text x="854" y="419" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">caps, allowlist, approval, idempotency, kill switch</text>
+  <rect x="1180" y="370" width="350" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="1184" y="370" width="4" height="96" rx="2" fill="#4ff0d0"/>
+  <text x="1204" y="394" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Guarded execution</text>
+  <text x="1204" y="419" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">reduce-only, idempotent retries, approval queue</text>
+  <rect x="1560" y="370" width="350" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="1564" y="370" width="4" height="96" rx="2" fill="#4ff0d0"/>
+  <text x="1584" y="394" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Adaptive bands (opt-in)</text>
+  <text x="1584" y="419" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">EWMA vol + regime, opt-in via --adaptive</text>
+
+  <rect x="60" y="550" width="1880" height="120" rx="12" fill="#0e1424" stroke="#a06cf0" stroke-width="1.5" stroke-dasharray="8 7"/>
+  <text x="80" y="540" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13" letter-spacing="1.6" fill="#a06cf0">PORTFOLIO LAYER (opt-in, --cascade)</text>
+  <rect x="100" y="578" width="350" height="72" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="104" y="578" width="4" height="72" rx="2" fill="#a06cf0"/>
+  <text x="124" y="598" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Correlation tracker</text>
+  <text x="124" y="623" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">EWMA λ=0.94 · pairwise covariance</text>
+  <rect x="480" y="578" width="320" height="72" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="484" y="578" width="4" height="72" rx="2" fill="#a06cf0"/>
+  <text x="504" y="598" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Equity-at-risk</text>
+  <text x="504" y="623" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">collateral × P(liq) ≤ naive sum</text>
+  <rect x="830" y="578" width="320" height="72" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="834" y="578" width="4" height="72" rx="2" fill="#a06cf0"/>
+  <text x="854" y="598" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Cascade planner</text>
+  <text x="854" y="623" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">survival/fee × concentration</text>
+  <rect x="1180" y="578" width="350" height="72" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="1184" y="578" width="4" height="72" rx="2" fill="#a06cf0"/>
+  <text x="1204" y="598" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Budget reserve</text>
+  <text x="1204" y="623" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">holds actions while correlated</text>
+  <rect x="1560" y="578" width="350" height="72" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="1564" y="578" width="4" height="72" rx="2" fill="#a06cf0"/>
+  <text x="1584" y="598" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Segregation ([P-1])</text>
+  <text x="1584" y="623" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">per-market + book ceiling</text>
+
+  <text x="80" y="720" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="14" letter-spacing="1.8" fill="#a06cf0">PROOF — EVERY DECISION, HASH-CHAINED, ANCHORED</text>
+  <rect x="80" y="744" width="300" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="84" y="744" width="4" height="96" rx="2" fill="#a06cf0"/>
+  <text x="104" y="768" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Audit journal</text>
+  <text x="104" y="793" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">append-only · hash-chained · inference commitment</text>
+  <rect x="410" y="744" width="280" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="414" y="744" width="4" height="96" rx="2" fill="#a06cf0"/>
+  <text x="434" y="768" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Inference archive</text>
+  <text x="434" y="793" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">replayable sidecar · inference-verify binary</text>
+  <rect x="720" y="744" width="280" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="724" y="744" width="4" height="96" rx="2" fill="#a06cf0"/>
+  <text x="744" y="768" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Policy fingerprint</text>
+  <text x="744" y="793" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">SHA-256 of caps + allowlist · per intent</text>
+  <rect x="1030" y="744" width="280" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="1034" y="744" width="4" height="96" rx="2" fill="#a06cf0"/>
+  <text x="1054" y="768" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Monad anchor</text>
+  <text x="1054" y="793" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">SentinelAuditAnchor · batch Merkle</text>
+  <rect x="1340" y="744" width="280" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="1344" y="744" width="4" height="96" rx="2" fill="#a06cf0"/>
+  <text x="1364" y="768" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">Envio indexer</text>
+  <text x="1364" y="793" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">HyperSync · public GraphQL</text>
+  <rect x="1650" y="744" width="280" height="96" rx="10" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.8"/>
+  <rect x="1654" y="744" width="4" height="96" rx="2" fill="#ff4d5e"/>
+  <text x="1674" y="768" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="19" font-weight="600" fill="#e8ecf8">CRE dead-man</text>
+  <text x="1674" y="793" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13.5" fill="#7c88a8">de-risks if Sentinel stops</text>
+
+  <rect x="80" y="910" width="1840" height="220" rx="12" fill="#0b0f1c" stroke="#1b2340" stroke-width="1.5"/>
+  <text x="100" y="944" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="13" letter-spacing="1.6" fill="#7c88a8">INVARIANTS (enforced by type system and tests)</text>
+  <text x="100" y="976" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="15" fill="#e8ecf8">1. Reflex core has ZERO network deps — no model can run in the protection path</text>
+  <text x="100" y="1004" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="15" fill="#e8ecf8">2. AI never bypasses the policy gate — proposals only, gate decides</text>
+  <text x="100" y="1032" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="15" fill="#e8ecf8">3. Journal written BEFORE action — audit-before-action, not after</text>
+  <text x="100" y="1060" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="15" fill="#e8ecf8">4. Secrets via SecretString only — redacting Debug, never in logs</text>
+  <text x="100" y="1088" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="15" fill="#e8ecf8">5. DRY_RUN mode is first-class — every I/O behind mockable async traits</text>
+</svg>

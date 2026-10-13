@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img">
+  <defs>
+    <linearGradient id="srStroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4ff0d0"/>
+      <stop offset="0.55" stop-color="#19c7a8"/>
+      <stop offset="1" stop-color="#a06cf0"/>
+    </linearGradient>
+    <filter id="srGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="256" cy="256" r="240" fill="#05070f" stroke="url(#srStroke)" stroke-width="18"/>
+  <circle cx="256" cy="256" r="220" fill="#0b0f1c" stroke="#2a3556" stroke-width="6"/>
+  <circle cx="256" cy="256" r="180" fill="none" stroke="#4ff0d0" stroke-width="16" stroke-linejoin="round" filter="url(#srGlow)"/>
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#4ff0d0" stroke-width="4" stroke-linejoin="round"/>
+  <text x="256" y="200" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="68" font-weight="700" letter-spacing="4" fill="#e8ecf8" text-anchor="middle">SENTINEL_</text>
+  <text x="256" y="258" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="22" fill="#7c88a8" text-anchor="middle">the verifiable AI risk guardian</text>
+  <circle cx="256" cy="300" r="2" fill="#e8ecf8"/>
+  <text x="256" y="352" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="18" fill="#3ddc97" text-anchor="middle">11 → 0 liquidations</text>
+  <text x="256" y="378" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="18" fill="#4ff0d0" text-anchor="middle">$5,972 preserved</text>
+</svg>

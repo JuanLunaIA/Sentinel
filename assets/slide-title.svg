@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img">
+  <title>Sentinel — Title Slide</title>
+  <rect width="1920" height="1080" fill="#05070f"/>
+  <g fill="none" stroke="#1b2340" stroke-width="1" opacity="0.4">
+    <line x1="0" y1="0" x2="1920" y2="0"/>
+    <line x1="0" y1="54" x2="1920" y2="54"/>
+    <line x1="0" y1="108" x2="1920" y2="108"/>
+    <line x1="0" y1="162" x2="1920" y2="162"/>
+    <line x1="0" y1="216" x2="1920" y2="216"/>
+    <line x1="0" y1="270" x2="1920" y2="270"/>
+    <line x1="0" y1="324" x2="1920" y2="324"/>
+    <line x1="0" y1="378" x2="1920" y2="378"/>
+    <line x1="0" y1="432" x2="1920" y2="432"/>
+    <line x1="0" y1="486" x2="1920" y2="486"/>
+    <line x1="0" y1="540" x2="1920" y2="540"/>
+    <line x1="0" y1="594" x2="1920" y2="594"/>
+    <line x1="0" y1="648" x2="1920" y2="648"/>
+    <line x1="0" y1="702" x2="1920" y2="702"/>
+    <line x1="0" y1="756" x2="1920" y2="756"/>
+    <line x1="0" y1="810" x2="1920" y2="810"/>
+    <line x1="0" y1="864" x2="1920" y2="864"/>
+    <line x1="0" y1="918" x2="1920" y2="918"/>
+    <line x1="0" y1="972" x2="1920" y2="972"/>
+    <line x1="0" y1="1026" x2="1920" y2="1026"/>
+    <line x1="64" y1="0" x2="64" y2="1080"/>
+    <line x1="128" y1="0" x2="128" y2="1080"/>
+    <line x1="192" y1="0" x2="192" y2="1080"/>
+    <line x1="256" y1="0" x2="256" y2="1080"/>
+    <line x1="320" y1="0" x2="320" y2="1080"/>
+    <line x1="384" y1="0" x2="384" y2="1080"/>
+    <line x1="448" y1="0" x2="448" y2="1080"/>
+    <line x1="512" y1="0" x2="512" y2="1080"/>
+    <line x1="576" y1="0" x2="576" y2="1080"/>
+    <line x1="640" y1="0" x2="640" y2="1080"/>
+    <line x1="704" y1="0" x2="704" y2="1080"/>
+    <line x1="768" y1="0" x2="768" y2="1080"/>
+    <line x1="832" y1="0" x2="832" y2="1080"/>
+    <line x1="896" y1="0" x2="896" y2="1080"/>
+    <line x1="960" y1="0" x2="960" y2="1080"/>
+    <line x1="1024" y1="0" x2="1024" y2="1080"/>
+    <line x1="1088" y1="0" x2="1088" y2="1080"/>
+    <line x1="1152" y1="0" x2="1152" y2="1080"/>
+    <line x1="1216" y1="0" x2="1216" y2="1080"/>
+    <line x1="1280" y1="0" x2="1216" y2="1080"/>
+    <line x1="1280" y1="0" x2="1280" y2="1080"/>
+    <line x1="1344" y1="0" x2="1344" y2="1080"/>
+    <line x1="1408" y1="0" x2="1408" y2="1080"/>
+    <line x1="1472" y1="0" x2="1472" y2="1080"/>
+    <line x1="1536" y1="0" x2="1536" y2="1080"/>
+    <line x1="1600" y1="0" x2="1600" y2="1080"/>
+    <line x1="1664" y1="0" x2="1664" y2="1080"/>
+    <line x1="1728" y1="0" x2="1728" y2="1080"/>
+    <line x1="1792" y1="0" x2="1792" y2="1080"/>
+    <line x1="1856" y1="0" x2="1856" y2="1080"/>
+  </g>
+  <rect width="1920" height="1080" fill="#05070f"/>
+  <text x="960" y="420" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="72" font-weight="700" letter-spacing="4" fill="#e8ecf8" text-anchor="middle">SENTINEL_</text>
+  <text x="960" y="504" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="28" fill="#7c88a8" text-anchor="middle">the verifiable AI risk guardian</text>
+  <rect x="860" y="530" width="200" height="3" fill="#4ff0d0" opacity="0.7"/>
+  <text x="960" y="620" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="20" fill="#7c88a8" text-anchor="middle">Isolated-margin perps on Monad · Deterministic reflex · Proof-carrying AI</text>
+  <text x="960" y="720" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="18" fill="#3ddc97" text-anchor="middle">11 → 0 liquidations · $5,972 preserved · 955 tests passing</text>
+  <text x="960" y="900" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="16" fill="#4a5573" text-anchor="middle">github.com/JuanLunaIA/Sentinel · v1.1.0</text>
+</svg>

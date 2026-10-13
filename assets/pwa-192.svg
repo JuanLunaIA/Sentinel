@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" viewBox="0 0 192 192" role="img">
+  <defs>
+    <linearGradient id="pwaStroke" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4ff0d0"/>
+      <stop offset="0.55" stop-color="#19c7a8"/>
+      <stop offset="1" stop-color="#a06cf0"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="38" fill="#05070f"/>
+  <polygon points="96,10 155,42 155,110 96,146 41,110 41,42"
+           fill="none" stroke="url(#pwaStroke)" stroke-width="12" stroke-linejoin="round"/>
+  <polygon points="96,28 133,50 133,98 96,122 59,98 59,50"
+           fill="#0b0f1c" stroke="#2a3556" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M52 96 H74 L85 72 L107 120 L118 96 H140"
+        fill="none" stroke="#4ff0d0" stroke-width="12"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="96" cy="96" r="4" fill="#e8ecf8"/>
+</svg>

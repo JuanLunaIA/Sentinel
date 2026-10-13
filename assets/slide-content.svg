@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img">
+  <title>Sentinel — Content Slide Template</title>
+  <rect width="1920" height="1080" fill="#05070f"/>
+  <g fill="none" stroke="#1b2340" stroke-width="1" opacity="0.4">
+    <line x1="0" y1="0" x2="1920" y2="0"/>
+    <line x1="0" y1="54" x2="1920" y2="54"/>
+    <line x1="0" y1="108" x2="1920" y2="108"/>
+    <line x1="0" y1="162" x2="1920" y2="162"/>
+    <line x1="0" y1="216" x2="1920" y2="216"/>
+    <line x1="0" y1="270" x2="1920" y2="270"/>
+    <line x1="0" y1="324" x2="1920" y2="324"/>
+    <line x1="0" y1="378" x2="1920" y2="378"/>
+    <line x1="0" y1="432" x2="1920" y2="432"/>
+    <line x1="0" y1="486" x2="1920" y2="486"/>
+    <line x1="0" y1="540" x2="1920" y2="540"/>
+    <line x1="0" y1="594" x2="1920" y2="594"/>
+    <line x1="0" y1="648" x2="1920" y2="648"/>
+    <line x1="0" y1="702" x2="1920" y2="702"/>
+    <line x1="0" y1="756" x2="1920" y2="756"/>
+    <line x1="0" y1="810" x2="1920" y2="810"/>
+    <line x1="0" y1="864" x2="1920" y2="864"/>
+    <line x1="0" y1="918" x2="1920" y2="918"/>
+    <line x1="0" y1="972" x2="1920" y2="972"/>
+    <line x1="0" y1="1026" x2="1920" y2="1026"/>
+    <line x1="64" y1="0" x2="64" y2="1080"/>
+    <line x1="128" y1="0" x2="128" y2="1080"/>
+    <line x1="192" y1="0" x2="192" y2="1080"/>
+    <line x1="256" y1="0" x2="256" y2="1080"/>
+    <line x1="320" y1="0" x2="320" y2="1080"/>
+    <line x1="384" y1="0" x2="384" y2="1080"/>
+    <line x1="448" y1="0" x2="448" y2="1080"/>
+    <line x1="512" y1="0" x2="512" y2="1080"/>
+    <line x1="576" y1="0" x2="576" y2="1080"/>
+    <line x1="640" y1="0" x2="640" y2="1080"/>
+    <line x1="704" y1="0" x2="704" y2="1080"/>
+    <line x1="768" y1="0" x2="768" y2="1080"/>
+    <line x1="832" y1="0" x2="832" y2="1080"/>
+    <line x1="896" y1="0" x2="896" y2="1080"/>
+    <line x1="960" y1="0" x2="960" y2="1080"/>
+    <line x1="1024" y1="0" x2="1024" y2="1080"/>
+    <line x1="1088" y1="0" x2="1088" y2="1080"/>
+    <line x1="1152" y1="0" x2="1152" y2="1080"/>
+    <line x1="1216" y1="0" x2="1216" y2="1080"/>
+    <line x1="1280" y1="0" x2="1280" y2="1080"/>
+    <line x1="1344" y1="0" x2="1344" y2="1080"/>
+    <line x1="1408" y1="0" x2="1408" y2="1080"/>
+    <line x1="1472" y1="0" x2="1472" y2="1080"/>
+    <line x1="1536" y1="0" x2="1536" y2="1080"/>
+    <line x1="1600" y1="0" x2="1600" y2="1080"/>
+    <line x1="1664" y1="0" x2="1664" y2="1080"/>
+    <line x1="1728" y1="0" x2="1728" y2="1080"/>
+    <line x1="1792" y1="0" x2="1792" y2="1080"/>
+    <line x1="1856" y1="0" x2="1856" y2="1080"/>
+  </g>
+  <rect width="1920" height="1080" fill="#05070f"/>
+  <rect x="0" y="0" width="1920" height="84" fill="#0b0f1c"/>
+  <text x="96" y="58" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="28" font-weight="700" letter-spacing="2" fill="#4ff0d0">SENTINEL_</text>
+  <text x="220" y="58" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="22" fill="#7c88a8">the verifiable AI risk guardian</text>
+  <line x1="96" y1="96" x2="1824" y2="96" stroke="#2a3556" stroke-width="1.5"/>
+  <text x="96" y="150" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="36" font-weight="700" fill="#e8ecf8">[SLIDE TITLE HERE]</text>
+  <rect x="96" y="170" width="400" height="4" fill="#4ff0d0"/>
+  <text x="96" y="260" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="24" fill="#e8ecf8">• First bullet point with actual content</text>
+  <text x="96" y="310" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="24" fill="#e8ecf8">• Second bullet point with evidence reference</text>
+  <text x="96" y="360" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="24" fill="#e8ecf8">• Third bullet point with a number: 0.271 µs</text>
+  <text x="96" y="460" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="24" fill="#7c88a8">Diagram placeholder — insert architecture.svg / tiers.svg / lifecycle.svg</text>
+  <rect x="96" y="500" width="1728" height="400" rx="12" fill="#0b0f1c" stroke="#2a3556" stroke-width="1.5"/>
+  <text x="96" y="740" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="18" fill="#7c88a8" text-anchor="end">evidence: docs/evidence/pXX-feature.txt</text>
+  <text x="96" y="1000" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="14" fill="#4a5573">github.com/JuanLunaIA/Sentinel</text>
+</svg>
