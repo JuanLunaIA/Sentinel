@@ -30,7 +30,9 @@ use std::time::Instant;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use sentinel_core::order::{OrderRequest, reduce_by_fraction};
+use sentinel_core::policy::{BudgetLedger, BudgetLimits};
 use sentinel_core::policy::{DayState, PolicyConfig, PolicyContext, PolicyEngine, PolicySource};
+use sentinel_core::portfolio::{self, CorrelationTracker, PortfolioConfig, PositionRisk};
 use sentinel_core::risk::{self, ReflexConfig, ReflexState, RiskThresholds};
 use sentinel_core::types::{
     AccountState, DataQuality, Decision, DecisionAction, Intent, Market, MarketId, PolicyVerdict,
@@ -53,7 +55,7 @@ use crate::sim::venue::SimExecutor;
 /// `ScenarioError` only for malformed inputs; policy/executor outcomes are
 /// recorded inside the report, never fatal.
 pub fn run(scenario: &Scenario) -> Result<SimReport, ScenarioError> {
-    run_with(scenario, None)
+    run_with(scenario, None, false)
 }
 
 /// Run one scenario with an optional volatility-adaptive band layer (P22).
@@ -69,6 +71,7 @@ pub fn run(scenario: &Scenario) -> Result<SimReport, ScenarioError> {
 pub fn run_with(
     scenario: &Scenario,
     adaptive: Option<VolConfig>,
+    cascade: bool,
 ) -> Result<SimReport, ScenarioError> {
     scenario.validate()?;
     let reflex_cfg = scenario.reflex_config()?;
@@ -108,6 +111,8 @@ pub fn run_with(
         ScenarioLabel::Synthetic => {}
     }
 
+    let cascade_layer =
+        cascade.then(|| PortfolioLayer::new(PortfolioConfig::default(), &policy_cfg));
     let mut sim = Sim {
         scenario,
         reflex_cfg,
@@ -135,6 +140,7 @@ pub fn run_with(
         ticks: 0,
         free_balance: scenario.start_free_balance,
         marks: HashMap::new(),
+        cascade: cascade_layer,
         adaptive: adaptive.map(|cfg| AdaptiveBands {
             cfg,
             states: HashMap::new(),
@@ -231,17 +237,87 @@ struct Sim<'a> {
     ticks: u64,
     free_balance: Decimal,
     marks: HashMap<MarketId, Decimal>,
+    cascade: Option<PortfolioLayer>,
+}
+
+/// The portfolio layer's live state (GAP-007). Present only under `--cascade`.
+struct PortfolioLayer {
+    tracker: CorrelationTracker,
+    cfg: PortfolioConfig,
+    ledger: BudgetLedger,
+    limits: BudgetLimits,
+    last_mark: HashMap<MarketId, Decimal>,
+}
+
+impl PortfolioLayer {
+    fn new(cfg: PortfolioConfig, policy: &sentinel_core::policy::PolicyConfig) -> Self {
+        Self {
+            tracker: CorrelationTracker::new(cfg.clone()),
+            cfg,
+            ledger: BudgetLedger::default(),
+            // The gate's own values, so the planner's budget query cannot
+            // disagree with the policy the engine enforces.
+            limits: BudgetLimits {
+                global_max_order_size_usd: policy.max_order_size_usd,
+                per_market_max_order_size_usd: std::collections::BTreeMap::new(),
+                global_daily_actions: policy.max_daily_actions,
+                per_market_daily_actions: std::collections::BTreeMap::new(),
+                max_book_daily_actions: None,
+            },
+            last_mark: HashMap::new(),
+        }
+    }
+
+    /// Simple return since the market's previous mark, if there is one.
+    fn observe_mark(&mut self, market: MarketId, mark: Decimal) -> Option<Decimal> {
+        let previous = self.last_mark.insert(market, mark)?;
+        if previous.is_zero() {
+            return None;
+        }
+        Some((mark - previous) / previous)
+    }
+
+    /// Record an executed action so the planner's budget query tracks reality.
+    fn note_execution(&mut self, market: MarketId) {
+        let limits = self.limits.clone();
+        self.ledger.record(market, &limits);
+    }
+
+    fn feed(&mut self, bucket: &[(MarketId, Decimal)]) {
+        if !bucket.is_empty() {
+            self.tracker.observe(bucket);
+        }
+    }
 }
 
 impl Sim<'_> {
     /// Apply every price-path entry in order (the tick loop, P13 §4).
     fn walk(&mut self) {
+        // GAP-007: returns are grouped by timestamp so the portfolio tracker
+        // sees one bucket per instant, with every market that printed in it.
+        let mut bucket: Vec<(MarketId, Decimal)> = Vec::new();
+        let mut bucket_ts: Option<i64> = None;
         for index in 0..self.scenario.price_path.len() {
             let (ts_ms, market_id, mark) = {
                 let tick = &self.scenario.price_path[index];
                 (tick.ts_ms, tick.market_id, tick.mark_price)
             };
+            if bucket_ts != Some(ts_ms) {
+                if let Some(layer) = &mut self.cascade {
+                    layer.feed(&bucket);
+                }
+                bucket.clear();
+                bucket_ts = Some(ts_ms);
+            }
+            if let Some(layer) = &mut self.cascade
+                && let Some(ret) = layer.observe_mark(MarketId(market_id), mark)
+            {
+                bucket.push((MarketId(market_id), ret));
+            }
             self.step(ts_ms, market_id, mark);
+        }
+        if let Some(layer) = &mut self.cascade {
+            layer.feed(&bucket);
         }
     }
 
@@ -298,10 +374,88 @@ impl Sim<'_> {
         }
 
         let quality = quality_at(&self.scenario.events, ts_ms);
-        for index in 0..self.states.len() {
+        let order = self.evaluation_order();
+        for index in order {
             self.evaluate(index, ts_ms, now_ms, quality);
         }
         self.ticks = self.ticks.saturating_add(1);
+    }
+
+    /// Which positions to evaluate this tick, and in what order (GAP-007).
+    ///
+    /// Without the portfolio layer this is the state order the walk has always
+    /// used. With it, and with two or more positions at or above the trigger
+    /// tier, the order becomes the cascade plan: the reduction that buys the
+    /// most portfolio survival per dollar of fee runs first. Positions the
+    /// budget refused, and every position outside the plan, keep their state
+    /// order behind the planned ones.
+    fn evaluation_order(&mut self) -> Vec<usize> {
+        let state_order = || (0..self.states.len()).collect::<Vec<_>>();
+        let Some(layer) = &self.cascade else {
+            return state_order();
+        };
+
+        let mut book: Vec<PositionRisk> = Vec::new();
+        let mut index_of: Vec<(MarketId, usize)> = Vec::new();
+        for (index, state) in self.states.iter().enumerate() {
+            if !state.active {
+                continue;
+            }
+            let position = &state.position;
+            let Some(market) = self.markets.get(&position.market_id) else {
+                continue;
+            };
+            let Some(distance) = risk::distance_to_liq_pct(position, market) else {
+                continue;
+            };
+            let tier = risk::tier(distance, &self.thresholds);
+            book.push(PositionRisk {
+                market_id: position.market_id,
+                notional: position.size.abs() * position.entry_price,
+                collateral: position.collateral,
+                distance_to_liq: distance,
+                tier,
+            });
+            index_of.push((position.market_id, index));
+        }
+
+        let risk = portfolio::assess(&book, &layer.tracker, &layer.cfg);
+        if !risk.cascade_triggered(&layer.cfg) {
+            return state_order();
+        }
+
+        let plan = portfolio::plan_cascade(
+            &book,
+            &layer.tracker,
+            &layer.ledger,
+            &layer.limits,
+            &layer.cfg,
+        );
+        let mut order: Vec<usize> = Vec::with_capacity(self.states.len());
+        for slice in &plan.slices {
+            if let Some((_, index)) = index_of.iter().find(|(m, _)| *m == slice.market_id) {
+                order.push(*index);
+            }
+        }
+        for index in 0..self.states.len() {
+            if !order.contains(&index) {
+                order.push(index);
+            }
+        }
+
+        let planned: Vec<String> = plan
+            .slices
+            .iter()
+            .map(|slice| format!("{}:{:.4}", slice.market_id.0, slice.ratio))
+            .collect();
+        self.notes.push(format!(
+            "cascade plan: threatening={} equity-at-risk={:.4} order=[{}] denied={}",
+            risk.threatened,
+            risk.equity_at_risk,
+            planned.join(" "),
+            plan.denied.len()
+        ));
+        order
     }
 
     /// Evaluate one position at one tick (reflex + consult points, §4).
@@ -692,6 +846,14 @@ impl Sim<'_> {
             }
             None => detail,
         };
+        // GAP-007: the planner's budget view must reflect what actually
+        // executed, or its denials drift from the gate's.
+        if order.is_some()
+            && matches!(verdict, Some(PolicyVerdict::Allow))
+            && let Some(layer) = &mut self.cascade
+        {
+            layer.note_execution(state.position.market_id);
+        }
         self.actions.push(SimAction {
             ts_ms,
             market_id: state.position.market_id.0,

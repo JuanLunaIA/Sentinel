@@ -1,0 +1,91 @@
+# GAP-007 slice 2 — the planner wired to the simulator, and the negative result it produced
+
+**Date:** 2026-10-13 · **Files:** `crates/sentinel/src/sim/engine.rs`,
+`crates/sentinel/src/bin/backtest.rs`
+
+## What was wired
+
+`--cascade` (opt-in, default off) adds a `PortfolioLayer` to the simulator:
+
+- Returns are grouped **by timestamp** inside `walk`, so the tracker receives
+  one bucket per instant with every market that printed in it, which is the API
+  the portfolio module requires.
+- `evaluation_order()` replaces the state-order loop when the plan triggers:
+  positions at or above the trigger tier are ranked by the cascade plan and
+  evaluated in that order, with everything else behind them.
+- `BudgetLimits` is built from the **scenario's own policy config**, not from
+  `Default`, and the ledger records every executed action, so the planner's
+  budget query cannot drift from the gate the engine enforces.
+- Each triggered tick journals a note: threatened count, equity-at-risk, the
+  ranked order with ratios, and how many positions the budget refused.
+
+Verified wiring: with a fixture whose daily cap is 1 and two threatened
+positions, the plan appears 171 times and reads
+`order=[16:285.7119] denied=1` — the correlated leg is admitted, the other is
+refused by the budget, as designed.
+
+## The result: zero effect, measured
+
+Same fixture set, both runs, `--cascade` on and off:
+
+| suite | notional | capital saved | sentinel liqs | baseline liqs | policy violations |
+|---|---|---|---|---|---|
+| realistic, no cascade | $38,533.50 | $394.02 | 0 | 1 | 0 |
+| realistic, `--cascade` | $38,533.50 | $394.02 | 0 | 1 | 0 |
+
+**Delta: $0.00 (0.0%).** Only 1 of 12 scenarios produced a plan at all, and the
+one contention fixture designed to make ordering matter also produced $0.00.
+
+## Why, at the mechanism level
+
+The contention fixture (daily cap = 1, two positions) is the decisive one. Its
+timeline:
+
+- `t = 1791854400000` — market 32 goes Orange. Market 16 is still Green. **One**
+  threatened position, so the cascade does not trigger; the reflex path acts on
+  market 32 and consumes the single daily action.
+- `t = 1791863670000` — market 16 goes Orange. Now two positions are threatened
+  and the plan is computed on every tick thereafter. But the day's budget is
+  already spent, so the gate refuses **both** positions regardless of order.
+
+The ordering only changes an outcome when two or more actions compete for a
+resource **at the moment of the plan**, and in this architecture the scarce
+resource (the daily action) has already been consumed by an earlier
+single-position event. Once it is gone, every ordering produces the same
+outcome: nothing.
+
+The general statement, which is the useful part: **in the current simulator the
+per-position evaluations are independent and the shared budget is consumed
+before the cascade triggers, so permuting the evaluation order is a no-op.** A
+planner that only reorders cannot move the number.
+
+## What the blueprint's KPI actually requires
+
+The KPI is *correlated-dump-class scenarios show >=20% less total loss vs the
+per-position-independent baseline at equal fee spend.* Reordering is not
+sufficient to reach it. The version of GAP-007 that could reach it is an
+**allocator**, not a scheduler: at the moment the cascade triggers it must
+decide *how much* to cut on each leg and *reserve* budget for that decision,
+rather than distributing an already-spent budget across an ordering.
+
+That is a different piece of work with a different shape: a reserve/commit
+protocol between the reflex path and the portfolio layer, plus slice sizing,
+plus a policy for pre-empting a single-position action when the book looks
+correlated. It is also the version that interacts with the `[P-1]` finding,
+because a per-market budget is exactly what stops one market from spending the
+day before the book needs it.
+
+## Honest status
+
+- The portfolio module (slice 1) is complete, tested and correct in isolation:
+  11 adversarial tests, including the one that proves the correlation term
+  changes the ordering.
+- The wiring (slice 2) is real, verified by its own journal notes, and
+  **measurably inert** on the current scenario set.
+- The KPI is **not met**. The number reproduced is 0.0%, and this file is why.
+- `--cascade` defaults to off, so every existing result is unchanged; the frozen
+  reporting tests still pass.
+
+Recording a 0.0% instead of tuning the fixture until something moved is the
+point. The useful output of this slice is the mechanism: ordering cannot help,
+allocation can, and the next slice should be the allocator.

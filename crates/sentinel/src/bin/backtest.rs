@@ -64,6 +64,8 @@ struct Cli {
     out: PathBuf,
     /// Enable the volatility-adaptive band layer (`--adaptive`, P22).
     adaptive: bool,
+    /// Enable the portfolio cascade planner (`--cascade`, GAP-007).
+    cascade: bool,
 }
 
 impl Default for Cli {
@@ -74,6 +76,7 @@ impl Default for Cli {
             mode: Mode::Replay,
             out: PathBuf::from(DEFAULT_OUT),
             adaptive: false,
+            cascade: false,
         }
     }
 }
@@ -113,13 +116,16 @@ impl Cli {
                     let value = iter.next().ok_or("--out requires a path base")?;
                     cli.out = PathBuf::from(value);
                 }
+                "--cascade" => {
+                    cli.cascade = true;
+                }
                 "--adaptive" => {
                     cli.adaptive = true;
                 }
                 other => {
                     return Err(format!(
                         "unknown argument {other:?} \
-                         (supported: --scenario, --scenarios-dir, --mode, --out, --adaptive)"
+                         (supported: --scenario, --scenarios-dir, --mode, --out, --adaptive, --cascade)"
                     ));
                 }
             }
@@ -176,6 +182,7 @@ fn run_replay(cli: &Cli) -> Result<(), Failure> {
         let report = engine::run_with(
             &scenario,
             cli.adaptive.then(sentinel_core::vol::VolConfig::default),
+            cli.cascade,
         )
         .map_err(|err| Failure::Internal(format!("run {}: {err}", scenario.id)))?;
         println!(
