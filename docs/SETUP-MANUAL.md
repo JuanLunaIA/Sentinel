@@ -1,9 +1,17 @@
-# SENTINEL — MANUAL SETUP CHECKLIST (final: keys -> live)
+# Sentinel setup manual: from a fresh clone to a live guardian
 
-Machine-verifiable facts live in `docs/FACTS.md`; operations in `docs/RUNBOOK.md`.
-**Rules:** secrets go into `.env` only — never into chat, commits, or this file.
-Refreshed 2026-10-06 (key-readiness audit): every env name below is exactly what the
-code reads (verified against `config.rs` dumps in both crates).
+This is the checklist for taking Sentinel from zero to running with real keys.
+Facts live in [FACTS.md](FACTS.md), day-to-day operations in
+[RUNBOOK.md](RUNBOOK.md), and what Sentinel actually does in
+[HOW-IT-THINKS.md](HOW-IT-THINKS.md).
+
+**Rule number one:** secrets go into `.env` only. Never into a chat, never into a
+commit, never into this file.
+
+Every environment variable name below is exactly what the code reads, verified
+against the `config.rs` dumps in both crates. Section 0 is the complete
+credential set in one table, with a one-line test for each; the sections after it
+walk through the setup one credential at a time.
 
 ---
 

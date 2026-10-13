@@ -1,39 +1,59 @@
 # Sentinel
 
-> The first verifiable, non-custodial AI risk guardian for perpetual futures — deterministic reflexes, Qwen/Kimi strategic judgment, every action provable on-chain
+> A non-custodial guardian for perpetual futures. It measures how close each position is to liquidation and cuts the risk before it becomes a loss. Every decision is provable.
 
-![tests: 878 passing](https://img.shields.io/badge/tests-912_passing-brightgreen)
+![tests: 912 passing](https://img.shields.io/badge/tests-912_passing-brightgreen)
 ![clippy: zero warnings](https://img.shields.io/badge/clippy-zero_warnings-brightgreen)
 ![license: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
-![Sentinel dashboard — positions, live decision feed, and the hash-chain audit verifier](docs/evidence/p15-dashboard-top.png)
+![The Sentinel dashboard: positions, live decision feed, and the hash-chain audit verifier](docs/evidence/p15-dashboard-top.png)
 
-Sentinel is a non-custodial guardian for isolated-margin perpetual futures on [Perpl](https://app.perpl.xyz) (Monad). It watches positions, decides defensively, and de-risks with reduce-only orders — and it is built so that every decision can be verified after the fact: a hash-chained audit journal, anchored on-chain, indexed for anyone to query, with an independent dead-man's switch in case Sentinel itself goes silent.
+Sentinel is a non-custodial guardian for isolated-margin perpetual futures on [Perpl](https://app.perpl.xyz) (Monad). It watches positions, decides defensively, and de-risks with reduce-only orders. And it is built so every decision can be checked after the fact: a hash-chained audit journal, anchored on-chain, indexed for anyone to query, with an independent dead-man's switch in case Sentinel itself goes silent.
 
----
+## What it does, in plain words
+
+Sentinel does not try to guess whether a coin will go up or down. It looks at each open position on its own and measures one thing: how far the price can move before that position gets liquidated.
+
+Then it acts in stages instead of panicking:
+
+| Distance to liquidation | Level | What Sentinel does |
+|---|---|---|
+| 25% or more | **Green** | Nothing. |
+| 15% to 25% | **Yellow** | Nothing to the position. It asks the AI for a read of the situation. |
+| 8% to 15% | **Orange** | Trims about a quarter of the position. |
+| Under 8% | **Red** | Trims about half. If it breaches again, closes what's left. |
+
+The difference from a simple bot that fires "if the price hits X, close" is that X here is not a number somebody guessed. Sentinel derives the real liquidation price from each market's own margin rules, recomputes it as the position changes, and reduces in stages rather than dumping everything at once.
+
+Two things it will never do: open a position, or add to one. It can only reduce. That limit is structural, not a setting somebody can flip.
+
+That is the short version. The long version, still in plain words, is [docs/HOW-IT-THINKS.md](docs/HOW-IT-THINKS.md).
 
 ## The Problem
 
-**Isolated margin removes the safety net.** In cross-margin trading, a shared account balance absorbs losses across positions. In isolated margin — the model Perpl uses — each position lives on its own collateral: free balance elsewhere in the account does **not** protect it ([docs/FACTS.md](docs/FACTS.md) §1.7). A single position can march toward liquidation while the trader sleeps, and the liquidation price is not even handed to you by the gateway: it must be derived from first principles (`entry + side × (MMR − collateral) / size`) and cross-checked against the exchange ([docs/FACTS.md](docs/FACTS.md) §1.7).
+**Isolated margin has no safety net.** In cross-margin trading, your whole account balance absorbs losses across positions. In isolated margin, the model Perpl uses, each position stands alone: cash sitting free elsewhere in the account does **not** protect it ([docs/FACTS.md](docs/FACTS.md) §1.7). One position can drift toward liquidation while you sleep, and the exchange does not hand you the liquidation price. You have to derive it yourself from the margin rules (`entry + side × (MMR − collateral) / size`) and cross-check it against the venue ([docs/FACTS.md](docs/FACTS.md) §1.7).
 
-**And a liquidation doesn't need a crash.** A gap through the liquidation level settles the position before a human can click anything — see the `gap-through-liq` scenario in [docs/backtest-report.md](docs/backtest-report.md). In the same backtest, the do-nothing baseline ends in **11 liquidations across 14 scenarios**; with Sentinel, **0**. But "we would have saved you" is worthless without proof — especially when the guardian is an AI. That is the second half of the problem: an automated guardian has to be *auditable*, or no one should trust it with a position.
+**And a liquidation does not need a crash.** One price gap through the liquidation level settles the position before a human can click anything. You can see exactly that in the `gap-through-liq` scenario of [docs/backtest-report.md](docs/backtest-report.md). Across 14 scenarios, doing nothing ends in **11 liquidations**; with Sentinel, **0**.
+
+But "we would have saved you" is worth nothing without proof, especially when the guardian is an AI. That is the second half of the problem: an automated guardian has to be auditable, or nobody should trust it with a position.
 
 ## The Solution
 
-Sentinel runs **two brains**:
+Sentinel runs two brains, and the division of labor between them is the whole design.
 
-- The **reflex brain** is deterministic — no LLM anywhere in the path. It evaluates every position on every tick ([crates/sentinel-core/src/risk.rs](crates/sentinel-core/src/risk.rs)) with classification measured at **0.271 µs per iteration** (10k iterations in 2.707756 ms; 2200 intents — [docs/evidence/p04-skill-verification.txt](docs/evidence/p04-skill-verification.txt)) and can de-risk a position the moment a tier breach is detected.
-- The **strategy brain** is LLM-powered — Alibaba **Qwen** primary, Moonshot **Kimi** fallback — consulted only at Yellow/Orange transitions and portfolio reviews. It proposes; the policy engine disposes.
+**The reflex brain is deterministic.** It is the one that measures and acts, and there is no AI anywhere in that path. It evaluates every position on every tick ([crates/sentinel-core/src/risk.rs](crates/sentinel-core/src/risk.rs)) at **0.271 microseconds per iteration** (10k iterations in 2.707756 ms; 2200 intents, [docs/evidence/p04-skill-verification.txt](docs/evidence/p04-skill-verification.txt)). That is fast enough to catch a breach on the tick it happens instead of the one after.
 
-Two invariants are structural, not aspirational: **the reflex never calls an LLM**, and **the LLM never bypasses the policy gate** ([docs/architecture.md](docs/architecture.md)).
+**The strategy brain is the AI.** Alibaba **Qwen 3.8 Max** is primary, Moonshot **Kimi** is the fallback. It gets consulted when a position enters the ambiguous band and again after a trim, to read the situation and suggest what to do next. It proposes; the policy engine decides ([docs/evidence/p08-failover.txt](docs/evidence/p08-failover.txt)).
+
+Two rules are structural, not promises: **the reflex never calls an LLM**, and **the LLM never bypasses the policy gate** ([docs/architecture.md](docs/architecture.md)). The consequence is worth spelling out: the model can be slow, wrong, or completely offline, and your position still gets protected, because the protection never ran through it.
 
 **The five pillars**
 
-1. **Deterministic reflex risk engine** — distance-to-liquidation from first principles with exchange-value preference, margin health, tier classification, reduce-only intents. No network, no clock, no unsafe code in the pure core.
-2. **Dual-brain strategy** — versioned prompts, strict JSON decisions, one repair nudge, confidence floor, per-slot circuit breakers, and a failover that is tested by force-failing the primary ([docs/evidence/p08-failover.txt](docs/evidence/p08-failover.txt)).
-3. **Policy gate & custody guardrails** — reduce-only by construction, caps and allowlists, human approval above a notional threshold (Telegram), idempotent order retries, kill switch, and secrets that never touch logs (`SecretString`, redacting `Debug`).
-4. **Verifiable audit spine** — an append-only hash-chained journal; decision batches anchored to the on-chain `SentinelAuditAnchor` contract on Monad; an Envio indexer for public queries; and a Chainlink CRE dead-man's switch that can de-risk even if Sentinel itself stops heartbeating ([docs/evidence/p10-anvil-e2e.txt](docs/evidence/p10-anvil-e2e.txt), [docs/evidence/p14-breaker-demo.txt](docs/evidence/p14-breaker-demo.txt)).
-5. **Operator surface & evidence** — a single-file dashboard with a live decision feed and a chain verifier (61,807 bytes, zero external requests; kill-switch round-trip verified — [docs/evidence/p15-validate.txt](docs/evidence/p15-validate.txt), [screenshots](docs/evidence/p15-dashboard-positions-feed.png)), Telegram approvals and alerts, and a deterministic backtester + replay.
+1. **Deterministic reflex risk engine.** Distance-to-liquidation from first principles with exchange-value preference, margin health, tier classification, reduce-only intents. No network, no clock, no unsafe code in the pure core.
+2. **Dual-brain strategy.** Versioned prompts, strict JSON decisions, one repair nudge, confidence floor, per-slot circuit breakers, and a failover that is tested by force-failing the primary ([docs/evidence/p08-failover.txt](docs/evidence/p08-failover.txt)).
+3. **Policy gate & custody guardrails.** Reduce-only by construction, caps and allowlists, human approval above a notional threshold (Telegram), idempotent order retries, kill switch, and secrets that never touch logs (`SecretString`, redacting `Debug`).
+4. **Verifiable audit spine.** An append-only hash-chained journal; decision batches anchored to the on-chain `SentinelAuditAnchor` contract on Monad; an Envio indexer for public queries; and a Chainlink CRE dead-man's switch that can de-risk even if Sentinel itself stops heartbeating ([docs/evidence/p10-anvil-e2e.txt](docs/evidence/p10-anvil-e2e.txt), [docs/evidence/p14-breaker-demo.txt](docs/evidence/p14-breaker-demo.txt)).
+5. **Operator surface.** A single-file dashboard with a live decision feed and a chain verifier (61,807 bytes, zero external requests; kill-switch round-trip verified, [docs/evidence/p15-validate.txt](docs/evidence/p15-validate.txt), [screenshots](docs/evidence/p15-dashboard-positions-feed.png)), Telegram approvals and alerts, and a deterministic backtester + replay.
 
 ```mermaid
 flowchart LR
@@ -52,8 +72,6 @@ flowchart LR
 ```
 
 **Built to be checked:** 39 suites / 912 tests OK; `clippy -D warnings` rc=0; `cargo fmt --check` clean ([docs/evidence/p16-validate.txt](docs/evidence/p16-validate.txt)).
-
-## Live links
 
 ## Live links
 
@@ -76,8 +94,8 @@ curl -s http://localhost:8080/healthz
 ```
 
 - The image is verified reproducible (digest `bdfa6a107a11`), runs as a non-root user, ships a healthcheck, and composes with journal seq-continuity across `up`/`down` cycles ([docs/evidence/p16-docker.txt](docs/evidence/p16-docker.txt), [docs/evidence/p16-verify.txt](docs/evidence/p16-verify.txt)).
-- Live `DRY_RUN`/`TESTNET` modes fetch a signed account snapshot at startup — placeholder credentials stop the daemon at the first call, which is exactly why the compose verification pins the service to a deterministic replay ([docs/RUNBOOK.md](docs/RUNBOOK.md) §1.2).
-- The breaker **fail-fasts** without `BREAKER_ANCHOR_ADDRESS`, `BREAKER_GUARDIANS` and `BREAKER_ARM_SECRET` — fill them in or leave that service off ([docs/RUNBOOK.md](docs/RUNBOOK.md) §1.3).
+- Live `DRY_RUN`/`TESTNET` modes fetch a signed account snapshot at startup. Placeholder credentials stop the daemon at the first call, which is exactly why the compose verification pins the service to a deterministic replay ([docs/RUNBOOK.md](docs/RUNBOOK.md) §1.2).
+- The breaker **fail-fasts** without `BREAKER_ANCHOR_ADDRESS`, `BREAKER_GUARDIANS` and `BREAKER_ARM_SECRET`. Fill them in or leave that service off ([docs/RUNBOOK.md](docs/RUNBOOK.md) §1.3).
 - Full operator procedures: [docs/RUNBOOK.md](docs/RUNBOOK.md). Credentials, wallets and network setup: [docs/SETUP-MANUAL.md](docs/SETUP-MANUAL.md).
 
 ### Zero-key local replay (no credentials, no Docker)
@@ -85,11 +103,11 @@ curl -s http://localhost:8080/healthz
 Everything below runs from a fresh clone with just the Rust toolchain (pinned in [rust-toolchain.toml](rust-toolchain.toml); the workspace `rust-version` floor lives in [Cargo.toml](Cargo.toml)):
 
 ```bash
-cp .env.example .env    # placeholders are valid for smoke runs — no keys needed
+cp .env.example .env    # placeholders are valid for smoke runs, no keys needed
 cargo run --bin sentinel -- --replay tests/fixtures/perpl/crash-scenario.jsonl
 ```
 
-This replays the crash scenario through the real decision path — offline and deterministic. The dashboard and `/healthz` are served on `http://localhost:8080` while it runs (health payload: `{"feed_age_s":…,"mode":"DRY_RUN","uptime_s":…,"version":"0.1.0"}`), journal entries land under `data/audit/`, and the daemon drains cleanly when the fixture ends. Want to watch the dashboard instead of blinking? Slow the replay down:
+This replays the crash scenario through the real decision path, offline and deterministic. The dashboard and `/healthz` are served on `http://localhost:8080` while it runs (health payload: `{"feed_age_s":…,"mode":"DRY_RUN","uptime_s":…,"version":"0.1.0"}`), journal entries land under `data/audit/`, and the daemon drains cleanly when the fixture ends. Want to watch the dashboard instead of blinking? Slow the replay down:
 
 ```bash
 SENTINEL_MOCK_PACE=1 SENTINEL_MOCK_CAP_MS=3200 cargo run --bin sentinel -- --replay tests/fixtures/perpl/crash-scenario.jsonl
@@ -493,13 +511,19 @@ type SentinelHeartbeat {
 
 ## Architecture
 
-The full deep-dive lives in [docs/architecture.md](docs/architecture.md): the system diagram, the invariants, mermaid sequence diagrams for the happy path, a reflex save, a strategy consult with an x402 purchase, the approval flow, a breaker save, and audit anchor + verify; scalability and cost modeling; and the security & threat model.
+The full deep-dive lives in [docs/architecture.md](docs/architecture.md): the system diagram, the invariants, mermaid sequence diagrams for the happy path, a reflex save, a strategy consult with an x402 purchase, the approval flow, a breaker save, and the audit anchor plus verify, followed by scalability, cost modeling, and the security and threat model.
 
 ## Backtest results
 
+The guardian is measured against 14 scenarios that walk the real decision path (reflex, policy gate, execution) and compare two worlds: doing nothing, versus running Sentinel.
+
 > Across 14 scenarios representing $60163.365 notional, Sentinel preserved $5972.13546111693125 (9.93%); baseline liquidations: 11 -> with Sentinel: 0
 
-Reproduce with `cargo run --bin backtest -- --scenario all --out docs/backtest-report` ([docs/backtest-report.md](docs/backtest-report.md) + [.json](docs/backtest-report.json)). The suite is 12 synthetic scenarios plus 1 recorded session and 1 reconstructed testnet window:
+In plain numbers: doing nothing loses positions 11 times out of 14. Sentinel loses them zero times, and preserves $5,972 of the $60,163 at stake.
+
+A second suite, [tests/scenarios-realistic/](tests/scenarios-realistic/), pushes further: 12 scenarios whose price paths are block-bootstrapped from the real Perpl testnet tape (960 one-minute candles pulled live from the venue), so they inherit the market's actual fat tails, negative skew and volatility clustering instead of being drawn by hand. The run is in [docs/backtest-report-realistic.md](docs/backtest-report-realistic.md), and its findings, including the unflattering ones, are written up in [docs/evidence/p21-realistic-bootstrap.txt](docs/evidence/p21-realistic-bootstrap.txt).
+
+The suite is 12 synthetic scenarios plus 1 recorded session and 1 reconstructed testnet window:
 
 | Scenario | Label | Baseline loss (USD) | Sentinel loss (USD) | Saved (USD) | Liquidations avoided |
 |---|---|---|---|---|---|
@@ -518,26 +542,26 @@ Reproduce with `cargo run --bin backtest -- --scenario all --out docs/backtest-r
 | whale-vs-caps | synthetic | 2720 | 748.2360579403 | 1971.7639420597 | 1 |
 | wick-both | synthetic | 299.2 | 31.88430115505 | 267.31569884495 | 1 |
 
-The report is honest about the two scenarios where Sentinel *costs* money (`dust-position`, `recovery-v` — fees and a false-positive trim) as well as the wins; the detail lives in the full report's false-positive and policy-violation fields ([docs/backtest-report.md](docs/backtest-report.md)). Reruns are byte-identical (minus the zeroed `metrics` block) by test.
+The report is honest about the two scenarios where Sentinel *costs* money (`dust-position`, `recovery-v`: fees and a false-positive trim) as well as the wins; the detail lives in the full report's false-positive and policy-violation fields ([docs/backtest-report.md](docs/backtest-report.md)). Reruns are byte-identical (minus the zeroed `metrics` block) by test.
 
 ## Security notes
 
-Sentinel's threat model assumes the guardian itself can fail and that its operator should not have to trust it blindly — see the security & threat model in [docs/architecture.md](docs/architecture.md).
+Sentinel's threat model assumes the guardian itself can fail and that its operator should not have to trust it blindly. See the security & threat model in [docs/architecture.md](docs/architecture.md).
 
 - **Key custody.** Every secret is read through `SecretString` with a redacting `Debug`; `.env` is gitignored and excluded from the Docker context; a secret scanner runs over evidence artifacts and logs in the test suite with zero violations ([docs/evidence/p16-verify.txt](docs/evidence/p16-verify.txt)). The x402 payer is a separate, low-balance wallet ([docs/SETUP-MANUAL.md](docs/SETUP-MANUAL.md) §8); its signer only ever produces EIP-3009 authorizations.
 - **Prompt injection & grounding.** The brain eval includes two prompt-injection scenarios (malicious symbol/note text): `injection schema validity: 2/2` and `grounding: 14/14` ([docs/evidence/p07-brain-eval-mock.txt](docs/evidence/p07-brain-eval-mock.txt)). Structurally, the reflex path contains no LLM at all, and the LLM's output passes the same policy gate as everything else.
-- **Kill switch & approvals.** Dashboard pause/resume mutations require `DASHBOARD_ADMIN_KEY` — when unset, mutations are disabled (503; wrong key 401; right key engages the kill flag), verified in [docs/evidence/p16-verify.txt](docs/evidence/p16-verify.txt); the paused state is visible in the UI ([screenshot](docs/evidence/p15-dashboard-paused-banner.png)). Orders above the approval threshold route to a human via Telegram instead of executing.
+- **Kill switch & approvals.** Dashboard pause/resume mutations require `DASHBOARD_ADMIN_KEY`. When unset, mutations are disabled (503; wrong key 401; right key engages the kill flag), verified in [docs/evidence/p16-verify.txt](docs/evidence/p16-verify.txt); the paused state is visible in the UI ([screenshot](docs/evidence/p15-dashboard-paused-banner.png)). Orders above the approval threshold route to a human via Telegram instead of executing.
 - **Rate limits & resilience.** The dashboard API is rate-limited (health endpoint exempt); the daemon supervises its tasks, degrades the journal to memory instead of failing when storage breaks, and resumes the audit chain across restarts ([docs/evidence/p16-verify.txt](docs/evidence/p16-verify.txt), [docs/RUNBOOK.md](docs/RUNBOOK.md) §5).
 - **Verifiability.** Journal entries are hash-chained and anchored on-chain; the dashboard's audit verifier re-checks the chain live ([docs/evidence/p15-validate.txt](docs/evidence/p15-validate.txt)).
 
 **Current deployment surface**
 
-- **Mainnet is deliberately not wired** — `MAINNET` mode refuses to start until MPC/session-key custody and a funded deployment land.
+- **Mainnet is deliberately not wired.** `MAINNET` mode refuses to start until MPC/session-key custody and a funded deployment land.
 - Live on-venue steps (testnet reduce, anchor deploy, x402 paid call, Envio Cloud, CRE registration) take operator-supplied keys and wallets; every one of them has a verified local equivalent in `docs/evidence/`.
-- **`--mode live-brain` backtests are not wired** — the sim engine is deliberately synchronous; the flag fails loudly rather than faking a live call.
+- **`--mode live-brain` backtests are not wired.** The sim engine is deliberately synchronous; the flag fails loudly rather than faking a live call.
 - **Funding drag is not modeled in v1.0**; funding events in scenarios are explicitly noted as ignored.
 - **Perpl exchange-event indexing** (fills/liquidations) extends the indexer once the exchange ABI is published.
-- Container egress on the dev host needed `--network=host` due to a local firewall policy — an environment quirk, not a product requirement ([docs/RUNBOOK.md](docs/RUNBOOK.md) §8).
+- Container egress on the dev host needed `--network=host` due to a local firewall policy. It is an environment quirk, not a product requirement ([docs/RUNBOOK.md](docs/RUNBOOK.md) §8).
 
 ## Roadmap
 
@@ -550,6 +574,6 @@ Sentinel's threat model assumes the guardian itself can fail and that its operat
 
 ## Team & License
 
-Built by **Juan Luna IA** — [github.com/JuanLunaIA/Sentinel](https://github.com/JuanLunaIA/Sentinel).
+Built by **Juan Luna IA**, [github.com/JuanLunaIA/Sentinel](https://github.com/JuanLunaIA/Sentinel).
 
 Licensed under **Apache-2.0** ([LICENSE](LICENSE); declared in the Cargo workspace and every crate).

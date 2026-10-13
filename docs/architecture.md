@@ -21,6 +21,11 @@ decides, and defensively de-risks — reduce-only orders or collateral additions
 and every decision is journaled into a SHA-256 hash chain and anchored on Monad, so it
 is provable after the fact by anyone with the local journal and `eth_getLogs`.
 
+> **Want the short version first?** [HOW-IT-THINKS.md](HOW-IT-THINKS.md) explains what
+> Sentinel measures, the four risk levels, why the AI does not run the protection, and
+> what it deliberately does not do, in plain words and without diagrams. This document
+> is the engineering detail behind that summary.
+
 ## 1. System diagram
 
 ```mermaid
