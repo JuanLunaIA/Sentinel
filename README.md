@@ -2,13 +2,24 @@
 
 > A non-custodial guardian for perpetual futures. It measures how close each position is to liquidation and cuts the risk before it becomes a loss. Every decision is provable.
 
-![tests: 912 passing](https://img.shields.io/badge/tests-912_passing-brightgreen)
+![tests: 955 passing](https://img.shields.io/badge/tests-955_passing-brightgreen)
 ![clippy: zero warnings](https://img.shields.io/badge/clippy-zero_warnings-brightgreen)
 ![license: Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
-![The Sentinel dashboard: positions, live decision feed, and the hash-chain audit verifier](docs/evidence/p15-dashboard-top.png)
+![The Sentinel dashboard: hero KPIs, the live Monad chain panel, the position book, the live decision feed, and the hash-chain audit verifier](docs/evidence/p15-dashboard-top.png)
 
 Sentinel is a non-custodial guardian for isolated-margin perpetual futures on [Perpl](https://app.perpl.xyz) (Monad). It watches positions, decides defensively, and de-risks with reduce-only orders. And it is built so every decision can be checked after the fact: a hash-chained audit journal, anchored on-chain, indexed for anyone to query, with an independent dead-man's switch in case Sentinel itself goes silent.
+
+## Start here
+
+| I want to | Go to |
+|---|---|
+| See it running in 5 minutes, no accounts and no keys | [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md) |
+| Understand what it does before installing anything | "What it does, in plain words" below, then [docs/HOW-IT-THINKS.md](docs/HOW-IT-THINKS.md) |
+| Change a limit, a threshold, or a network | [docs/CONFIGURATION.md](docs/CONFIGURATION.md) — every setting, what it does, and the default |
+| Go live properly | [docs/SETUP-MANUAL.md](docs/SETUP-MANUAL.md) |
+| Operate it day to day | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
+| Find the right document out of all of them | [docs/](docs/README.md) — the index |
 
 ## What it does, in plain words
 
@@ -108,6 +119,8 @@ curl -s http://localhost:8080/healthz
 - Full operator procedures: [docs/RUNBOOK.md](docs/RUNBOOK.md). Credentials, wallets and network setup: [docs/SETUP-MANUAL.md](docs/SETUP-MANUAL.md).
 
 ### Zero-key local replay (no credentials, no Docker)
+
+The full walkthrough, including what you are and are not exercising, is [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md).
 
 Everything below runs from a fresh clone with just the Rust toolchain (pinned in [rust-toolchain.toml](rust-toolchain.toml); the workspace `rust-version` floor lives in [Cargo.toml](Cargo.toml)):
 
