@@ -1,0 +1,678 @@
+{
+ "id": "ct-05-contention-5x",
+ "label": "synthetic",
+ "description": "contention 5: 24 warmup bars then 12 correlated stress cycles, daily cap 3",
+ "start_free_balance": "10000.00",
+ "markets": [
+  {
+   "id": 16,
+   "symbol": "BTC",
+   "base": "BTC",
+   "price_decimals": 1,
+   "size_decimals": 5,
+   "initial_margin_fraction": "0.066667",
+   "maintenance_margin_fraction": "0.04",
+   "max_leverage": "15",
+   "min_size": "0",
+   "tick_size": "0.1",
+   "maker_fee_micros": 45,
+   "taker_fee_micros": 345,
+   "order_ttl_blocks": 20
+  },
+  {
+   "id": 32,
+   "symbol": "ETH",
+   "base": "ETH",
+   "price_decimals": 2,
+   "size_decimals": 3,
+   "initial_margin_fraction": "0.083333",
+   "maintenance_margin_fraction": "0.05",
+   "max_leverage": "12",
+   "min_size": "0",
+   "tick_size": "0.01",
+   "maker_fee_micros": 45,
+   "taker_fee_micros": 345,
+   "order_ttl_blocks": 20
+  }
+ ],
+ "positions": [
+  {
+   "market_id": 32,
+   "symbol": "ETH",
+   "size": "1.000",
+   "entry_price": "2474.51",
+   "mark_price": "2474.51",
+   "liq_price": null,
+   "collateral": "494.90",
+   "unrealized_pnl": "0",
+   "margin_ratio": null,
+   "leverage": "5",
+   "opened_at": null
+  },
+  {
+   "market_id": 16,
+   "symbol": "BTC",
+   "size": "0.03000",
+   "entry_price": "82654.0",
+   "mark_price": "82654.0",
+   "liq_price": null,
+   "collateral": "495.92",
+   "unrealized_pnl": "0",
+   "margin_ratio": null,
+   "leverage": "5",
+   "opened_at": null
+  }
+ ],
+ "price_path": [
+  {
+   "ts_ms": 1791900000016,
+   "market_id": 16,
+   "mark_price": "82669.1973"
+  },
+  {
+   "ts_ms": 1791900000032,
+   "market_id": 32,
+   "mark_price": "2473.1209"
+  },
+  {
+   "ts_ms": 1791900060016,
+   "market_id": 16,
+   "mark_price": "82664.4982"
+  },
+  {
+   "ts_ms": 1791900060032,
+   "market_id": 32,
+   "mark_price": "2473.5905"
+  },
+  {
+   "ts_ms": 1791900120016,
+   "market_id": 16,
+   "mark_price": "82689.2938"
+  },
+  {
+   "ts_ms": 1791900120032,
+   "market_id": 32,
+   "mark_price": "2475.5665"
+  },
+  {
+   "ts_ms": 1791900180016,
+   "market_id": 16,
+   "mark_price": "82601.1093"
+  },
+  {
+   "ts_ms": 1791900180032,
+   "market_id": 32,
+   "mark_price": "2473.1503"
+  },
+  {
+   "ts_ms": 1791900240016,
+   "market_id": 16,
+   "mark_price": "82639.8025"
+  },
+  {
+   "ts_ms": 1791900240032,
+   "market_id": 32,
+   "mark_price": "2473.6003"
+  },
+  {
+   "ts_ms": 1791900300016,
+   "market_id": 16,
+   "mark_price": "82641.7022"
+  },
+  {
+   "ts_ms": 1791900300032,
+   "market_id": 32,
+   "mark_price": "2474.0991"
+  },
+  {
+   "ts_ms": 1791900360016,
+   "market_id": 16,
+   "mark_price": "82689.5938"
+  },
+  {
+   "ts_ms": 1791900360032,
+   "market_id": 32,
+   "mark_price": "2475.2632"
+  },
+  {
+   "ts_ms": 1791900420016,
+   "market_id": 16,
+   "mark_price": "82662.6985"
+  },
+  {
+   "ts_ms": 1791900420032,
+   "market_id": 32,
+   "mark_price": "2475.6154"
+  },
+  {
+   "ts_ms": 1791900480016,
+   "market_id": 16,
+   "mark_price": "82616.0067"
+  },
+  {
+   "ts_ms": 1791900480032,
+   "market_id": 32,
+   "mark_price": "2473.7079"
+  },
+  {
+   "ts_ms": 1791900540016,
+   "market_id": 16,
+   "mark_price": "82629.2043"
+  },
+  {
+   "ts_ms": 1791900540032,
+   "market_id": 32,
+   "mark_price": "2474.3241"
+  },
+  {
+   "ts_ms": 1791900600016,
+   "market_id": 16,
+   "mark_price": "82579.5131"
+  },
+  {
+   "ts_ms": 1791900600032,
+   "market_id": 32,
+   "mark_price": "2472.2699"
+  },
+  {
+   "ts_ms": 1791900660016,
+   "market_id": 16,
+   "mark_price": "82601.6092"
+  },
+  {
+   "ts_ms": 1791900660032,
+   "market_id": 32,
+   "mark_price": "2472.5046"
+  },
+  {
+   "ts_ms": 1791900720016,
+   "market_id": 16,
+   "mark_price": "82574.8139"
+  },
+  {
+   "ts_ms": 1791900720032,
+   "market_id": 32,
+   "mark_price": "2472.1720"
+  },
+  {
+   "ts_ms": 1791900780016,
+   "market_id": 16,
+   "mark_price": "82583.8123"
+  },
+  {
+   "ts_ms": 1791900780032,
+   "market_id": 32,
+   "mark_price": "2473.1111"
+  },
+  {
+   "ts_ms": 1791900840016,
+   "market_id": 16,
+   "mark_price": "82538.3203"
+  },
+  {
+   "ts_ms": 1791900840032,
+   "market_id": 32,
+   "mark_price": "2472.1036"
+  },
+  {
+   "ts_ms": 1791900900016,
+   "market_id": 16,
+   "mark_price": "82495.2279"
+  },
+  {
+   "ts_ms": 1791900900032,
+   "market_id": 32,
+   "mark_price": "2470.9884"
+  },
+  {
+   "ts_ms": 1791900960016,
+   "market_id": 16,
+   "mark_price": "82516.6241"
+  },
+  {
+   "ts_ms": 1791900960032,
+   "market_id": 32,
+   "mark_price": "2471.1449"
+  },
+  {
+   "ts_ms": 1791901020016,
+   "market_id": 16,
+   "mark_price": "82559.2166"
+  },
+  {
+   "ts_ms": 1791901020032,
+   "market_id": 32,
+   "mark_price": "2472.7883"
+  },
+  {
+   "ts_ms": 1791901080016,
+   "market_id": 16,
+   "mark_price": "82517.9239"
+  },
+  {
+   "ts_ms": 1791901080032,
+   "market_id": 32,
+   "mark_price": "2471.5656"
+  },
+  {
+   "ts_ms": 1791901140016,
+   "market_id": 16,
+   "mark_price": "82478.3308"
+  },
+  {
+   "ts_ms": 1791901140032,
+   "market_id": 32,
+   "mark_price": "2470.1765"
+  },
+  {
+   "ts_ms": 1791901200016,
+   "market_id": 16,
+   "mark_price": "82481.9302"
+  },
+  {
+   "ts_ms": 1791901200032,
+   "market_id": 32,
+   "mark_price": "2469.8145"
+  },
+  {
+   "ts_ms": 1791901260016,
+   "market_id": 16,
+   "mark_price": "82515.5243"
+  },
+  {
+   "ts_ms": 1791901260032,
+   "market_id": 32,
+   "mark_price": "2471.3797"
+  },
+  {
+   "ts_ms": 1791901320016,
+   "market_id": 16,
+   "mark_price": "82523.1230"
+  },
+  {
+   "ts_ms": 1791901320032,
+   "market_id": 32,
+   "mark_price": "2471.9079"
+  },
+  {
+   "ts_ms": 1791901380016,
+   "market_id": 16,
+   "mark_price": "82489.4289"
+  },
+  {
+   "ts_ms": 1791901380032,
+   "market_id": 32,
+   "mark_price": "2471.4384"
+  },
+  {
+   "ts_ms": 1791901440016,
+   "market_id": 16,
+   "mark_price": "82096.6240"
+  },
+  {
+   "ts_ms": 1791901440032,
+   "market_id": 32,
+   "mark_price": "2452.3332"
+  },
+  {
+   "ts_ms": 1791901500016,
+   "market_id": 16,
+   "mark_price": "82269.3764"
+  },
+  {
+   "ts_ms": 1791901500032,
+   "market_id": 32,
+   "mark_price": "2458.9424"
+  },
+  {
+   "ts_ms": 1791901560016,
+   "market_id": 16,
+   "mark_price": "81955.9708"
+  },
+  {
+   "ts_ms": 1791901560032,
+   "market_id": 32,
+   "mark_price": "2443.7355"
+  },
+  {
+   "ts_ms": 1791901620016,
+   "market_id": 16,
+   "mark_price": "81373.8417"
+  },
+  {
+   "ts_ms": 1791901620032,
+   "market_id": 32,
+   "mark_price": "2400.4871"
+  },
+  {
+   "ts_ms": 1791901680016,
+   "market_id": 16,
+   "mark_price": "81548.0782"
+  },
+  {
+   "ts_ms": 1791901680032,
+   "market_id": 32,
+   "mark_price": "2407.3042"
+  },
+  {
+   "ts_ms": 1791901740016,
+   "market_id": 16,
+   "mark_price": "81084.6928"
+  },
+  {
+   "ts_ms": 1791901740032,
+   "market_id": 32,
+   "mark_price": "2373.2212"
+  },
+  {
+   "ts_ms": 1791901800016,
+   "market_id": 16,
+   "mark_price": "80743.6049"
+  },
+  {
+   "ts_ms": 1791901800032,
+   "market_id": 32,
+   "mark_price": "2355.0659"
+  },
+  {
+   "ts_ms": 1791901860016,
+   "market_id": 16,
+   "mark_price": "80907.8397"
+  },
+  {
+   "ts_ms": 1791901860032,
+   "market_id": 32,
+   "mark_price": "2362.6935"
+  },
+  {
+   "ts_ms": 1791901920016,
+   "market_id": 16,
+   "mark_price": "80635.5646"
+  },
+  {
+   "ts_ms": 1791901920032,
+   "market_id": 32,
+   "mark_price": "2348.2337"
+  },
+  {
+   "ts_ms": 1791901980016,
+   "market_id": 16,
+   "mark_price": "79946.5963"
+  },
+  {
+   "ts_ms": 1791901980032,
+   "market_id": 32,
+   "mark_price": "2327.0952"
+  },
+  {
+   "ts_ms": 1791902040016,
+   "market_id": 16,
+   "mark_price": "80120.5461"
+  },
+  {
+   "ts_ms": 1791902040032,
+   "market_id": 32,
+   "mark_price": "2333.9576"
+  },
+  {
+   "ts_ms": 1791902100016,
+   "market_id": 16,
+   "mark_price": "79572.8917"
+  },
+  {
+   "ts_ms": 1791902100032,
+   "market_id": 32,
+   "mark_price": "2317.1496"
+  },
+  {
+   "ts_ms": 1791902160016,
+   "market_id": 16,
+   "mark_price": "79238.1634"
+  },
+  {
+   "ts_ms": 1791902160032,
+   "market_id": 32,
+   "mark_price": "2291.4847"
+  },
+  {
+   "ts_ms": 1791902220016,
+   "market_id": 16,
+   "mark_price": "79400.7990"
+  },
+  {
+   "ts_ms": 1791902220032,
+   "market_id": 32,
+   "mark_price": "2297.9922"
+  },
+  {
+   "ts_ms": 1791902280016,
+   "market_id": 16,
+   "mark_price": "79133.5955"
+  },
+  {
+   "ts_ms": 1791902280032,
+   "market_id": 32,
+   "mark_price": "2277.6300"
+  },
+  {
+   "ts_ms": 1791902340016,
+   "market_id": 16,
+   "mark_price": "78764.8266"
+  },
+  {
+   "ts_ms": 1791902340032,
+   "market_id": 32,
+   "mark_price": "2240.1109"
+  },
+  {
+   "ts_ms": 1791902400016,
+   "market_id": 16,
+   "mark_price": "78920.2983"
+  },
+  {
+   "ts_ms": 1791902400032,
+   "market_id": 32,
+   "mark_price": "2246.1532"
+  },
+  {
+   "ts_ms": 1791902460016,
+   "market_id": 16,
+   "mark_price": "78626.0784"
+  },
+  {
+   "ts_ms": 1791902460032,
+   "market_id": 32,
+   "mark_price": "2216.5528"
+  },
+  {
+   "ts_ms": 1791902520016,
+   "market_id": 16,
+   "mark_price": "78250.7375"
+  },
+  {
+   "ts_ms": 1791902520032,
+   "market_id": 32,
+   "mark_price": "2199.4179"
+  },
+  {
+   "ts_ms": 1791902580016,
+   "market_id": 16,
+   "mark_price": "78411.3465"
+  },
+  {
+   "ts_ms": 1791902580032,
+   "market_id": 32,
+   "mark_price": "2205.3505"
+  },
+  {
+   "ts_ms": 1791902640016,
+   "market_id": 16,
+   "mark_price": "78111.8938"
+  },
+  {
+   "ts_ms": 1791902640032,
+   "market_id": 32,
+   "mark_price": "2191.7119"
+  },
+  {
+   "ts_ms": 1791902700016,
+   "market_id": 16,
+   "mark_price": "77674.0807"
+  },
+  {
+   "ts_ms": 1791902700032,
+   "market_id": 32,
+   "mark_price": "2152.9237"
+  },
+  {
+   "ts_ms": 1791902760016,
+   "market_id": 16,
+   "mark_price": "77906.0052"
+  },
+  {
+   "ts_ms": 1791902760032,
+   "market_id": 32,
+   "mark_price": "2158.7260"
+  },
+  {
+   "ts_ms": 1791902820016,
+   "market_id": 16,
+   "mark_price": "77556.6780"
+  },
+  {
+   "ts_ms": 1791902820032,
+   "market_id": 32,
+   "mark_price": "2128.1625"
+  },
+  {
+   "ts_ms": 1791902880016,
+   "market_id": 16,
+   "mark_price": "77186.4421"
+  },
+  {
+   "ts_ms": 1791902880032,
+   "market_id": 32,
+   "mark_price": "2093.1055"
+  },
+  {
+   "ts_ms": 1791902940016,
+   "market_id": 16,
+   "mark_price": "77354.3862"
+  },
+  {
+   "ts_ms": 1791902940032,
+   "market_id": 32,
+   "mark_price": "2098.7513"
+  },
+  {
+   "ts_ms": 1791903000016,
+   "market_id": 16,
+   "mark_price": "77058.9701"
+  },
+  {
+   "ts_ms": 1791903000032,
+   "market_id": 32,
+   "mark_price": "2071.0934"
+  },
+  {
+   "ts_ms": 1791903060016,
+   "market_id": 16,
+   "mark_price": "76511.6242"
+  },
+  {
+   "ts_ms": 1791903060032,
+   "market_id": 32,
+   "mark_price": "2055.0830"
+  },
+  {
+   "ts_ms": 1791903120016,
+   "market_id": 16,
+   "mark_price": "76667.2510"
+  },
+  {
+   "ts_ms": 1791903120032,
+   "market_id": 32,
+   "mark_price": "2061.8320"
+  },
+  {
+   "ts_ms": 1791903180016,
+   "market_id": 16,
+   "mark_price": "76231.6002"
+  },
+  {
+   "ts_ms": 1791903180032,
+   "market_id": 32,
+   "mark_price": "2049.0810"
+  },
+  {
+   "ts_ms": 1791903240016,
+   "market_id": 16,
+   "mark_price": "75883.1379"
+  },
+  {
+   "ts_ms": 1791903240032,
+   "market_id": 32,
+   "mark_price": "2026.3852"
+  },
+  {
+   "ts_ms": 1791903300016,
+   "market_id": 16,
+   "mark_price": "76043.3168"
+  },
+  {
+   "ts_ms": 1791903300032,
+   "market_id": 32,
+   "mark_price": "2031.8510"
+  },
+  {
+   "ts_ms": 1791903360016,
+   "market_id": 16,
+   "mark_price": "75765.2355"
+  },
+  {
+   "ts_ms": 1791903360032,
+   "market_id": 32,
+   "mark_price": "2013.8471"
+  },
+  {
+   "ts_ms": 1791903420016,
+   "market_id": 16,
+   "mark_price": "75418.9050"
+  },
+  {
+   "ts_ms": 1791903420032,
+   "market_id": 32,
+   "mark_price": "1990.4757"
+  },
+  {
+   "ts_ms": 1791903480016,
+   "market_id": 16,
+   "mark_price": "75580.3908"
+  },
+  {
+   "ts_ms": 1791903480032,
+   "market_id": 32,
+   "mark_price": "1996.9225"
+  },
+  {
+   "ts_ms": 1791903540016,
+   "market_id": 16,
+   "mark_price": "75304.0023"
+  },
+  {
+   "ts_ms": 1791903540032,
+   "market_id": 32,
+   "mark_price": "1978.3825"
+  }
+ ],
+ "policy": {
+  "market_allowlist": [
+   16,
+   32
+  ],
+  "max_order_size_usd": "4954",
+  "max_daily_actions": 3,
+  "require_approval_above_usd": "2477",
+  "kill_switch": false
+ }
+}

@@ -1,0 +1,87 @@
+# GAP-007 slice 4 — the contention family, and the regression it exposed
+
+**Date:** 2026-10-13 · **Files:** `tests/scenarios-contention/*.json` (6),
+`tools/scenarios/generate_contention.py`
+
+## Why this family exists
+
+Slice 3 measured 0.00% and traced it to the scenario set: the daily action
+budget was never scarce (max 4 executed orders against a cap of 10), so every
+allocation mechanism was provably inert. The KPI had no witness. This family is
+that witness.
+
+**Construction.** Real 1-minute ETH and BTC closes from the P21 tape
+(`docs/evidence/p21-perpl-real-candles.json`), real return distributions.
+
+- **24 warmup bars** of real returns. This matters: the earlier contention
+  attempt failed because the first single-position action landed inside the
+  tracker's 20-bucket warmup, so any reserve computed there was zero by
+  construction. The warmup is what makes the measurement meaningful rather than
+  degenerate.
+- **12 correlated stress cycles** per scenario: both legs take a real
+  tail-quantile down move amplified 3x, a partial recovery, then another down
+  move, so positions keep re-entering the danger bands instead of being trimmed
+  once and staying out.
+- **`max_daily_actions = 3`**, which binds: base executes 3.0 orders per
+  scenario and the cap is reached.
+
+Validated: timestamps strictly increasing, every mark positive.
+
+## The measurement
+
+| run | capital saved | liq avoided | violations | orders |
+|---|---|---|---|---|
+| no cascade | $50.18 | 6 | 0 | 18 |
+| `--cascade` | **-$263.00** | 6 | 0 | 12 |
+| delta | **-$313.18 (-624%)** | 0 | 0 | -6 |
+
+The mechanism engages on every scenario: **6 of 6 record portfolio budget
+refusals**, and the order count drops from 18 to 12.
+
+## It made things worse, and the reason is a design flaw I introduced
+
+The reserve holds actions back from the reflex path. But the cascade planner
+**only reorders** — it never emits its own reductions. So the actions the
+reserve withheld are not transferred to the cascade; they are simply lost. Six
+fewer reductions across the family, in a book whose positions each need
+trimming repeatedly, converts a small gain into a large loss.
+
+Stated as a rule: **a reserve without a corresponding commit is pure negative.**
+Withholding budget from the path that acts, on behalf of a path that does not
+act, removes protection and buys nothing. The intent/commit split has to be
+completed — the cascade must *emit* the reductions it reserved for — before the
+reserve can be anything other than a loss.
+
+The `liquidations_avoided` column stays at 6 in both runs, consistent with the
+documented property that sentinel-side liquidation accounting is formula-only
+(P13 §5) and does not react to this mechanism. `capital_saved_usd` is the
+column that carries the signal.
+
+## Containment
+
+`--cascade` defaults to **off**, so nothing shipped regresses: every frozen
+result, the P13 suite and the P21 realistic suite all still measure exactly what
+they measured before. The regression exists only under the experimental flag.
+Enabling it by default would be wrong until the commit half exists.
+
+## Honest status of GAP-007
+
+| part | state |
+|---|---|
+| correlation tracking, equity-at-risk | complete, 14 adversarial tests |
+| cascade planner (ordering) | complete, proven to reorder on correlation, measured inert |
+| reserve + segregation, enforced | built and wired; **measured harmful without the commit half** |
+| allocator commit (cascade emits reductions) | **not built** |
+| KPI (>=20% less loss at equal fee spend) | **not met**; the measurement now exists and reads -624% |
+
+The valuable output is the instrument, not a percentage. Before this slice the
+gap was unmeasurable; now a change to the portfolio layer produces a number
+with a sign, on a family whose cap genuinely binds, in 0.2 seconds.
+
+## Reproduce
+
+```bash
+python3 tools/scenarios/generate_contention.py
+./target/release/backtest --scenarios-dir tests/scenarios-contention --out /tmp/base
+./target/release/backtest --scenarios-dir tests/scenarios-contention --out /tmp/casc --cascade
+```
