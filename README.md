@@ -49,10 +49,10 @@ Two rules are structural, not promises: **the reflex never calls an LLM**, and *
 
 **The five pillars**
 
-1. **Deterministic reflex risk engine.** Distance-to-liquidation from first principles with exchange-value preference, margin health, tier classification, reduce-only intents. No network, no clock, no unsafe code in the pure core.
+1. **Deterministic reflex risk engine.** Distance-to-liquidation from first principles with exchange-value preference, margin health, tier classification, reduce-only intents. No network, no clock, no unsafe code in the pure core. The tier cuts can be **volatility-adaptive** (`--adaptive`): bands widen and tighten with an EWMA of realized volatility and a regime classifier, so a quiet market and a dislocation do not share one static threshold ([docs/evidence/p22-adaptive-bands.txt](docs/evidence/p22-adaptive-bands.txt)).
 2. **Dual-brain strategy.** Versioned prompts, strict JSON decisions, one repair nudge, confidence floor, per-slot circuit breakers, and a failover that is tested by force-failing the primary ([docs/evidence/p08-failover.txt](docs/evidence/p08-failover.txt)).
 3. **Policy gate & custody guardrails.** Reduce-only by construction, caps and allowlists, human approval above a notional threshold (Telegram), idempotent order retries, kill switch, and secrets that never touch logs (`SecretString`, redacting `Debug`).
-4. **Verifiable audit spine.** An append-only hash-chained journal; decision batches anchored to the on-chain `SentinelAuditAnchor` contract on Monad; an Envio indexer for public queries; and a Chainlink CRE dead-man's switch that can de-risk even if Sentinel itself stops heartbeating ([docs/evidence/p10-anvil-e2e.txt](docs/evidence/p10-anvil-e2e.txt), [docs/evidence/p14-breaker-demo.txt](docs/evidence/p14-breaker-demo.txt)).
+4. **Verifiable audit spine, including the AI's own decisions.** An append-only hash-chained journal; decision batches anchored to the on-chain `SentinelAuditAnchor` contract on Monad; an Envio indexer for public queries; and a Chainlink CRE dead-man's switch that can de-risk even if Sentinel itself stops heartbeating ([docs/evidence/p10-anvil-e2e.txt](docs/evidence/p10-anvil-e2e.txt), [docs/evidence/p14-breaker-demo.txt](docs/evidence/p14-breaker-demo.txt)). Two things ride that chain that usually do not: every strategy call carries an **inference commitment** (SHA-256 over the system prompt, schema, user prompt, model id, provider, sampling parameters and raw completion, in a length-prefixed encoding) plus a sidecar archive, so a third party holding the journal can recompute it with the shipped `inference-verify` binary and confirm which model said what; and every strategy intent carries a **policy fingerprint**, so "who changed the caps at 03:14 and what were they before" is answerable by walking the chain ([docs/evidence/p23-inference-commitment.txt](docs/evidence/p23-inference-commitment.txt), [docs/evidence/p24-policy-budgets.txt](docs/evidence/p24-policy-budgets.txt)).
 5. **Operator surface.** A single-file dashboard with a live decision feed and a chain verifier (61,807 bytes, zero external requests; kill-switch round-trip verified, [docs/evidence/p15-validate.txt](docs/evidence/p15-validate.txt), [screenshots](docs/evidence/p15-dashboard-positions-feed.png)), Telegram approvals and alerts, and a deterministic backtester + replay.
 
 ```mermaid
@@ -71,7 +71,16 @@ flowchart LR
     J --> DASH[Dashboard, alerts, backtest]
 ```
 
-**Built to be checked:** 39 suites / 912 tests OK; `clippy -D warnings` rc=0; `cargo fmt --check` clean ([docs/evidence/p16-validate.txt](docs/evidence/p16-validate.txt)).
+**Built to be checked:** 44 suites / 955 tests OK; `clippy -D warnings` rc=0; `cargo fmt --check` clean ([docs/evidence/p16-validate.txt](docs/evidence/p16-validate.txt)).
+
+## Engineering honesty
+
+A guardian that hides its own failures is not a guardian. These are ours, measured, in the repository.
+
+- **A portfolio feature that made things worse.** The cascade planner (`--cascade`) reorders multi-position reductions by survival bought per fee dollar, and the reserve holds budget back while the book measures as correlated. On a purpose-built contention family whose daily cap genuinely binds, enabling it turns **+$50.18 into -$263.00 (-624%)**: the reserve withholds actions from the reflex path, but the planner only reorders and never emits its own reductions, so the held-back actions are lost. It is **off by default and stays off** until the commit half exists ([docs/evidence/p28-contention-family.txt](docs/evidence/p28-contention-family.txt)).
+- **A protective trim that cost money.** In the whipsaw scenario the guardian reduced into a drop that then recovered: **-$3.21** against doing nothing. Reported, not tuned away.
+- **A metric that is structural, not measured.** `sentinel_liquidations` is formula-only accounting per the frozen spec, so "liquidations avoided" is derived rather than observed. The P21 evidence file says so instead of letting the number speak for itself.
+- **A flaky test, hardened not silenced.** One supervisor test failed once under heavy load and did not reproduce in 17 runs. The failing assertion was not captured, so the mechanism is honestly unknown; the response was to widen the patience windows without touching a single assertion ([docs/evidence/p16-flake-hardening.txt](docs/evidence/p16-flake-hardening.txt)).
 
 ## Live links
 

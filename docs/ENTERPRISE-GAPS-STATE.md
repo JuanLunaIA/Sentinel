@@ -53,6 +53,24 @@ Not built (GAP-014 layer 2): TEE remote attestation, which is what would
 prove the execution environment itself. The evidence file states that boundary
 explicitly.
 
+
+### After the P22–P28 series (tests 39 -> 44 suites, 912 -> 955)
+
+| item | state | evidence |
+|---|---|---|
+| GAP-009/028 volatility-adaptive bands | **shipped** (`--adaptive`) | `p22-adaptive-bands.txt` |
+| GAP-014 layer 1, inference commitment + `inference-verify` | **shipped** | `p23-inference-commitment.txt` |
+| GAP-029 per-market budgets, GAP-024 policy fingerprint | **shipped** (fingerprint adopted in every strategy intent) | `p24-policy-budgets.txt` |
+| GAP-007 portfolio: correlation, equity-at-risk, planner | **built and tested**, planner measured inert | `p25-portfolio-layer.txt`, `p26-cascade-wiring.txt` |
+| GAP-007 reserve + segregation enforcement | **built and wired, measured harmful** (-624%); off by default | `p27-allocator.txt`, `p28-contention-family.txt` |
+| GAP-007 allocator commit | **not built** — the next step | `p28-contention-family.txt` |
+| contention scenario family (new instrument) | **shipped**, deterministic | `p28-contention-family.txt` |
+| P16 supervisor flake | hardened, no assertion weakened | `p16-flake-hardening.txt` |
+
+Three of these are negative results published with their mechanism. On a
+"don't trust, verify" product that is the point: the measurement is the
+deliverable, and every number above can be reproduced from the repository.
+
 ## The 74 gaps, sorted by what is actually actionable
 
 ### A. Pure code, no external dependency — can be built now

@@ -322,6 +322,28 @@ deferred; in `docs/STUBS.md`).
 
 ---
 
+## 10. Experimental flags (read before enabling)
+
+The backtester takes two opt-in flags. Neither is enabled by default, and one of
+them should not be enabled at all today.
+
+| flag | state | evidence |
+|---|---|---|
+| `--adaptive` | **Shipped.** Volatility-adaptive tier bands. | `docs/evidence/p22-adaptive-bands.txt` |
+| `--cascade` | **Experimental and measured harmful.** Do not enable. | `docs/evidence/p28-contention-family.txt` |
+
+`--cascade` wires the portfolio layer (mode of the risk engine): it segregates
+daily action budgets per market and reserves part of the day while the book
+measures as correlated. On the purpose-built contention family, enabling it
+turns +$50.18 into -$263.00 (-624%). The reserve holds actions back from the
+reflex path, but the planner only reorders and never emits its own reductions,
+so the withheld actions are lost rather than transferred. The flag stays in the
+tree because the contention family is now a permanent regression instrument: any
+future change to the portfolio layer produces a signed number in 0.2 seconds.
+
+Every default-path result — the P13 suite and the P21 realistic suite — is
+identical with the flags off, which is the shipped configuration.
+
 ## 9. Standing operator constraints
 
 - Never commit `.env` (or any real secret); the docker context and image

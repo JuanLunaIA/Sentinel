@@ -63,8 +63,15 @@ struct Cli {
     /// Output base path; `.json` and `.md` are appended (`--out`).
     out: PathBuf,
     /// Enable the volatility-adaptive band layer (`--adaptive`, P22).
+    /// Shipped and measured: see `docs/evidence/p22-adaptive-bands.txt`.
     adaptive: bool,
     /// Enable the portfolio cascade planner (`--cascade`, GAP-007).
+    ///
+    /// **Experimental, and measured harmful as it stands.** On the contention
+    /// family the reserve withholds actions from the reflex path while the
+    /// planner only reorders and never emits its own reductions, so the
+    /// held-back budget is lost: +$50.18 becomes -$263.00. See
+    /// `docs/evidence/p28-contention-family.txt` before enabling this.
     cascade: bool,
 }
 
