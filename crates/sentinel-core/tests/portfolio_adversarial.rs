@@ -39,11 +39,6 @@ fn cfg() -> PortfolioConfig {
     }
 }
 
-/// Feed one market's returns one per bucket, starting at bucket 0.
-fn feed(tracker: &mut CorrelationTracker, market: MarketId, rets: &[Decimal]) {
-    tracker.observe_series(market, rets, 0);
-}
-
 /// Feed several markets' series that share bucket indices, one bucket per call.
 /// This is how the simulator feeds the tracker.
 fn feed_aligned(tracker: &mut CorrelationTracker, series: &[(MarketId, &[Decimal])]) {
@@ -53,7 +48,7 @@ fn feed_aligned(tracker: &mut CorrelationTracker, series: &[(MarketId, &[Decimal
             .iter()
             .filter_map(|(market, rets)| rets.get(bucket).map(|ret| (*market, *ret)))
             .collect();
-        tracker.observe(bucket as i64, &returns);
+        tracker.observe(&returns);
     }
 }
 

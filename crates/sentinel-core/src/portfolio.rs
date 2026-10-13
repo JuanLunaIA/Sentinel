@@ -116,7 +116,10 @@ impl CorrelationTracker {
 
     /// Feed one time bucket's returns: every market that printed in it.
     ///
-    /// One call is one bucket, so cross terms pair returns that genuinely share
+    /// The call *is* the bucket, so no bucket id is taken: a parameter the
+    /// tracker does not read would imply it pairs across calls, which is the
+    /// defect the next paragraph describes. One call is one bucket, and cross
+    /// terms pair returns that genuinely share
     /// a time step. Two earlier designs were rejected for this reason:
     /// pairing against the other market's most recent deviation produced
     /// correlations near zero for series that move together (it compares
@@ -130,7 +133,7 @@ impl CorrelationTracker {
     /// summed, which is what a return series does over a period. A market
     /// absent from the slice contributes no cross term for that bucket, so a
     /// gap yields no information rather than wrong information.
-    pub fn observe(&mut self, bucket: i64, returns: &[(MarketId, Decimal)]) {
+    pub fn observe(&mut self, returns: &[(MarketId, Decimal)]) {
         let lambda = self.cfg.lambda;
         let one_minus = Decimal::ONE - lambda;
 
@@ -172,12 +175,12 @@ impl CorrelationTracker {
         self.observations = self.observations.saturating_add(1);
     }
 
-    /// Feed one market's return series, one return per bucket, starting at `first_bucket`.
+    /// Feed one market's return series, one return per bucket.
     ///
     /// Convenience for tests and for callers with a single-market series.
-    pub fn observe_series(&mut self, market: MarketId, rets: &[Decimal], first_bucket: i64) {
-        for (offset, ret) in rets.iter().enumerate() {
-            self.observe(first_bucket + offset as i64, &[(market, *ret)]);
+    pub fn observe_series(&mut self, market: MarketId, rets: &[Decimal]) {
+        for ret in rets {
+            self.observe(&[(market, *ret)]);
         }
     }
 
