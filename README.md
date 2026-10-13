@@ -1,3 +1,5 @@
+![Sentinel banner](assets/banner-readme.svg)
+
 # Sentinel
 
 > A non-custodial guardian for perpetual futures. It measures how close each position is to liquidation and cuts the risk before it becomes a loss. Every decision is provable.
