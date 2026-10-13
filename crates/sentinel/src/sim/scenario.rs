@@ -24,15 +24,21 @@ pub enum ScenarioLabel {
     Recorded,
     /// Rebuilt from recorded testnet data + a consistent synthesized path.
     Reconstructed,
+    /// Block-bootstrap of real recorded returns (contiguous blocks sampled
+    /// with replacement, optional calibrated regime injection). Preserves
+    /// the empirical fat tails, skew and volatility clustering of the tape.
+    #[serde(rename = "realistic-bootstrap")]
+    RealisticBootstrap,
 }
 
 impl ScenarioLabel {
-    /// Wire/report string: `"synthetic"`, `"recorded"` or `"reconstructed"`.
+    /// Wire/report string.
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Synthetic => "synthetic",
             Self::Recorded => "recorded",
             Self::Reconstructed => "reconstructed",
+            Self::RealisticBootstrap => "realistic-bootstrap",
         }
     }
 }

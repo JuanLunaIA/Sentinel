@@ -84,6 +84,9 @@ pub fn run(scenario: &Scenario) -> Result<SimReport, ScenarioError> {
     match scenario.label {
         ScenarioLabel::Recorded => notes.push("label: recorded".to_string()),
         ScenarioLabel::Reconstructed => notes.push("label: reconstructed".to_string()),
+        ScenarioLabel::RealisticBootstrap => {
+            notes.push("label: realistic-bootstrap".to_string());
+        }
         ScenarioLabel::Synthetic => {}
     }
 

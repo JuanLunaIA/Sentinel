@@ -1,0 +1,726 @@
+{
+  "aggregate": {
+    "baseline_liquidations": 1,
+    "pct_saved": "1.02",
+    "scenarios": 12,
+    "sentinel_liquidations": 0,
+    "total_notional_usd": "38533.499000",
+    "total_saved_usd": "394.023198812652825"
+  },
+  "scenarios": [
+    {
+      "actions": [
+        {
+          "detail": "red tier: first-breach reduce: filled 0.200 @ 2471.76576 (sim-32-1, fee $0.17055183744)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.200",
+            "size_decimals": 3
+          },
+          "size_after": "0.200",
+          "source": "REFLEX",
+          "tier": "Red",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.050 @ 2467.19034 (sim-32-2, fee $0.042559033365)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.050",
+            "size_decimals": 3
+          },
+          "size_after": "0.150",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791854580000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "35.84400",
+      "capital_saved_usd": "21.274558129195",
+      "false_positive_reduces": 2,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "989.80400",
+      "policy_violations": 0,
+      "scenario_id": "rb-01-drift-down-10x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "14.569441870805",
+      "sim_fees_usd": "0.213110870805",
+      "ticks": 240
+    },
+    {
+      "actions": [
+        {
+          "detail": "red tier: first-breach reduce: filled 0.400 @ 2472.17535 (sim-32-1, fee $0.3411601983)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.400",
+            "size_decimals": 3
+          },
+          "size_after": "0.400",
+          "source": "REFLEX",
+          "tier": "Red",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.100 @ 2470.68684 (sim-32-2, fee $0.08523869598)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.100",
+            "size_decimals": 3
+          },
+          "size_after": "0.300",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791855000000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "12.80000",
+      "capital_saved_usd": "6.25742510572",
+      "false_positive_reduces": 2,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "1979.60800",
+      "policy_violations": 0,
+      "scenario_id": "rb-02-quiet-range-12x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "6.54257489428",
+      "sim_fees_usd": "0.42639889428",
+      "ticks": 240
+    },
+    {
+      "actions": [
+        {
+          "detail": "red tier: first-breach reduce: filled 0.300 @ 2471.37615 (sim-32-1, fee $0.255787431525)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.300",
+            "size_decimals": 3
+          },
+          "size_after": "0.300",
+          "source": "REFLEX",
+          "tier": "Red",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "76.97400",
+      "capital_saved_usd": "37.291057568475",
+      "false_positive_reduces": 1,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "1484.70600",
+      "policy_violations": 0,
+      "scenario_id": "rb-03-tail-gap-8x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "39.682942431525",
+      "sim_fees_usd": "0.255787431525",
+      "ticks": 240
+    },
+    {
+      "actions": [
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.250 @ 2472.35517 (sim-32-1, fee $0.2132406334125)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.250",
+            "size_decimals": 3
+          },
+          "size_after": "0.750",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.187 @ 2398.31928 (sim-32-2, fee $0.1547275683492)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.187",
+            "size_decimals": 3
+          },
+          "size_after": "0.563",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791859560000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "27.33000",
+      "capital_saved_usd": "-3.2111303417617",
+      "false_positive_reduces": 2,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "2474.51000",
+      "policy_violations": 0,
+      "scenario_id": "rb-04-whipsaw-recovery-6x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "30.5411303417617",
+      "sim_fees_usd": "0.3679682017617",
+      "ticks": 240
+    },
+    {
+      "actions": [],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "291.12500",
+      "capital_saved_usd": "0.00000",
+      "false_positive_reduces": 0,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "6186.27500",
+      "policy_violations": 0,
+      "scenario_id": "rb-05-slow-bleed-4x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "291.12500",
+      "sim_fees_usd": "0",
+      "ticks": 480
+    },
+    {
+      "actions": [
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.250 @ 2470.04748 (sim-32-1, fee $0.21304159515)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.250",
+            "size_decimals": 3
+          },
+          "size_after": "0.750",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.187 @ 2272.98474 (sim-32-2, fee $0.1466416105011)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.187",
+            "size_decimals": 3
+          },
+          "size_after": "0.563",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791863580000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.00750 @ 80709.6096 (sim-16-1, fee $0.20883611484)",
+          "market_id": 16,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 16,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.00750",
+            "size_decimals": 5
+          },
+          "size_after": "0.02250",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791863670000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.00562 @ 75114.1107 (sim-16-2, fee $0.14563874923623)",
+          "market_id": 16,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 16,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.00562",
+            "size_decimals": 5
+          },
+          "size_after": "0.01688",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791864030000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "525.939000",
+      "capital_saved_usd": "133.44829844427267",
+      "false_positive_reduces": 4,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "4954.130000",
+      "policy_violations": 0,
+      "scenario_id": "rb-06-correlated-eth-btc-5x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "392.49070155572733",
+      "sim_fees_usd": "0.71415806972733",
+      "ticks": 480
+    },
+    {
+      "actions": [
+        {
+          "detail": "red tier: first-breach reduce: filled 0.200 @ 2472.10542 (sim-32-1, fee $0.17057527398)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.200",
+            "size_decimals": 3
+          },
+          "size_after": "0.200",
+          "source": "REFLEX",
+          "tier": "Red",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.050 @ 2471.91561 (sim-32-2, fee $0.0426405442725)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.050",
+            "size_decimals": 3
+          },
+          "size_after": "0.150",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791854880000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "0",
+      "capital_saved_usd": "-0.2132158182525",
+      "false_positive_reduces": 2,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "989.80400",
+      "policy_violations": 0,
+      "scenario_id": "rb-07-short-squeeze-10x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "0.2132158182525",
+      "sim_fees_usd": "0.2132158182525",
+      "ticks": 240
+    },
+    {
+      "actions": [
+        {
+          "detail": "red tier: first-breach reduce: filled 0.350 @ 2471.47605 (sim-32-1, fee $0.2984307330375)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.350",
+            "size_decimals": 3
+          },
+          "size_after": "0.350",
+          "source": "REFLEX",
+          "tier": "Red",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "48.13200",
+      "capital_saved_usd": "22.7056867669625",
+      "false_positive_reduces": 1,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "1732.15700",
+      "policy_violations": 0,
+      "scenario_id": "rb-08-vol-cluster-8x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "25.4263132330375",
+      "sim_fees_usd": "0.2984307330375",
+      "ticks": 240
+    },
+    {
+      "actions": [],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "109.20000",
+      "capital_saved_usd": "0.00000",
+      "false_positive_reduces": 0,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "7423.53000",
+      "policy_violations": 0,
+      "scenario_id": "rb-09-noop-active-3x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "109.20000",
+      "sim_fees_usd": "0",
+      "ticks": 240
+    },
+    {
+      "actions": [
+        {
+          "detail": "red tier: first-breach reduce: filled 0.250 @ 2469.78774 (sim-32-1, fee $0.213019192575)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.250",
+            "size_decimals": 3
+          },
+          "size_after": "0.250",
+          "source": "REFLEX",
+          "tier": "Red",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "red tier: still in breach after reduce: filled 0.250 @ 2089.49841 (sim-32-2, fee $0.1802192378625)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.250",
+            "size_decimals": 3
+          },
+          "size_after": "0.000",
+          "source": "REFLEX",
+          "tier": "Red",
+          "ts_ms": 1791855000000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 1,
+      "baseline_loss_usd": "103.10",
+      "capital_saved_usd": "5.2732990695625",
+      "false_positive_reduces": 0,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 1,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap",
+        "sentinel position crossed its liq price at 1791854580000 ms (formula-only accounting, P13 §5)",
+        "sentinel position crossed its liq price at 1791854640000 ms (formula-only accounting, P13 §5)",
+        "sentinel position crossed its liq price at 1791854700000 ms (formula-only accounting, P13 §5)",
+        "sentinel position crossed its liq price at 1791854760000 ms (formula-only accounting, P13 §5)",
+        "sentinel position crossed its liq price at 1791854820000 ms (formula-only accounting, P13 §5)",
+        "sentinel position crossed its liq price at 1791854880000 ms (formula-only accounting, P13 §5)",
+        "sentinel position crossed its liq price at 1791854940000 ms (formula-only accounting, P13 §5)",
+        "sentinel position crossed its liq price at 1791855000000 ms (formula-only accounting, P13 §5)"
+      ],
+      "notional_usd": "1237.25500",
+      "policy_violations": 0,
+      "scenario_id": "rb-10-gap-through-liq-12x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "97.8267009304375",
+      "sim_fees_usd": "0.3932384304375",
+      "ticks": 240
+    },
+    {
+      "actions": [
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.300 @ 2471.85567 (sim-32-1, fee $0.255837061845)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.300",
+            "size_decimals": 3
+          },
+          "size_after": "0.900",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791856860000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.225 @ 2267.80992 (sim-32-2, fee $0.17603874504)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.225",
+            "size_decimals": 3
+          },
+          "size_after": "0.675",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791864840000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "166.86000",
+      "capital_saved_usd": "25.265557193115",
+      "false_positive_reduces": 2,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "2969.41200",
+      "policy_violations": 0,
+      "scenario_id": "rb-11-trim-then-recover-5x",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "141.594442806885",
+      "sim_fees_usd": "0.431875806885",
+      "ticks": 480
+    },
+    {
+      "actions": [
+        {
+          "detail": "red tier: first-breach reduce: filled 0.400 @ 2472.03549 (sim-32-1, fee $0.34114089762)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.400",
+            "size_decimals": 3
+          },
+          "size_after": "0.400",
+          "source": "REFLEX",
+          "tier": "Red",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: executor error: perpl: order: no mark price for market 16",
+          "market_id": 16,
+          "order": null,
+          "size_after": "0.05000",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791854400000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.01250 @ 82428.2892 (sim-16-1, fee $0.355471997175)",
+          "market_id": 16,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 16,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.01250",
+            "size_decimals": 5
+          },
+          "size_after": "0.03750",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791855000000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.00937 @ 79431.1893 (sim-16-2, fee $0.256773234090645)",
+          "market_id": 16,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 16,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.00937",
+            "size_decimals": 5
+          },
+          "size_after": "0.02813",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791864870000,
+          "verdict": "Allow"
+        },
+        {
+          "detail": "orange tier: de-risking reduce: filled 0.100 @ 2326.17150 (sim-32-2, fee $0.08025291675)",
+          "market_id": 32,
+          "order": {
+            "close": "CloseLong",
+            "market_id": 32,
+            "max_slippage_bps": 10,
+            "order_type": "Market",
+            "size": "0.100",
+            "size_decimals": 3
+          },
+          "size_after": "0.300",
+          "source": "REFLEX",
+          "tier": "Orange",
+          "ts_ms": 1791868320000,
+          "verdict": "Allow"
+        }
+      ],
+      "baseline_liquidations": 0,
+      "baseline_loss_usd": "387.539000",
+      "capital_saved_usd": "145.931662695364355",
+      "false_positive_reduces": 4,
+      "label": "realistic-bootstrap",
+      "liquidations_avoided": 0,
+      "metrics": {
+        "reflex_eval_eval": {
+          "p50_us": 0,
+          "p90_us": 0,
+          "p99_us": 0
+        }
+      },
+      "notes": [
+        "label: realistic-bootstrap"
+      ],
+      "notional_usd": "6112.308000",
+      "policy_violations": 0,
+      "scenario_id": "rb-12-two-leg-portfolio",
+      "sentinel_liquidations": 0,
+      "sentinel_loss_usd": "241.607337304635645",
+      "sim_fees_usd": "1.033639045635645",
+      "ticks": 600
+    }
+  ]
+}
