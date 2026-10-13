@@ -17,6 +17,7 @@ pub mod audit;
 pub mod inference;
 pub mod order;
 pub mod policy;
+pub mod portfolio;
 pub mod risk;
 pub mod types;
 pub mod vol;

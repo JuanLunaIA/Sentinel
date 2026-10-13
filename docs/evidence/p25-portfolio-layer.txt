@@ -1,0 +1,91 @@
+# GAP-007 slice 1 — the portfolio risk layer (correlation, equity-at-risk, cascade plan)
+
+**Date:** 2026-10-13 · **Module:** `crates/sentinel-core/src/portfolio.rs`
+**Tests:** `crates/sentinel-core/tests/portfolio_adversarial.rs` (11)
+
+## What GAP-007 asks for
+
+The evaluation's rank #7: isolated margin is per-position but *ruin* is
+per-portfolio. Today five positions going Orange in the same tick fire five
+independent reduces in state order, with no notion of which reduction buys the
+most portfolio survival per dollar of fees and slippage. The blueprint lists
+five parts; this slice delivers the first two as pure, tested primitives.
+
+## What landed
+
+**Correlation tracking.** EWMA mean, variance and pairwise covariance with
+RiskMetrics-style decay (`lambda = 0.94`, ~60-observation half-life). Volatility
+and correlation are `None` below `min_samples`, so the layer reports "not
+measured" instead of a number it cannot support.
+
+**Equity-at-risk.** `assess` weights each threatened position's collateral by
+its modelled liquidation probability (`distance_to_liq / sigma` into a logistic
+tail), so `equity_at_risk` is structurally `<= collateral_at_risk`. An
+unmeasured market is treated as *likely* to liquidate, never as safe.
+
+**Cascade planner.** `plan_cascade` ranks the book by
+
+```text
+ratio_i = (collateral_i * P(liq_i)) / (notional_i * cost_fraction)
+          * (1 + mean correlation of i with the other threatened legs)
+```
+
+Budgets are consulted through the P24 `BudgetLedger::check`, which is pure, so
+ranking candidates never consumes budget and refused positions land in an
+explicit `denied` list.
+
+## Three design failures the tests caught before they shipped
+
+Worth recording, because each was a silent-wrong-answer bug rather than a crash.
+
+1. **Double-scaled cross terms.** The EWMA covariance applied `(1 - lambda)` to
+   the deviation *and* again in the update, understating every covariance by a
+   factor of `(1 - lambda)` ≈ 0.06. Co-moving series measured a correlation near
+   zero. Fixed by storing the deviation `r - mean_before` at observation time,
+   which is the standard RiskMetrics form.
+
+2. **Arrival-order pairing.** Pairing a return against the other market's *most
+   recent* deviation compares returns from different times; feeding markets in
+   batches reported `-0.18` for series that are identical. Rejected.
+
+3. **A bounded per-market bucket window.** The first fix tried a window of 8
+   buckets per market. Feeding 10 buckets of one market and then another evicted
+   the first two before the partner arrived, dropping those pairs silently and
+   understating the covariance by exactly the dropped fraction, measured as
+   `rho = 0.809` on two identical series. **Any windowed design has this
+   failure mode**, because the required window is a property of the caller's
+   feed order, which the tracker cannot see.
+
+The shipped API removes the class: `observe(bucket, &[(MarketId, Decimal)])`
+takes **one time bucket per call**, with every market that printed in it. There
+is nothing to pair across time and nothing to evict. A market that prints twice
+in a bucket has its returns summed (log returns add over a period); a market
+absent from the slice contributes no cross term, so a gap yields no information
+rather than wrong information.
+
+## The load-bearing test
+
+`the_correlation_term_changes_the_order` is the one that decides whether this
+module is a portfolio layer or a dressed-up collateral sort. Its fixture gives
+SOL *more* collateral than ETH or BTC at the same notional, so a sort by
+collateral-per-fee ranks SOL first; SOL is also the only leg that does not share
+the book's exposure, so the planner must rank it **last**. The test asserts the
+two orderings differ. They do.
+
+## Status against the acceptance criterion
+
+The blueprint's KPI is: *correlated-dump-class scenarios show >=20% less total
+loss vs the per-position-independent baseline at equal fee spend.*
+
+**Not measured yet, and therefore not claimed.** The planner is not wired into
+the simulator: `sim/engine.rs::step` still evaluates positions in state order.
+Wiring it is the next slice, and it is the one that produces the number. What
+this slice establishes is that the ordering the wiring will apply is
+correlation-aware and budget-honest, with the properties asserted rather than
+assumed.
+
+## Reproduce
+
+```bash
+cargo test -p sentinel-core --test portfolio_adversarial
+```
