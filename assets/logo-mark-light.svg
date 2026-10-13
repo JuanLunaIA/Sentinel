@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img">
+  <title>Sentinel mark, light</title>
+  <desc>The Sentinel mark for light backgrounds.</desc>
+  <polygon points="128,32 211,80 211,176 128,224 45,176 45,80" fill="none" stroke="#0fb894" stroke-width="9" stroke-linejoin="round"/>
+  <polygon points="128,68 180,98 180,158 128,188 76,158 76,98" fill="#ffffff" stroke="#0a8f74" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M74 128 H101 L114 95 L138 161 L151 128 H182" fill="none"
+        stroke="#7c4de0" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="128" cy="128" r="4.5" fill="#0fb894"/>
+</svg>
