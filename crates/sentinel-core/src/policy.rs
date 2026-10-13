@@ -11,7 +11,10 @@
 //! first failure wins. The `Reflex`+`Red` asymmetry bypasses only the approval
 //! threshold — the per-order cap and the daily action cap still apply.
 
+use std::collections::BTreeMap;
+
 use rust_decimal::Decimal;
+use sha2::{Digest, Sha256};
 
 use crate::types::{AccountState, Intent, MarketId, PolicyVerdict, Position, RiskTier};
 
@@ -896,4 +899,229 @@ mod tests {
             assert_eq!(exposure_effect(&intent), effect);
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// GAP-029 — per-market and aggregate action budgets
+// ---------------------------------------------------------------------------
+//
+// The gate above enforces one global per-order ceiling and one global daily
+// action cap. The enterprise evaluation flags exactly that as finding [P-1]:
+// a correlated multi-position cascade can spend the whole daily budget on the
+// first market it touches, and there is no per-market ceiling at all.
+//
+// These types are additive on purpose. `PolicyConfig`, `DayState` and
+// `PolicyEngine::evaluate` are frozen by `P05` §3 and keep their exact
+// semantics; a caller that wants per-market budgets opts in by consulting
+// [`BudgetLimits::order_cap`] / [`BudgetLimits::daily_cap`] and tracking a
+// [`BudgetLedger`] alongside `DayState`. With empty override maps the limits
+// reproduce the global values exactly, so adopting the ledger is a no-op for
+// every existing configuration.
+
+/// Per-market and aggregate action budgets (GAP-029).
+///
+/// Empty override maps mean "use the global value", so the default value is
+/// behaviour-preserving.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct BudgetLimits {
+    /// Global per-action notional ceiling, USD (mirrors the policy config).
+    pub global_max_order_size_usd: Decimal,
+    /// Per-market overrides of the per-action ceiling.
+    pub per_market_max_order_size_usd: BTreeMap<MarketId, Decimal>,
+    /// Global daily action cap (mirrors the policy config).
+    pub global_daily_actions: u32,
+    /// Per-market overrides of the daily action cap.
+    pub per_market_daily_actions: BTreeMap<MarketId, u32>,
+    /// Ceiling on the total number of actions across every market in a day.
+    /// `None` leaves the book limited only by the sum of the per-market caps.
+    pub max_book_daily_actions: Option<u32>,
+}
+
+impl BudgetLimits {
+    /// Effective per-action notional ceiling for `market`.
+    pub fn order_cap(&self, market: MarketId) -> Decimal {
+        self.per_market_max_order_size_usd
+            .get(&market)
+            .copied()
+            .unwrap_or(self.global_max_order_size_usd)
+    }
+
+    /// Effective daily action cap for `market`.
+    pub fn daily_cap(&self, market: MarketId) -> u32 {
+        let market_cap = self
+            .per_market_daily_actions
+            .get(&market)
+            .copied()
+            .unwrap_or(self.global_daily_actions);
+        match self.max_book_daily_actions {
+            // A book ceiling tighter than a market ceiling still binds.
+            Some(book) => market_cap.min(book),
+            None => market_cap,
+        }
+    }
+}
+
+/// Why an action was refused by the budget layer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BudgetVerdict {
+    /// The action fits inside every budget.
+    Ok,
+    /// The market's own daily cap is spent.
+    MarketDailyExhausted {
+        /// Market whose cap ran out.
+        market_id: MarketId,
+        /// The cap that applied.
+        cap: u32,
+    },
+    /// The book-wide daily ceiling is spent, whichever market asks.
+    BookDailyExhausted {
+        /// The book ceiling that applied.
+        cap: u32,
+    },
+}
+
+/// Per-market and aggregate action accounting for one day (GAP-029).
+///
+/// Deliberately not part of [`DayState`]: `DayState` is frozen with the gate,
+/// and a ledger that can be consulted *before* committing an action is what
+/// lets a cascade planner order its slices (GAP-007) instead of discovering
+/// exhaustion halfway through.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct BudgetLedger {
+    per_market: BTreeMap<MarketId, u32>,
+    total: u32,
+}
+
+impl BudgetLedger {
+    /// Actions recorded for one market today.
+    pub fn actions_for(&self, market: MarketId) -> u32 {
+        self.per_market.get(&market).copied().unwrap_or(0)
+    }
+
+    /// Actions recorded across the whole book today.
+    pub fn total_actions(&self) -> u32 {
+        self.total
+    }
+
+    /// Would one more action on `market` fit the budgets?
+    ///
+    /// A pure query: it never mutates the ledger, so a planner can rank
+    /// candidate slices without spending budget on the ones it rejects.
+    pub fn check(&self, market: MarketId, limits: &BudgetLimits) -> BudgetVerdict {
+        if let Some(book) = limits.max_book_daily_actions
+            && self.total >= book
+        {
+            return BudgetVerdict::BookDailyExhausted { cap: book };
+        }
+        let cap = limits
+            .per_market_daily_actions
+            .get(&market)
+            .copied()
+            .unwrap_or(limits.global_daily_actions);
+        if self.per_market.get(&market).copied().unwrap_or(0) >= cap {
+            return BudgetVerdict::MarketDailyExhausted {
+                market_id: market,
+                cap,
+            };
+        }
+        BudgetVerdict::Ok
+    }
+
+    /// Record one executed action and return the verdict that applied.
+    ///
+    /// Committing is explicit and separate from checking, so an executor that
+    /// fails does not silently consume budget.
+    pub fn record(&mut self, market: MarketId, limits: &BudgetLimits) -> BudgetVerdict {
+        let verdict = self.check(market, limits);
+        if matches!(verdict, BudgetVerdict::Ok) {
+            *self.per_market.entry(market).or_insert(0) += 1;
+            self.total = self.total.saturating_add(1);
+        }
+        verdict
+    }
+
+    /// Reset for a new day (UTC rollover).
+    pub fn reset(&mut self) {
+        self.per_market.clear();
+        self.total = 0;
+    }
+}
+
+/// Stable fingerprint of the policy values in force (GAP-024, first half).
+///
+/// The evaluation's finding [P-2] is that policy *changes* are not
+/// hash-committed into the journal, so "who changed the caps at 03:14 and what
+/// were they before" is not a journal query. This function gives every policy
+/// state a stable 64-hex identity that a journal entry can carry, which makes
+/// that question answerable by diffing fingerprints up the chain.
+///
+/// The encoding is length-prefixed and field-ordered, same discipline as the
+/// inference commitment (`crate::inference`): concatenation would let two
+/// different policies collide.
+pub fn policy_fingerprint(config: &PolicyConfig) -> String {
+    fingerprint_fields(
+        &config.market_allowlist,
+        config.max_order_size_usd,
+        config.require_approval_above_usd,
+        config.max_daily_actions,
+        config.kill_switch,
+    )
+}
+
+/// Fingerprint over the limit fields a prompt-facing policy summary carries
+/// (GAP-024, first half).
+///
+/// The strategy consult receives a summary, not the full config: it has the
+/// allowlist, the per-order ceiling and the approval threshold, but its daily
+/// figure is *remaining budget* (state that drains as actions execute) and the
+/// kill switch is journaled separately through the paused state. Neither
+/// belongs to a policy identity, so this variant covers the limits only. A cap
+/// or threshold change still produces a new fingerprint, which is the point.
+pub fn policy_fingerprint_limits(
+    market_allowlist: &[MarketId],
+    max_order_size_usd: Decimal,
+    require_approval_above_usd: Decimal,
+) -> String {
+    // `max_daily_actions = 0` and `kill_switch = false` are the neutral values
+    // for fields this view does not carry; they are constants here, so the
+    // fingerprint still changes whenever one of the three limits changes.
+    fingerprint_fields(
+        market_allowlist,
+        max_order_size_usd,
+        require_approval_above_usd,
+        0,
+        false,
+    )
+}
+
+/// Shared length-prefixed encoding for both fingerprints.
+fn fingerprint_fields(
+    market_allowlist: &[MarketId],
+    max_order_size_usd: Decimal,
+    require_approval_above_usd: Decimal,
+    max_daily_actions: u32,
+    kill_switch: bool,
+) -> String {
+    let mut bytes: Vec<u8> = Vec::with_capacity(160);
+    bytes.extend_from_slice(b"policy-v1\n");
+    let allowlist: Vec<String> = market_allowlist
+        .iter()
+        .map(|market| market.0.to_string())
+        .collect();
+    let fields: [String; 5] = [
+        allowlist.join(","),
+        max_order_size_usd.to_string(),
+        max_daily_actions.to_string(),
+        require_approval_above_usd.to_string(),
+        if kill_switch { "1" } else { "0" }.to_string(),
+    ];
+    for field in fields {
+        bytes.extend_from_slice(field.len().to_string().as_bytes());
+        bytes.push(b':');
+        bytes.extend_from_slice(field.as_bytes());
+        bytes.push(b'\n');
+    }
+    let mut hasher = Sha256::new();
+    hasher.update(&bytes);
+    hex::encode(hasher.finalize())
 }

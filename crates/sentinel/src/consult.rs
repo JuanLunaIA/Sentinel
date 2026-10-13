@@ -665,6 +665,14 @@ where
                 "focus_market": input.focus_market.0,
                 "trigger": trigger.label(),
                 "policy": serde_json::to_value(&input.policy).unwrap_or(Value::Null),
+                // GAP-024 (first half): a stable identity for the policy in
+                // force, so "who changed the caps at 03:14 and what were they
+                // before" is answerable by diffing fingerprints up the chain.
+                "policy_fingerprint": sentinel_core::policy::policy_fingerprint_limits(
+                    &input.policy.market_allowlist,
+                    input.policy.max_order_size_usd,
+                    input.policy.require_approval_above_usd,
+                ),
             }),
             policy_verdict: json!({ "verdict": "pending", "note": "consult requested" }),
         };

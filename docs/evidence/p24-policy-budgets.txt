@@ -1,0 +1,81 @@
+# P24 — per-market action budgets (GAP-029) and the policy fingerprint (GAP-024, first half)
+
+**Date:** 2026-10-13 · **Module:** `crates/sentinel-core/src/policy.rs` (additive)
+**Tests:** `crates/sentinel-core/tests/policy_budget_adversarial.rs` (9)
+
+## The findings this addresses
+
+Straight from the enterprise evaluation's own component audit:
+
+- **[P-1]** "No per-market caps or velocity limits. One global
+  `MAX_ORDER_SIZE_USD` and `MAX_DAILY_ACTIONS`; a correlated multi-position
+  cascade could burn the daily cap on the first market. Per-market +
+  aggregate-velocity budgets belong here (GAP-029)."
+- **[P-2]** "No policy versioning in the gate itself. Policy *changes* aren't
+  hash-committed into the audit journal as first-class entries with
+  before/after diffs. For institutional buyers, 'who changed the caps at 03:14
+  UTC and what were they before' must be a journal query (GAP-024)."
+
+## Design constraint: the gate is frozen
+
+`PolicyConfig`, `DayState` and `PolicyEngine::evaluate` are normative under
+`P05` §3: check precedence, exact deny reasons, and the Red+Reflex approval
+asymmetry are pinned by adversarial tests. Adding required fields to those
+structs would ripple through 13 construction sites and risk the frozen
+semantics, so this slice is **additive**: new types that a caller consults
+*around* the gate.
+
+## What was built
+
+### GAP-029 — `BudgetLimits` + `BudgetLedger`
+
+- `BudgetLimits` carries per-market overrides for the per-action notional
+  ceiling and the daily action cap, plus an optional **book-wide** daily
+  ceiling. `order_cap(market)` and `daily_cap(market)` resolve the effective
+  value.
+- `BudgetLedger` tracks actions per market and across the book, with a pure
+  `check()` (a planner can rank candidate slices without spending budget on
+  the ones it rejects) and an explicit `record()` commit.
+
+**The semantic distinction the tests pin down:** `global_daily_actions` is the
+*per-market default*, not a book ceiling. One market can spend the whole
+global cap by itself; that is precisely the [P-1] hole. Closing it needs
+`max_book_daily_actions`, and `a_correlated_cascade_cannot_burn_the_book_on_one_market`
+reproduces the hole and then closes it.
+
+**Adoption-safety property, asserted:** with empty override maps the limits
+reproduce the global values exactly for every market, so adopting the ledger
+cannot change the frozen gate's outcome for any existing configuration.
+
+### GAP-024 first half — `policy_fingerprint`
+
+A stable 64-hex identity for a `PolicyConfig`, using the same length-prefixed,
+field-ordered encoding discipline as the P23 inference commitment (plain
+concatenation would let two different policies collide). Adopted at the one
+point that makes it immediately useful: the **strategy intent journal entry**
+now carries `policy_fingerprint` alongside the serialized policy, so the
+policy in force is part of the hash-chained record and a change is visible by
+diffing up the chain.
+
+## Honest scope statement
+
+- **Landed and adopted:** the fingerprint (visible in every strategy intent
+  journal entry from now on).
+- **Landed with tests, enforcement NOT yet wired:** the budget ledger. Its
+  consumer is either the cascade planner (GAP-007), which orders slices and
+  needs to know the remaining budget before it starts, or a daemon config
+  surface for per-market caps (new env vars + three `policy_config()`
+  construction sites). Neither is in this slice, so the ledger is a library
+  API today, not an enforced limit. Stating that plainly rather than ticking
+  GAP-029 off.
+
+## Reproduce
+
+```bash
+cargo test -p sentinel-core --test policy_budget_adversarial
+```
+
+Coverage: 9 tests including the behaviour-preservation property, the [P-1]
+hole reproduction and closure, purity of `check`, non-recording of refused
+actions, day reset, fingerprint determinism, per-field sensitivity and
+encoding injectivity.
