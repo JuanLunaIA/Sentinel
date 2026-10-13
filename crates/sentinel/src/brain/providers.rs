@@ -62,6 +62,15 @@ pub trait Provider {
 
     /// Stable provider name for logs and audit fields.
     fn name(&self) -> &'static str;
+
+    /// Sampling parameters as rendered into the request body (P23): the
+    /// temperature string exactly as the provider writes it, and the output
+    /// token budget. Committed into the inference commitment, so a verifier can
+    /// reproduce the exact call. Providers without sampling parameters return
+    /// the neutral default.
+    fn request_params(&self) -> (String, u64) {
+        (String::new(), 0)
+    }
 }
 
 /// Qwen via Alibaba Cloud Model Studio (OpenAI-compatible chat completions).
@@ -146,6 +155,15 @@ impl Provider for QwenProvider {
     fn name(&self) -> &'static str {
         "qwen"
     }
+
+    fn request_params(&self) -> (String, u64) {
+        // Rendered exactly as the request body renders it (P23).
+        let temperature = match self.temperature.to_f64() {
+            Some(value) => value,
+            None => DEFAULT_TEMPERATURE,
+        };
+        (temperature.to_string(), u64::from(self.max_tokens))
+    }
 }
 
 /// Kimi (Moonshot) — same OpenAI-compatible shape; pulled forward for the
@@ -213,6 +231,10 @@ impl Provider for KimiProvider {
 
     fn name(&self) -> &'static str {
         "kimi"
+    }
+
+    fn request_params(&self) -> (String, u64) {
+        (Self::TEMPERATURE.to_string(), u64::from(Self::MAX_TOKENS))
     }
 }
 

@@ -14,6 +14,7 @@
 #![cfg_attr(not(test), deny(clippy::unwrap_used, clippy::expect_used))]
 
 pub mod audit;
+pub mod inference;
 pub mod order;
 pub mod policy;
 pub mod risk;

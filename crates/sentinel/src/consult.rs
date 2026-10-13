@@ -404,6 +404,10 @@ where
             }
         };
 
+        // P23: archive the inference context before journaling, so the
+        // commitment in the entry is always replayable.
+        self.write_inference_archive(&decision_id, &outcome).await;
+
         self.journal_outcome(
             market_id,
             input_hash,
@@ -670,6 +674,48 @@ where
                 error = %err,
                 decision_id,
                 "strategy intent journal write failed; proceeding"
+            );
+        }
+    }
+
+    /// Append one inference-context archive record beside the journal (P23).
+    ///
+    /// The journal entry carries the commitment; this sidecar carries the raw
+    /// inputs it was taken over, so `inference-verify` can recompute it and a
+    /// third party can re-run the parse chain. Best-effort by design: an
+    /// archive failure must never stall a consult.
+    async fn write_inference_archive(&self, decision_id: &str, outcome: &ConsultOutcome) {
+        let Some(journal) = &self.journal else {
+            return;
+        };
+        let path = {
+            let guard = journal.lock().await;
+            guard.dir().join("inference.jsonl")
+        };
+        let mut record = outcome.inference_archive.clone();
+        match record.as_object_mut() {
+            Some(object) => {
+                object.insert("decision_id".to_string(), json!(decision_id));
+            }
+            None => return,
+        }
+        let Ok(line) = serde_json::to_string(&record) else {
+            tracing::warn!(decision_id, "inference archive serialize failed");
+            return;
+        };
+        let write = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .and_then(|mut file| {
+                std::io::Write::write_all(&mut file, format!("{line}\n").as_bytes())
+            });
+        if let Err(err) = write {
+            tracing::warn!(
+                error = %err,
+                path = %path.display(),
+                decision_id,
+                "inference archive write failed; proceeding"
             );
         }
     }
@@ -984,6 +1030,15 @@ fn consult_decision_json(decision_id: &str, outcome: &ConsultOutcome) -> Value {
         "latency_ms": outcome.latency_ms,
         "repaired": outcome.repaired,
         "downgraded": outcome.downgraded,
+        // P23 / GAP-014 layer 1: proof-carrying decision. The commitment
+        // covers system prompt, schema, user prompt, model id, provider,
+        // sampling params and the raw completion. It rides this journal
+        // entry, so it is covered by entry_hash, by the Merkle batch and by
+        // the on-chain anchor: a verifier holding the archived inputs can
+        // recompute it and re-run the parse chain.
+        "inference_commitment": outcome.inference_commitment.clone(),
+        "inference_commitment_version":
+            sentinel_core::inference::COMMITMENT_VERSION,
         "source": "strategy_consult",
     })
 }

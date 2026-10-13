@@ -21,6 +21,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::{Mutex, MutexGuard};
 
 use rust_decimal::Decimal;
+use sentinel_core::inference;
 use sentinel_core::types::{AccountState, Decision, DecisionAction, Market, MarketId, Urgency};
 
 use crate::brain::chain::{CircuitBreaker, NoProvider, breaker_pair};
@@ -90,6 +91,15 @@ pub struct ConsultOutcome {
     pub repaired: bool,
     /// True when the confidence floor downgraded the decision to ESCALATE.
     pub downgraded: bool,
+    /// SHA-256 commitment over the full inference context that produced this
+    /// decision (P23 / GAP-014 layer 1): system prompt, schema, user prompt,
+    /// model id, provider, sampling parameters and the raw completion. Rides
+    /// the journal entry, therefore the hash chain, therefore the on-chain
+    /// anchor batch.
+    pub inference_commitment: String,
+    /// The raw inputs the commitment was taken over, as a JSON object, ready
+    /// for the archive sidecar (`inference.jsonl`) that a verifier replays.
+    pub inference_archive: serde_json::Value,
 }
 
 /// The consult engine.
@@ -338,6 +348,40 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
         lock(&self.last_consult_ms).insert(input.focus_market, now_ms);
         log_consult(provider_name, &raw, &decision, repaired, downgraded);
 
+        // Inference commitment (P23 / GAP-014 layer 1): commit the full context
+        // that produced this decision, so the journal entry proves which model,
+        // prompt, and parameters were behind it. The params come from the
+        // provider that actually answered, which is the fallback on failover.
+        let (temperature, max_tokens) = if provider_name == primary_name {
+            self.provider.request_params()
+        } else if let Some(fallback) = &self.fallback {
+            fallback.request_params()
+        } else {
+            (String::new(), 0)
+        };
+        let inference_commitment = inference::commitment(&inference::InferenceContext {
+            system_prompt: system,
+            schema_doc: crate::brain::parser::SCHEMA_DOC,
+            user_prompt: &user,
+            model_id: &raw.model,
+            provider: provider_name,
+            temperature: &temperature,
+            max_tokens,
+            raw_completion: &raw.text,
+        });
+
+        let inference_archive = serde_json::json!({
+            "commitment": inference_commitment,
+            "system_prompt": system,
+            "schema_doc": crate::brain::parser::SCHEMA_DOC,
+            "user_prompt": &user,
+            "model_id": &raw.model,
+            "provider": provider_name,
+            "temperature": &temperature,
+            "max_tokens": max_tokens,
+            "raw_completion": &raw.text,
+        });
+
         Ok(ConsultOutcome {
             decision,
             provider_used: provider_name.to_string(),
@@ -348,6 +392,8 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
             completion_tokens: raw.completion_tokens,
             repaired,
             downgraded,
+            inference_commitment,
+            inference_archive,
         })
     }
 
@@ -409,6 +455,30 @@ impl<P: Provider, F: Provider> StrategyEngine<P, F> {
             completion_tokens: None,
             repaired: false,
             downgraded: false,
+            // No provider call was made: commit the empty context under the
+            // `budget` provider so the synthetic outcome is distinguishable
+            // and independently recomputable (P23).
+            inference_commitment: inference::commitment(&inference::InferenceContext {
+                system_prompt: "",
+                schema_doc: "",
+                user_prompt: "",
+                model_id: "",
+                provider: "budget",
+                temperature: "",
+                max_tokens: 0,
+                raw_completion: "",
+            }),
+            inference_archive: serde_json::json!({
+                "commitment": "",
+                "system_prompt": "",
+                "schema_doc": "",
+                "user_prompt": "",
+                "model_id": "",
+                "provider": "budget",
+                "temperature": "",
+                "max_tokens": 0,
+                "raw_completion": "",
+            }),
         }
     }
 }

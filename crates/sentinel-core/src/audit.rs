@@ -395,6 +395,14 @@ pub struct AuditJournal {
 }
 
 impl AuditJournal {
+    /// Directory holding the journal files.
+    ///
+    /// Exposed so sibling artifacts (the inference archive, P23) can be written
+    /// next to the journal they belong to.
+    pub fn dir(&self) -> &std::path::Path {
+        &self.dir
+    }
+
     /// Open (or initialize) the journal in `dir`, resuming from the latest
     /// `journal-*.jsonl` file.
     ///

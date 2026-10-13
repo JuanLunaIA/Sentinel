@@ -1,0 +1,113 @@
+# P23 — proof-carrying AI decisions: the inference commitment (GAP-014 layer 1)
+
+**Date:** 2026-10-13 · **Module:** `crates/sentinel-core/src/inference.rs`
+**Verifier:** `crates/sentinel/src/bin/inference_verify.rs` (`inference-verify`)
+**Tests:** `crates/sentinel-core/tests/inference_adversarial.rs` (9) + the
+end-to-end replay below.
+
+## The gap this closes
+
+`docs/architecture.md` and the entry's own threat model say the reflex path
+contains no LLM and the LLM never bypasses the policy gate. Both hold. What was
+missing is simpler and more embarrassing: the audit spine proved *what was
+decided and when*, but not *which model, prompt, and parameters produced it*.
+`PROMPT_VERSION` was a string in the journal; the model id and provider were
+recorded in the outcome; nothing committed the actual inference context. The
+enterprise evaluation calls this the last unverifiable link and rates it the
+keystone of the "don't trust, verify" positioning (GAP-014, rank #14 overall,
+and the highest-ranked item reachable without external vendors).
+
+## What was built
+
+**1. A pure commitment function** (`sentinel-core::inference`). SHA-256 over a
+length-prefixed encoding of eight inputs, in a frozen order:
+
+```text
+v1\n
+<len>:<system_prompt>\n
+<len>:<schema_doc>\n
+<len>:<user_prompt>\n
+<len>:<model_id>\n
+<len>:<provider>\n
+<len>:<temperature>\n
+<len>:<raw_completion>\n
+<max_tokens>\n
+```
+
+**Length prefixes are the point.** Plain concatenation is ambiguous: `("ab","c")`
+and `("a","bc")` hash identically, which would let an operator move text between
+the system prompt and the user prompt without changing the commitment. With
+`<len>:` framing the mapping from inputs to digest is injective. The property is
+asserted by test and demonstrated against the verifier below.
+
+The format version leads the digest, so a `v1` commitment can never be confused
+with a future format.
+
+**2. Sampling parameters as sent.** The `Provider` trait gained
+`request_params()`, overridden by the Qwen and Kimi providers to render exactly
+what their request bodies render (Qwen: the `f64` temperature and its token
+budget; Kimi: its two constants). The commitment is therefore over the call that
+actually happened, including on failover, where the params come from the
+fallback that answered.
+
+**3. Committed into the journal, therefore anchored.** Every STRATEGY journal
+entry now carries `inference_commitment` and `inference_commitment_version`.
+Because they ride the `decision` document, they are covered by `entry_hash`,
+which is covered by the Merkle batch, which is anchored on Monad. Nothing else
+in the entry shape changed.
+
+**4. An archive sidecar so the commitment is replayable.** The daemon appends
+one JSON line per consult to `<journal_dir>/inference.jsonl` with the raw
+inputs. Best-effort by design: an archive write failure logs and proceeds,
+because an archive must never stall a consult.
+
+**5. A reference verifier.** `inference-verify --archive <inference.jsonl>
+--journal <journal-*.jsonl>` recomputes every archived commitment from its raw
+inputs and asserts it matches the journaled one. Exit 0 on agreement, 1 on
+mismatch, 2 on usage error.
+
+## End-to-end evidence
+
+The encoding was re-implemented independently in Python (the same discipline as
+the project's Ed25519, EIP-712 and journal SHA-256 oracles) and the two
+implementations agree byte for byte on the digest:
+
+```text
+commitment (rust, via infer verifier) == commitment (python, independent)  ✓
+2f1750b042d392328da45396e96a6e432430c1361cd729893f3b441f90e6f6ee
+```
+
+Verifier behaviour, measured:
+
+| case | result | meaning |
+|---|---|---|
+| honest archive + journal | `rc=0 RESULT: OK — every archived commitment reproduces from its inputs and matches the journal` | the happy path verifies |
+| archive rewritten after the fact | `rc=1 RESULT: FAIL — 1 problem(s)` | the attacker can recompute their own commitment but cannot rewrite the hash-chained journal, so the mismatch is caught |
+| field-boundary shift (`("S","U")` → `("SU","")`) | `rc=1 RESULT: FAIL`; digests differ (`c78bc632…` vs `01eefb7e…`) | the length-prefix framing is not ambiguous, so the classic concatenation collision does not exist |
+| archived record absent from the journal | `rc=1 RESULT: FAIL` | an injected archive line cannot claim a decision that was never journaled |
+
+## What this does and does not prove
+
+**Does prove:** the exact model id, provider, system prompt, schema, user prompt,
+sampling parameters and raw completion behind a journaled strategy decision are
+committed, and anyone holding the archive can recompute the commitment and
+confirm it is the one on the chain.
+
+**Does not prove (layer 2, not built):** that the *execution environment* ran the
+binary it claims to have run. That needs TEE remote attestation. The claim stays
+precise and honest: *the model call is committed; everything around it is
+deterministic and already covered by the chain.*
+
+## Reproduce
+
+```bash
+cargo test -p sentinel-core --test inference_adversarial
+cargo build --release --bin inference-verify
+# then point it at a real archive + journal pair from a daemon run:
+./target/release/inference-verify --archive data/audit/inference.jsonl \
+                                  --journal data/audit/journal-*.jsonl
+```
+
+Live archive contents depend on a live consult (operator keys, STUB-01/02), so
+the pairs exercised here are constructed fixtures; the encoding
+cross-verification above is what makes them meaningful.

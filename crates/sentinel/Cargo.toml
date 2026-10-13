@@ -38,6 +38,10 @@ path = "src/bin/audit_verify.rs"
 name = "backtest"
 path = "src/bin/backtest.rs"
 
+[[bin]]
+name = "inference-verify"
+path = "src/bin/inference_verify.rs"
+
 [lints]
 workspace = true
 
