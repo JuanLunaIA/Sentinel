@@ -26,6 +26,33 @@ suite (same 8 scenarios in both columns, correlation +0.561). Full write-up in
 `docs/evidence/p22-adaptive-bands.txt`; plan and attack notes in
 `docs/PLAN-adaptive-bands.md`.
 
+
+### P23 — GAP-014 layer 1: proof-carrying AI decisions (inference commitment)
+Commits on `main` (plus a clippy fix), CI green, **42 suites / 932 tests, 0 failures**.
+
+`sentinel-core/src/inference.rs` + `bin/inference-verify` + archive sidecar +
+9 adversarial tests. Every STRATEGY journal entry now carries
+`inference_commitment`: SHA-256 over a length-prefixed encoding of the system
+prompt, schema, user prompt, model id, provider, sampling parameters and the
+raw completion. It rides the decision document, so it is covered by
+`entry_hash`, the Merkle batch and the on-chain anchor.
+
+Length framing is load-bearing: plain concatenation lets `("ab","c")` and
+`("a","bc")` collide, which would let text move between prompts without
+changing the commitment. Asserted by test and demonstrated against the
+verifier.
+
+End-to-end evidence: the encoding was re-implemented independently in Python
+and both implementations agree byte for byte (the same cross-language oracle
+discipline as the Ed25519, EIP-712 and journal SHA-256 checks). Verifier paths
+measured: honest `rc=0`; rewritten archive `rc=1`; field-boundary shift
+`rc=1` with distinct digests; orphan record `rc=1`. Full write-up in
+`docs/evidence/p23-inference-commitment.txt`.
+
+Not built (GAP-014 layer 2): TEE remote attestation, which is what would
+prove the execution environment itself. The evidence file states that boundary
+explicitly.
+
 ## The 74 gaps, sorted by what is actually actionable
 
 ### A. Pure code, no external dependency — can be built now
@@ -40,7 +67,7 @@ Highest value first, per the evaluation's own ranking:
 | GAP-011 | Observability: Prometheus/OTel metrics, SLO catalog, alert routing | M | telemetry.rs fan-out already exists |
 | GAP-012 | HA: journal fencing (writer_id + epoch), active-passive, game-days | L | `AuditJournal` trait is the seam |
 | GAP-013 | AI model council + confidence calibration (isotonic/temperature) | L | needs the live corpus for labels |
-| GAP-014 | **Verifiable inference: commitment hash of prompt‖schema‖model‖params‖completion in every STRATEGY journal entry** | M | highest credibility-per-line item left; the evaluation calls it the keystone |
+| GAP-014 | ~~Verifiable inference, layer 1~~ **DONE (P23)**. Layer 2 (TEE attestation) and layer 3 (zk proof of the deterministic envelope) remain | M→L | layers 2–3 need confidential-computing infra and proving tooling |
 | GAP-015 | Backtester v2: walk-forward, Monte Carlo, funding, depth, liquidation fees | L | builds on P13 + P21 |
 | GAP-016 | Prompt-injection red team at scale (2 fixtures → 100+) | M | corpus generation |
 | GAP-021 | Redundant alert channels + approval-latency engineering | S | notify.rs sinks |
