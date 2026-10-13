@@ -123,7 +123,13 @@
 
   <rect x="100" y="700" width="1000" height="80" rx="8" fill="#0b0f1c" stroke="#1b2340"/>
   <text x="116" y="732" font-family="'DejaVu Sans Mono','Liberation Mono',Menlo,Consolas,monospace" font-size="12" letter-spacing="1.6" fill="#7c88a8">EXTERNAL DEPENDENCIES</text>
-  <text x="116" y="764" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="13" fill="#e8ecf8">Perpl REST/WS → marks, funding, orders → Nansen x402 → paid intel → Qwen/Kimi APIs → AI proposals → Telegram bot → human approval → Monad RPC → anchor → Envio → public queries</text>
+  <text x="116" y="764" font-family="'DejaVu Sans','Liberation Sans',Helvetica,Arial,sans-serif" font-size="13" fill="#e8ecf8">
+    <tspan x="116" y="764">Perpl REST/WS → marks, funding, orders</tspan>
+    <tspan x="116" y="784">→ Nansen x402 → paid intel</tspan>
+    <tspan x="116" y="804">→ Qwen/Kimi APIs → AI proposals</tspan>
+    <tspan x="116" y="824">→ Telegram bot → human approval</tspan>
+    <tspan x="116" y="844">→ Monad RPC → anchor → Envio → public queries</tspan>
+</text>
 
   <defs>
     <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
