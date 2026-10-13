@@ -30,7 +30,7 @@ use std::time::Instant;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use sentinel_core::order::{OrderRequest, reduce_by_fraction};
-use sentinel_core::policy::{BudgetLedger, BudgetLimits};
+use sentinel_core::policy::{BudgetLedger, BudgetLimits, BudgetVerdict};
 use sentinel_core::policy::{DayState, PolicyConfig, PolicyContext, PolicyEngine, PolicySource};
 use sentinel_core::portfolio::{self, CorrelationTracker, PortfolioConfig, PositionRisk};
 use sentinel_core::risk::{self, ReflexConfig, ReflexState, RiskThresholds};
@@ -381,6 +381,80 @@ impl Sim<'_> {
         self.ticks = self.ticks.saturating_add(1);
     }
 
+    /// Every active position as the portfolio layer sees it (GAP-007).
+    fn book_risk(&self) -> Vec<PositionRisk> {
+        let mut book = Vec::new();
+        for state in &self.states {
+            if !state.active {
+                continue;
+            }
+            let position = &state.position;
+            let Some(market) = self.markets.get(&position.market_id) else {
+                continue;
+            };
+            let Some(distance) = risk::distance_to_liq_pct(position, market) else {
+                continue;
+            };
+            book.push(PositionRisk {
+                market_id: position.market_id,
+                notional: position.size.abs() * position.entry_price,
+                collateral: position.collateral,
+                distance_to_liq: distance,
+                tier: risk::tier(distance, &self.thresholds),
+            });
+        }
+        book
+    }
+
+    /// Portfolio budget admission, ahead of the frozen policy gate (GAP-007).
+    ///
+    /// Only active under `--cascade`, so the frozen gate and every existing
+    /// result are untouched. Two things it adds that a single global counter
+    /// cannot express:
+    ///
+    ///   - **Segregation ([P-1]).** Each allowed market gets its own daily
+    ///     segment, so no single market can spend the whole day. The book
+    ///     ceiling stays the policy's own value.
+    ///   - **Reserve.** While the book measures as correlated, a share of the
+    ///     day is held back from the reflex path so the cascade still has an
+    ///     action when it fires. Measured reason: without it the day's action
+    ///     is spent by a single-position event before the cascade can exist,
+    ///     and the plan moves the result by exactly $0.00.
+    fn portfolio_admits(&mut self, index: usize, ts_ms: i64) -> bool {
+        let market_id = self.states[index].position.market_id;
+        let book = self.book_risk();
+        let day_cap = self.policy_cfg.max_daily_actions;
+        let markets = self.policy_cfg.market_allowlist.len().max(1);
+        let segment = (day_cap / markets as u32).max(1);
+
+        let Some(layer) = self.cascade.as_mut() else {
+            return true;
+        };
+        let reserve = portfolio::reserve_actions(&layer.tracker, &book, day_cap, &layer.cfg);
+        layer.limits.global_daily_actions = day_cap.saturating_sub(reserve);
+        layer.limits.max_book_daily_actions = Some(day_cap);
+        layer.limits.per_market_daily_actions.clear();
+        for market in &self.policy_cfg.market_allowlist {
+            // A segment never exceeds the book ceiling, and the reserve never
+            // makes a segment zero: a zero segment would deny the market even
+            // when the day is otherwise free.
+            let capped = segment.min(day_cap).max(1);
+            layer
+                .limits
+                .per_market_daily_actions
+                .insert(*market, capped);
+        }
+        let verdict = layer.ledger.check(market_id, &layer.limits);
+        if matches!(verdict, BudgetVerdict::Ok) {
+            return true;
+        }
+        self.notes.push(format!(
+            "portfolio budget denied market {} at {ts_ms} ms: {verdict:?} (reserve={reserve}, segment={segment})",
+            market_id.0
+        ));
+        false
+    }
+
     /// Which positions to evaluate this tick, and in what order (GAP-007).
     ///
     /// Without the portfolio layer this is the state order the walk has always
@@ -395,29 +469,14 @@ impl Sim<'_> {
             return state_order();
         };
 
-        let mut book: Vec<PositionRisk> = Vec::new();
-        let mut index_of: Vec<(MarketId, usize)> = Vec::new();
-        for (index, state) in self.states.iter().enumerate() {
-            if !state.active {
-                continue;
-            }
-            let position = &state.position;
-            let Some(market) = self.markets.get(&position.market_id) else {
-                continue;
-            };
-            let Some(distance) = risk::distance_to_liq_pct(position, market) else {
-                continue;
-            };
-            let tier = risk::tier(distance, &self.thresholds);
-            book.push(PositionRisk {
-                market_id: position.market_id,
-                notional: position.size.abs() * position.entry_price,
-                collateral: position.collateral,
-                distance_to_liq: distance,
-                tier,
-            });
-            index_of.push((position.market_id, index));
-        }
+        let book = self.book_risk();
+        let index_of: Vec<(MarketId, usize)> = self
+            .states
+            .iter()
+            .enumerate()
+            .filter(|(_, state)| state.active)
+            .map(|(index, state)| (state.position.market_id, index))
+            .collect();
 
         let risk = portfolio::assess(&book, &layer.tracker, &layer.cfg);
         if !risk.cascade_triggered(&layer.cfg) {
@@ -607,6 +666,12 @@ impl Sim<'_> {
             tier,
             market_id,
         };
+        // GAP-007: the portfolio layer gets a say before the frozen gate, and
+        // only under --cascade. A refusal here is a budget decision, never an
+        // executed action, so it cannot register as a policy violation.
+        if !self.portfolio_admits(index, ts_ms) {
+            return false;
+        }
         let verdict =
             PolicyEngine::evaluate(&intent, &snapshot, &self.policy_cfg, &self.day, &context);
         match &verdict {

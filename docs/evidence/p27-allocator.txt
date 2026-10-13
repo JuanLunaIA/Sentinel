@@ -1,0 +1,112 @@
+# GAP-007 slice 3 — the allocator (reserve + segregation), and why it still measured 0.00%
+
+**Date:** 2026-10-13 · **Files:** `crates/sentinel-core/src/portfolio.rs`,
+`crates/sentinel/src/sim/engine.rs`
+
+## What was built
+
+**Reserve** (`portfolio::book_watching`, `portfolio::reserve_actions`). While
+the book *measures* as correlated (mean pairwise correlation at or above
+`reserve_correlation`, at least `reserve_min_positions` positions), a share of
+the day's action budget is held back from the reflex path so the cascade still
+has an action when it fires. The reserve is never zero once engaged: a quarter
+of a one-action budget floors to zero, which would hold nothing back exactly
+when the budget is scarcest. During warmup the reserve is **off**, because
+engaging it would hold actions back on the strength of a correlation nobody
+measured.
+
+**Segregation ([P-1]).** Each allowed market gets its own daily segment; the
+book ceiling stays the policy's own value.
+
+**Enforcement.** `Sim::portfolio_admits` runs ahead of the frozen
+`PolicyEngine::evaluate` and only under `--cascade`, so the frozen gate and
+every existing result are untouched. A refusal here is a budget decision, never
+an executed action, so it cannot register as a policy violation.
+
+Segregation verifiably works: the contention fixture records 18 refusals of the
+form `BookDailyExhausted { cap: 1 } (reserve=0, segment=1)`.
+
+## Measurement 1 — the contention fixture (cap = 1, two markets)
+
+| run | capital saved | sentinel loss | liquidations avoided |
+|---|---|---|---|
+| no cascade | $66.3513 | $459.5877 | 0 |
+| `--cascade` | $66.3513 | $459.5877 | 0 |
+
+**Delta $0.00**, and the refusals explain why: `reserve=0`, because the first
+single-position action happens at tick `1791854400000`, inside the tracker's
+20-bucket warmup window. By the time the correlation is measurable the day's
+single action is already spent.
+
+This fixture is also degenerate by construction: with a one-action budget for
+two markets, *whichever* market acts first wins, and no budget policy can change
+that without deferring the first action — which is the barrier design, declined
+below.
+
+## Measurement 2 — the realistic suite (cap = 10)
+
+| run | notional | capital saved | liq avoided | violations |
+|---|---|---|---|---|
+| no cascade | $38,533.50 | $394.02 | 1 | 0 |
+| `--cascade` | $38,533.50 | $394.02 | 1 | 0 |
+
+**Delta $0.00 again — and 0 of 12 scenarios recorded a single portfolio
+denial.** Executed orders per scenario, against the cap of 10:
+
+```text
+rb-01 2   rb-02 2   rb-03 1   rb-04 2   rb-05 0   rb-06 4
+rb-07 2   rb-08 1   rb-09 0   rb-10 2   rb-11 2   rb-12 4
+max 4 / 10
+```
+
+## The actual finding
+
+**The daily action budget is never scarce anywhere in the scenario set.** The
+heaviest scenario spends 4 of 10 actions. When the resource being allocated is
+never exhausted, every allocation mechanism — ordering, reservation,
+segregation — is provably inert, because there is nothing to allocate. The
+0.00% is not a defect in the planner; it is the scenario set failing to exercise
+the mechanism.
+
+This supersedes the slice-2 finding. Slice 2 said reordering is inert because
+the budget is consumed before the cascade triggers. Slice 3 says allocation is
+inert for a deeper reason: **the binding constraint is the test data, not the
+architecture.** The blueprint's KPI (>=20% less total loss at equal fee spend)
+is not *measurable* on the current scenario set under any mechanism.
+
+## On the proposed two-phase barrier
+
+Declined as specified, for a measurable reason. Deferring every single-position
+reflex action to a cascade commit would hold protection on the 10-of-12
+scenarios that are single-position or near it, in order to buy the rare
+simultaneous case. The reflex path's value is acting immediately at
+sub-microsecond latency on a local signal; a barrier spends that on a condition
+that does not exist yet. The intent/commit split is kept where it costs
+nothing — a reservation is mutable state, decoupled from execution — without
+deferring execution itself.
+
+A measured correction to the framing: this is not TOCTOU. The check and the
+consume are atomic within one tick; there is no gap and no adversary. The
+structure is that the reflex actor holds **global write scope** over the budget
+while holding only **local read scope** over the book, and that the cascade
+decision needs k >= 2 signals, so it is structurally *later* than any
+single-signal decision. The distinction is operational: a TOCTOU remedy
+(atomicity, locking) would not change the result, because check and use are
+already atomic and the loss still happens. Reservation against a future class of
+decisions does address it, and that is what was built.
+
+## What the next slice should be
+
+Not a better allocator. A **contention scenario family**: correlated
+multi-position books whose daily actions genuinely exhaust the cap, so that
+ordering, reservation and segregation have something to allocate. Without it
+the KPI has no witness, and any percentage reported from the current set would
+be measuring noise.
+
+## Reproduce
+
+```bash
+cargo test -p sentinel-core --test portfolio_adversarial      # 14 tests
+./target/release/backtest --scenarios-dir tests/scenarios-realistic --out /tmp/base
+./target/release/backtest --scenarios-dir tests/scenarios-realistic --out /tmp/casc --cascade
+```

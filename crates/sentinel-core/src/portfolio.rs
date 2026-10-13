@@ -35,6 +35,7 @@
 
 use std::collections::BTreeMap;
 
+use rust_decimal::prelude::ToPrimitive;
 use rust_decimal::{Decimal, MathematicalOps};
 
 use crate::policy::{BudgetLedger, BudgetLimits, BudgetVerdict};
@@ -57,6 +58,14 @@ pub struct PortfolioConfig {
     pub slice_fraction: Decimal,
     /// Round-trip fee plus slippage, as a fraction of notional.
     pub cost_fraction: Decimal,
+    /// Fraction of the day's action budget held back from the reflex path
+    /// while the book looks correlated (GAP-007 slice 3).
+    pub reserve_fraction: Decimal,
+    /// Mean measured pairwise correlation at or above which the book counts
+    /// as correlated and the reserve engages.
+    pub reserve_correlation: Decimal,
+    /// Positions the book needs before a reserve is considered.
+    pub reserve_min_positions: usize,
 }
 
 impl Default for PortfolioConfig {
@@ -68,6 +77,9 @@ impl Default for PortfolioConfig {
             min_positions: 2,
             slice_fraction: Decimal::new(5, 1),
             cost_fraction: Decimal::new(7, 4),
+            reserve_fraction: Decimal::new(25, 2),
+            reserve_correlation: Decimal::new(5, 1),
+            reserve_min_positions: 2,
         }
     }
 }
@@ -495,4 +507,59 @@ pub fn plan_cascade(
         slices: candidates,
         denied,
     }
+}
+
+/// Whether the book looks correlated enough to hold budget back.
+///
+/// Warmup is deliberately not "watching": with no measured pair the reserve
+/// stays off, because engaging it on an unmeasured book would hold actions
+/// back on the strength of a correlation nobody measured.
+pub fn book_watching(
+    tracker: &CorrelationTracker,
+    positions: &[PositionRisk],
+    cfg: &PortfolioConfig,
+) -> bool {
+    if positions.len() < cfg.reserve_min_positions {
+        return false;
+    }
+    let mut sum = Decimal::ZERO;
+    let mut measured = 0u32;
+    for (i, a) in positions.iter().enumerate() {
+        for b in positions.iter().skip(i + 1) {
+            if let Some(rho) = tracker.correlation(a.market_id, b.market_id) {
+                sum += rho;
+                measured += 1;
+            }
+        }
+    }
+    if measured == 0 {
+        return false;
+    }
+    sum / Decimal::from(measured) >= cfg.reserve_correlation
+}
+
+/// Actions to hold back from the reflex path so a cascade still has budget.
+///
+/// This is the piece the ordering-only planner was missing. Measured on the
+/// realistic suite, reordering the evaluation loop moved the result by
+/// exactly $0.00, because the day's action is consumed by a single-position
+/// event before the cascade ever triggers. A reserve changes that: while the
+/// book looks correlated, the reflex path sees a smaller daily cap, so the
+/// budget a cascade needs is still there when the cascade fires.
+///
+/// The reserve is at least one action once it engages, because a fraction of a
+/// small budget floors to zero and would reserve nothing exactly when the
+/// budget is scarcest.
+pub fn reserve_actions(
+    tracker: &CorrelationTracker,
+    positions: &[PositionRisk],
+    actions_available: u32,
+    cfg: &PortfolioConfig,
+) -> u32 {
+    if !book_watching(tracker, positions, cfg) {
+        return 0;
+    }
+    let fraction = Decimal::from(actions_available) * cfg.reserve_fraction;
+    let whole = fraction.trunc().to_u32().unwrap_or(0);
+    whole.max(1).min(actions_available)
 }

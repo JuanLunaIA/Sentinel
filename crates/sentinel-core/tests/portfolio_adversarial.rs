@@ -20,7 +20,8 @@ use rust_decimal::Decimal;
 use rust_decimal_macros::dec;
 use sentinel_core::policy::{BudgetLedger, BudgetLimits};
 use sentinel_core::portfolio::{
-    CorrelationTracker, PortfolioConfig, PositionRisk, assess, plan_cascade,
+    CorrelationTracker, PortfolioConfig, PositionRisk, assess, book_watching, plan_cascade,
+    reserve_actions,
 };
 use sentinel_core::types::{MarketId, RiskTier};
 
@@ -36,6 +37,9 @@ fn cfg() -> PortfolioConfig {
         min_positions: 2,
         slice_fraction: dec!(0.5),
         cost_fraction: dec!(0.0007),
+        reserve_fraction: dec!(0.25),
+        reserve_correlation: dec!(0.5),
+        reserve_min_positions: 2,
     }
 }
 
@@ -300,4 +304,86 @@ fn a_single_threatened_position_produces_no_plan() {
     ];
     let plan = plan_cascade(&book, &tracker, &ledger, &limits(), &cfg());
     assert!(plan.is_empty(), "one position stays on the reflex path");
+}
+
+#[test]
+fn warmup_does_not_engage_the_reserve() {
+    // No measured pair: holding actions back would be acting on a correlation
+    // nobody measured.
+    let tracker = CorrelationTracker::new(cfg());
+    let book = vec![
+        position(ETH, dec!(100), dec!(1000), RiskTier::Orange),
+        position(BTC, dec!(100), dec!(1000), RiskTier::Orange),
+    ];
+    assert!(!book_watching(&tracker, &book, &cfg()));
+    assert_eq!(reserve_actions(&tracker, &book, 10, &cfg()), 0);
+}
+
+#[test]
+fn a_correlated_book_reserves_and_an_independent_one_does_not() {
+    let moves: Vec<Decimal> = [3, -2, 4, -3, 2, -4, 3, 2, -3, 4, -2, 3]
+        .iter()
+        .map(|v| Decimal::from(*v) / Decimal::from(1000))
+        .collect();
+    let noise: Vec<Decimal> = [1, -4, 2, -1, 4, -2, 1, -3, 3, -1, 2, -4]
+        .iter()
+        .map(|v| Decimal::from(*v) / Decimal::from(1000))
+        .collect();
+
+    let mut correlated = CorrelationTracker::new(cfg());
+    feed_aligned(&mut correlated, &[(ETH, &moves), (BTC, &moves)]);
+    let book = vec![
+        position(ETH, dec!(100), dec!(1000), RiskTier::Orange),
+        position(BTC, dec!(100), dec!(1000), RiskTier::Orange),
+    ];
+    assert!(book_watching(&correlated, &book, &cfg()), "co-moving book");
+    assert_eq!(
+        reserve_actions(&correlated, &book, 10, &cfg()),
+        2,
+        "a quarter of ten actions"
+    );
+
+    // Two independent books: a correlated pair AND a pair that is not.
+    let mut independent = CorrelationTracker::new(cfg());
+    feed_aligned(&mut independent, &[(SOL, &noise), (SOL, &noise)]);
+    let solo = vec![position(SOL, dec!(100), dec!(1000), RiskTier::Orange)];
+    assert!(!book_watching(&independent, &solo, &cfg()), "one position");
+
+    let mut mixed = CorrelationTracker::new(cfg());
+    feed_aligned(&mut mixed, &[(ETH, &moves), (BTC, &moves), (SOL, &noise)]);
+    let three = vec![
+        position(ETH, dec!(100), dec!(1000), RiskTier::Orange),
+        position(BTC, dec!(100), dec!(1000), RiskTier::Orange),
+        position(SOL, dec!(100), dec!(1000), RiskTier::Orange),
+    ];
+    let mean = (mixed.correlation(ETH, BTC).unwrap()
+        + mixed.correlation(ETH, SOL).unwrap()
+        + mixed.correlation(BTC, SOL).unwrap())
+        / Decimal::from(3);
+    assert_eq!(
+        book_watching(&mixed, &three, &cfg()),
+        mean >= dec!(0.5),
+        "the watch decision follows the measured mean: {mean}"
+    );
+}
+
+#[test]
+fn the_reserve_never_exceeds_the_budget_and_is_at_least_one() {
+    let moves: Vec<Decimal> = [3, -2, 4, -3, 2, -4, 3, 2, -3, 4, -2, 3]
+        .iter()
+        .map(|v| Decimal::from(*v) / Decimal::from(1000))
+        .collect();
+    let mut tracker = CorrelationTracker::new(cfg());
+    feed_aligned(&mut tracker, &[(ETH, &moves), (BTC, &moves)]);
+    let book = vec![
+        position(ETH, dec!(100), dec!(1000), RiskTier::Orange),
+        position(BTC, dec!(100), dec!(1000), RiskTier::Orange),
+    ];
+    // A quarter of one action floors to zero; the reserve must still be one,
+    // because a zero reserve would hold nothing back exactly when the budget is
+    // scarcest.
+    assert_eq!(reserve_actions(&tracker, &book, 1, &cfg()), 1);
+    assert_eq!(reserve_actions(&tracker, &book, 4, &cfg()), 1);
+    assert_eq!(reserve_actions(&tracker, &book, 40, &cfg()), 10);
+    assert!(reserve_actions(&tracker, &book, 3, &cfg()) <= 3);
 }
