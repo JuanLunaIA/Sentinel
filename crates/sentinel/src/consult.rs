@@ -406,7 +406,7 @@ where
 
         // P23: archive the inference context before journaling, so the
         // commitment in the entry is always replayable.
-        self.write_inference_archive(&decision_id, &outcome).await;
+        self.write_inference_archive(decision_id, outcome).await;
 
         self.journal_outcome(
             market_id,
