@@ -68,6 +68,25 @@ fn capture_logs() -> (LogBuffer, tracing::subscriber::DefaultGuard) {
     (buffer, guard)
 }
 
+// ---------------------------------------------------------------------------
+// Wall-clock budget policy
+// ---------------------------------------------------------------------------
+// Every test in this file runs on a `current_thread` runtime, so all tasks in
+// a test share ONE worker thread. Under CPU contention that thread gets less
+// scheduler time, and a patience window measured in wall-clock seconds shrinks
+// in effective terms even though nothing about the supervisor changed.
+//
+// This was observed once: a run of `supervisor_restarts_panicking_task_once_
+// then_stops_on_shutdown` failed while several cargo jobs contended on a 3.7 GB
+// host. It did not reproduce in 17 subsequent runs (7 idle, 10 under three
+// busy CPU loops), so the exact assertion is unknown and the mechanism below is
+// inference, not measurement.
+//
+// The response is deliberate: the patience budgets are generous, the assertions
+// are untouched. A slower machine then fails only if the supervisor is
+// genuinely broken, never because a timer fired late. These are upper bounds on
+// how long a healthy supervisor may take, not performance targets.
+
 /// Poll `cond` every 20 ms until it holds or `timeout` elapses.
 async fn wait_for(timeout: Duration, mut cond: impl FnMut() -> bool) -> bool {
     let deadline = tokio::time::Instant::now() + timeout;
@@ -154,7 +173,7 @@ async fn supervisor_restarts_panicking_task_once_then_stops_on_shutdown() {
     });
 
     assert!(
-        wait_for(Duration::from_secs(5), || runs.load(Ordering::SeqCst) >= 2).await,
+        wait_for(Duration::from_secs(15), || runs.load(Ordering::SeqCst) >= 2).await,
         "panicking task was never restarted"
     );
     assert_eq!(
@@ -166,7 +185,7 @@ async fn supervisor_restarts_panicking_task_once_then_stops_on_shutdown() {
 
     // The restart log line may be written after the replacement task is
     // spawned, so wait for it instead of reading the buffer immediately.
-    let logged = wait_for(Duration::from_secs(2), || {
+    let logged = wait_for(Duration::from_secs(10), || {
         let text = log_text(&logs);
         text.contains("flaky-test-task")
             && text.contains("restarts=1")
@@ -177,7 +196,7 @@ async fn supervisor_restarts_panicking_task_once_then_stops_on_shutdown() {
 
     // Shutdown drains the healthy attempt and stops the supervision loop.
     tx.send(true).expect("shutdown receiver alive");
-    tokio::time::timeout(Duration::from_secs(3), handle)
+    tokio::time::timeout(Duration::from_secs(15), handle)
         .await
         .expect("supervisor ends after shutdown")
         .expect("supervisor task joins cleanly");
@@ -200,21 +219,23 @@ async fn supervisor_stops_restarting_once_shutdown_is_set() {
 
     // Attempt #1 panics immediately; the supervisor enters its 1 s backoff.
     assert!(
-        wait_for(Duration::from_secs(3), || runs.load(Ordering::SeqCst) >= 1).await,
+        wait_for(Duration::from_secs(10), || runs.load(Ordering::SeqCst) >= 1).await,
         "first attempt never ran"
     );
     // Flip shutdown while the first restart is still pending.
     tx.send(true).expect("shutdown receiver alive");
 
     // The supervisor must end without launching another attempt.
-    tokio::time::timeout(Duration::from_secs(4), handle)
+    tokio::time::timeout(Duration::from_secs(15), handle)
         .await
         .expect("supervisor ends after shutdown")
         .expect("supervisor task joins cleanly");
     assert_eq!(runs.load(Ordering::SeqCst), 1, "no restart after shutdown");
 
-    // Guard against a late wake-up starting a stray attempt.
-    tokio::time::sleep(Duration::from_millis(1200)).await;
+    // Guard against a late wake-up starting a stray attempt. This sleep is a
+    // lower bound on how long a stray attempt would take to appear, so a longer
+    // value is a stronger guard, not a weaker one.
+    tokio::time::sleep(Duration::from_millis(3000)).await;
     assert_eq!(
         runs.load(Ordering::SeqCst),
         1,
@@ -261,7 +282,7 @@ async fn telegram_send_is_ok_and_retries_until_delivered() {
         .expect("send never propagates delivery failures");
 
     // Retries observed: initial attempt + 2 retries before the 200 lands.
-    let count = wait_for_requests(&server, 3, Duration::from_secs(8)).await;
+    let count = wait_for_requests(&server, 3, Duration::from_secs(20)).await;
     assert!(
         count >= 3,
         "expected at least 3 requests (failures + retry), got {count}"
@@ -303,7 +324,7 @@ async fn telegram_delivery_abandons_after_three_retries() {
     sink.send(&alert).await.expect("caller still gets Ok");
 
     // Attempts land at ~0 s, +0.5 s, +1.5 s, +3.5 s (500 ms doubling).
-    let count = wait_for_requests(&server, 4, Duration::from_secs(10)).await;
+    let count = wait_for_requests(&server, 4, Duration::from_secs(25)).await;
     assert_eq!(count, 4, "initial attempt + exactly 3 retries");
     tokio::time::sleep(Duration::from_millis(500)).await;
     let requests = server.received_requests().await.expect("recorded requests");

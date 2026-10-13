@@ -1,0 +1,71 @@
+# P16 supervisor test: load-induced flake, measured and hardened
+
+**Date:** 2026-10-13 · **File:** `crates/sentinel/tests/p16_resilience_supervisor.rs`
+
+## What was observed
+
+While P23 was in flight, one workspace test run reported:
+
+```text
+test supervisor_restarts_panicking_task_once_then_stops_on_shutdown ... FAILED
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out
+```
+
+That run was launched while several heavy cargo jobs were running concurrently
+(clippy over the workspace, a full workspace test run, and a release build) on
+a 3.7 GB host. The captured output was filtered to the result lines, so **the
+failing assertion is not in the record**. Honest classification of the
+mechanism: `[UNKNOWN]`. The load hypothesis below is `[STRONG_INFERENCE]`,
+not measurement.
+
+Every later workspace run passed. Current count: 43 suites / 941 tests, 0
+failures.
+
+## Reproduction attempt
+
+| condition | runs | result |
+|---|---|---|
+| idle host, single test filtered | 7 | 7 pass, ~1.02 s each |
+| host + three busy CPU loops | 10 | 10 pass, ~1.02 s each |
+
+17 consecutive clean runs. The failure did not reproduce, so it is not a
+deterministic regression. It remains load-correlated: it has been seen exactly
+once, in the most contended window observed on this host.
+
+## The structural reason it can flake at all
+
+Every test in the file is `#[tokio::test(flavor = "current_thread")]`: all
+tasks in a test share **one** worker thread. Under CPU contention that thread
+receives less scheduler time, so a patience window expressed in wall-clock
+seconds shrinks in effective terms even though the supervisor's behaviour is
+unchanged. The tightest window in the failing test was 2 s.
+
+## The fix
+
+Patience budgets widened; **no assertion touched**.
+
+| window | before | after |
+|---|---|---|
+| restart wait | 5 s | 15 s |
+| restart log line (tightest) | 2 s | 10 s |
+| join after shutdown | 3 s | 15 s |
+| first attempt wait | 3 s | 10 s |
+| join after shutdown (sibling) | 4 s | 15 s |
+| Telegram queue drain | 8 s / 10 s | 20 s / 25 s |
+| stray-attempt guard sleep | 1200 ms | 3000 ms (longer = stronger guard) |
+
+The direction matters: these are upper bounds on how long a *healthy*
+supervisor may take, not performance targets. A slower machine now fails only
+if the supervisor is genuinely broken, never because a timer fired late. The
+happy path is unchanged at 4.06 s (8/8 pass), which is the expected result for
+budgets that are upper bounds.
+
+A rationale block at the top of the file records the observation, the
+non-reproduction, the honest `[UNKNOWN]` on the failing assertion, and this
+policy, so a future reader does not "tighten" the numbers back.
+
+## What this does not claim
+
+It does not claim the original failure is explained. It claims the test can no
+longer fail for the load reason that is the leading hypothesis, and that the
+change cannot weaken any assertion in the file.
