@@ -36,6 +36,7 @@ use sentinel_core::types::{
     AccountState, DataQuality, Decision, DecisionAction, Intent, Market, MarketId, PolicyVerdict,
     Position, RiskTier,
 };
+use sentinel_core::vol::{VolConfig, VolState, adaptive_bands};
 
 use crate::execution::Executor;
 use crate::sim::baseline::{self, BaselineOutcome, crossed, liq_price_of};
@@ -52,6 +53,23 @@ use crate::sim::venue::SimExecutor;
 /// `ScenarioError` only for malformed inputs; policy/executor outcomes are
 /// recorded inside the report, never fatal.
 pub fn run(scenario: &Scenario) -> Result<SimReport, ScenarioError> {
+    run_with(scenario, None)
+}
+
+/// Run one scenario with an optional volatility-adaptive band layer (P22).
+///
+/// With `adaptive = None` the run uses the operator's static thresholds and
+/// behaves exactly as previous releases. With `Some(cfg)` each market carries
+/// a [`VolState`](sentinel_core::vol::VolState) fed from the same marks the
+/// pipeline sees, and the tier cuts come from
+/// [`adaptive_bands`](sentinel_core::vol::adaptive_bands) instead, falling
+/// back to the static bands during warmup. Action records carry the band
+/// values and sigma in force, so the report explains *why* Orange meant what
+/// it meant at that tick.
+pub fn run_with(
+    scenario: &Scenario,
+    adaptive: Option<VolConfig>,
+) -> Result<SimReport, ScenarioError> {
     scenario.validate()?;
     let reflex_cfg = scenario.reflex_config()?;
     let policy_cfg = scenario.policy_config()?;
@@ -117,9 +135,50 @@ pub fn run(scenario: &Scenario) -> Result<SimReport, ScenarioError> {
         ticks: 0,
         free_balance: scenario.start_free_balance,
         marks: HashMap::new(),
+        adaptive: adaptive.map(|cfg| AdaptiveBands {
+            cfg,
+            states: HashMap::new(),
+        }),
     };
     sim.walk();
     Ok(sim.finish(baseline))
+}
+
+/// Per-market volatility state backing the adaptive band layer (P22).
+struct AdaptiveBands {
+    /// Layer configuration (clamps, reference sigma, horizon).
+    cfg: VolConfig,
+    /// One rolling state per market, fed from the scenario's marks.
+    states: HashMap<MarketId, VolState>,
+}
+
+impl AdaptiveBands {
+    /// Effective bands for a market at `now_ms`, or `None` during warmup
+    /// (the caller then keeps the static thresholds).
+    fn bands(
+        &self,
+        market_id: MarketId,
+        now_ms: u64,
+        static_hard: Decimal,
+    ) -> Option<RiskThresholds> {
+        let state = self.states.get(&market_id)?;
+        adaptive_bands(state, &self.cfg, now_ms, static_hard)
+    }
+
+    /// One-line provenance for the journal/detail (P22 acceptance #5).
+    fn provenance(&self, market_id: MarketId, now_ms: u64) -> String {
+        let Some(state) = self.states.get(&market_id) else {
+            return "bands: static (no state)".to_string();
+        };
+        let sigma = state
+            .sigma_step(&self.cfg)
+            .map(|s| format!("{:.6}%", s * Decimal::from(100)))
+            .unwrap_or_else(|| "warmup".to_string());
+        format!(
+            "sigma_step={sigma} regime={}",
+            state.regime(&self.cfg, now_ms).as_str()
+        )
+    }
 }
 
 /// Live bookkeeping for one scenario position.
@@ -154,7 +213,11 @@ struct Sim<'a> {
     scenario: &'a Scenario,
     reflex_cfg: ReflexConfig,
     policy_cfg: PolicyConfig,
+    /// Tier thresholds in force when the adaptive layer is off, and the
+    /// warmup fallback when it is on.
     thresholds: RiskThresholds,
+    /// Volatility-adaptive band layer (P22); `None` = static thresholds.
+    adaptive: Option<AdaptiveBands>,
     markets: HashMap<MarketId, &'a Market>,
     executor: SimExecutor,
     states: Vec<LivePosition>,
@@ -188,6 +251,17 @@ impl Sim<'_> {
         self.executor.set_tick(now_ms);
         self.executor.set_mark(MarketId(market_id), mark);
         self.marks.insert(MarketId(market_id), mark);
+
+        // Feed the adaptive layer from the same marks the pipeline sees (P22).
+        if let Some(adaptive) = &mut self.adaptive {
+            let cfg = adaptive.cfg.clone();
+            let mid = MarketId(market_id);
+            let state = adaptive
+                .states
+                .entry(mid)
+                .or_insert_with(|| VolState::new(mid));
+            state.observe(now_ms, mark, &cfg);
+        }
 
         for state in &mut self.states {
             if state.active && state.position.market_id.0 == market_id {
@@ -243,7 +317,14 @@ impl Sim<'_> {
             // Cannot classify safely; the production pipeline skips the same way.
             return;
         };
-        let tier = risk::tier(distance, &self.thresholds);
+        // Effective tier cuts: the adaptive layer when it has enough samples,
+        // the operator's static thresholds otherwise (P22 warmup fallback).
+        let thresholds = self
+            .adaptive
+            .as_ref()
+            .and_then(|a| a.bands(market_id, now_ms, self.thresholds.hard))
+            .unwrap_or(self.thresholds);
+        let tier = risk::tier(distance, &thresholds);
 
         // (a) Yellow-entry transition per market (`Green -> Yellow`, P13
         // §4). The consult runs after the reflex pass, like the production
@@ -597,6 +678,20 @@ impl Sim<'_> {
             self.policy_violations = self.policy_violations.saturating_add(1);
         }
         let state = &self.states[index];
+        // Threshold provenance (P22 acceptance #5): when the adaptive layer is
+        // live, every action records the sigma and regime that produced its
+        // tier cut, so the audit trail explains why Orange meant what it meant.
+        let detail = match &self.adaptive {
+            Some(adaptive) => {
+                let now_ms = u64::try_from(ts_ms).unwrap_or(0);
+                format!(
+                    "{} [{}]",
+                    detail,
+                    adaptive.provenance(state.position.market_id, now_ms)
+                )
+            }
+            None => detail,
+        };
         self.actions.push(SimAction {
             ts_ms,
             market_id: state.position.market_id.0,

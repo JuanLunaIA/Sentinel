@@ -1,0 +1,124 @@
+# P22 — volatility-adaptive risk bands (GAP-009 / GAP-028): build and run evidence
+
+**Date:** 2026-10-13 · **Engine:** `backtest` release binary with `--adaptive`
+**Plan:** `docs/PLAN-adaptive-bands.md` · **Module:** `crates/sentinel-core/src/vol.rs`
+**Suites:** both frozen suites, run twice (static vs adaptive), diffs below.
+
+## What was built
+
+A pure, deterministic volatility layer in `sentinel-core`:
+
+- **EWMA realized volatility** per market (`lambda = 0.94`, RiskMetrics discrete
+  form: simple returns, because `Decimal` has no `ln`). Pure: marks and
+  timestamps are injected, no clock, no I/O.
+- **Horizon-scaled bands.** The evaluation specifies
+  `hard = k_hard · σ · √(T_rescue)`. This module computes exactly that:
+  `σ_h = σ_step · √(horizon_ms / step_ms)` and `hard_pct = base_hard_pct · (σ_h / σ_h_ref)`,
+  which is the document's form with `k_hard` folded into the reference
+  calibration. At the reference sigma the band reproduces the operator's
+  configured 8% (asserted by test), so the feature is a strict generalization
+  of the shipped defaults, not a replacement.
+- **Clamps** `[4%, 40%]`, orderings `hard < warn < soft` preserved by
+  construction, ratios pinned to the shipped 8/15/25.
+- **Regime classifier** (deterministic state machine, no ML): Calm / Elevated /
+  Stress / Dislocation from `σ / σ_ref`, plus a jump detector
+  (`|r| > jump_k·σ`) that pins Dislocation for 15 minutes.
+- **Structural safety property:** in Stress and Dislocation the adaptive `hard`
+  is floored at the static band. The layer may act *earlier* than the static
+  configuration when the tape is violent, and *later* only when it is calm.
+  Asserted by test and swept by proptest.
+- **Threshold provenance** (acceptance #5): every action detail carries the
+  sigma and regime in force, e.g.
+  `… filled 0.187 @ 2471.42 [sigma_step=0.223388% regime=stress]`.
+
+`--adaptive` on the backtest binary enables it; the default path is unchanged.
+
+## Suites: measured deltas
+
+### Curated suite (14 scenarios) — clean win
+
+| metric | static | adaptive | delta |
+|---|---|---|---|
+| capital preserved | $5,972.14 | **$6,410.42** | **+7.3%** |
+| % of notional | 9.93% | **10.66%** | +0.73pp |
+| baseline liquidations | 11 | 11 | — |
+| liquidations avoided | 11 | **11** | **preserved** |
+| false-positive reduces | 3 | 3 | unchanged |
+
+### Realistic-bootstrap suite (12 scenarios) — win with a caveat
+
+| metric | static | adaptive | delta |
+|---|---|---|---|
+| capital preserved | $394.02 | **$650.16** | **+65.0%** |
+| % of notional | 1.02% | **1.69%** | +0.67pp |
+| baseline liquidations | 1 | 1 | — |
+| liquidations avoided | 1 | **1** | **preserved** |
+| false-positive reduces | 20 | 29 | **+9 (worse)** |
+
+## Finding: acceptance criterion #2 is falsified, and the reason matters
+
+The plan's criterion #2 was *"false-positive reduces drop ≥50% while
+liquidations-avoided does not drop."* The second half holds on both suites.
+The first half fails on the realistic suite (+45% instead of −50%), and the
+per-scenario diff explains exactly why:
+
+| scenario | Δ FP | Δ saved |
+|---|---|---|
+| rb-01-drift-down-10x | +1 | +$2.64 |
+| rb-03-tail-gap-8x | +1 | +$7.79 |
+| rb-04-whipsaw-recovery-6x | +1 | +$15.13 |
+| rb-05-slow-bleed-4x | +1 | +$79.43 |
+| rb-06-correlated-eth-btc-5x | +2 | +$103.48 |
+| rb-07-short-squeeze-10x | +1 | −$0.03 |
+| rb-08-vol-cluster-8x | +1 | +$5.07 |
+| rb-12-two-leg-portfolio | +1 | +$7.77 |
+
+**The eight scenarios where the false-positive count rises are the same eight
+where capital preserved rises** (correlation +0.561; +9 trims for +$256
+preserved, about $28 of preserved capital per extra trim).
+
+That is not a coincidence, it is the harness's definition: `engine.rs:636`
+counts **every executed reduce** as a false positive in any scenario whose
+baseline never liquidated. On this suite, protection and "false positive" are
+the same event observed from two sides. A policy that trims more in order to
+preserve more capital *must* score worse on that metric, so the two halves of
+criterion #2 are in direct tension and no band tuning can satisfy both. The
+criterion was mis-specified, not the feature. It is recorded here rather than
+tuned away, which is the same discipline the P21 finding applied to the
+tick-0 trims.
+
+## Why the bands widened on this suite
+
+The provenance line shows the realized sigma the bootstrap produces:
+0.11% to 0.27% per step versus the 0.0775% reference. The scenarios inject
+calibrated regimes (crashes, gaps, volatility spikes) on top of the tape, so
+they are stress-flavored by construction; the classifier correctly reads them
+as Elevated → Stress → Dislocation and widens the bands, which is the intended
+"under-protect in vol clusters" half of GAP-009. The calm half (act later than
+static when the tape is quiet) does not show on this suite because no scenario
+opens a mid-leverage position in a genuinely calm regime; the two no-op
+scenarios (rb-09, 3x at 30% distance; rb-02, damped) produce zero and two
+reduces respectively, unchanged from static.
+
+## Not fixed by this feature (carried forward)
+
+The P21 Finding 1 stands: a position opened at 10x–12x starts 3.5%–5.3% from
+liquidation, inside *any* band in the configured `[4%, 40%]` range, so it trims
+on the first tick regardless of volatility. That is a leverage-choice problem
+expressed as a band problem, and it needs the position-relative normalization
+described in P21, not a wider clamp. This feature does not claim to fix it.
+
+## Reproduce
+
+```bash
+cargo build --release --bin backtest
+./target/release/backtest --scenarios-dir tests/scenarios           --out /tmp/cur-static
+./target/release/backtest --scenarios-dir tests/scenarios           --out /tmp/cur-adaptive --adaptive
+./target/release/backtest --scenarios-dir tests/scenarios-realistic --out /tmp/rb-static
+./target/release/backtest --scenarios-dir tests/scenarios-realistic --out /tmp/rb-adaptive  --adaptive
+```
+
+Unit + property coverage: `crates/sentinel-core/tests/vol_adversarial.rs`
+(11 tests, including two proptest sweeps over five orders of magnitude of
+volatility: ordering/clamp invariance, and the never-loosen-under-stress
+safety property).

@@ -18,5 +18,6 @@ pub mod order;
 pub mod policy;
 pub mod risk;
 pub mod types;
+pub mod vol;
 
 pub use rust_decimal::Decimal;
